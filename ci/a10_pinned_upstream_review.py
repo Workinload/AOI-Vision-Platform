@@ -323,6 +323,7 @@ def run_upstream(root, pr):
             ["docs/reviews/verify_w003_owner.py","."]],
         29:[["contracts/C01/test_c01_draft_contract.py"]],
     }
+    upstream_ok = True
     for args in commands.get(pr,[]):
         command=[sys.executable,*args]
         print("UPSTREAM_CMD", " ".join(command),flush=True)
@@ -330,8 +331,10 @@ def run_upstream(root, pr):
         print(result.stdout)
         print(result.stderr)
         print("UPSTREAM_EXIT",result.returncode)
-        require(result.returncode==0,
-                "upstream exact-HEAD test failed: "+" ".join(args))
+        if result.returncode != 0:
+            print("UPSTREAM_HOLD_EXACT_HEAD_TEST_FAILED",pr," ".join(args))
+            upstream_ok = False
+    return upstream_ok
 
 
 def main():
@@ -346,9 +349,10 @@ def main():
     require(actual==opt.sha, f"requested exact SHA {opt.sha}, got {actual}")
     print("A10_ROUND_START",opt.round,"PR",opt.pr,"EXACT_SHA",actual)
     wbs,fg=plan_integrity(root)
-    run_upstream(root,opt.pr)
+    upstream_ok=run_upstream(root,opt.pr)
     independent={12:pr12,27:pr27,28:pr28,29:pr29}[opt.pr]
     negatives=independent(root,wbs,fg)
+    require(upstream_ok,"upstream exact-HEAD verifier failed after independent mutation testing")
     print("A10_ROUND_PASS",opt.round,"PR",opt.pr,
           "SHA",actual,"INDEPENDENT_NEGATIVES",negatives,
           "SCOPE=STATIC_DRAFT_SAFETY_ONLY_NO_WBS_VERIFICATION")
