@@ -1,0 +1,58 @@
+name: A10 exact-SHA upstream audit
+on:
+  pull_request:
+    paths:
+      - 'ci/a10_pinned_upstream_review.py'
+      - '.github/workflows/a10-pinned-upstream-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {pr: 12, sha: '39598da19fd43eecc839a6c13047a2b78b58f366'}
+          - {pr: 27, sha: 'd13235a96db67f586ac972183473a698ef309e23'}
+          - {pr: 28, sha: 'd7ace91ad1fc1fab0739d93280262315f9651944'}
+          - {pr: 29, sha: '1dc75f37b28b76e1f028799521897f1ab686d9f7'}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch exact upstream commit
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/${PR_ID}/head"
+          ACTUAL="$(git rev-parse FETCH_HEAD)"
+          test "$ACTUAL" = "$PINNED_SHA"
+          git worktree add --detach /tmp/a10-upstream "$ACTUAL"
+          test "$(git -C /tmp/a10-upstream rev-parse HEAD)" = "$PINNED_SHA"
+          sha256sum ci/a10_pinned_upstream_review.py
+      - name: Independent round 1
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          python3 ci/a10_pinned_upstream_review.py --repo /tmp/a10-upstream --pr "$PR_ID" --sha "$PINNED_SHA" --round 1 | tee "/tmp/pr${PR_ID}-round1.log"
+      - name: Independent round 2
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          python3 ci/a10_pinned_upstream_review.py --repo /tmp/a10-upstream --pr "$PR_ID" --sha "$PINNED_SHA" --round 2 | tee "/tmp/pr${PR_ID}-round2.log"
+      - name: Upload round evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a10-review-pr-${{ matrix.pr }}-${{ github.run_id }}
+          path: /tmp/pr*-round*.log
+          if-no-files-found: warn
