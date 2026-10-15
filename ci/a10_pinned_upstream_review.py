@@ -321,7 +321,8 @@ def run_upstream(root, pr):
         27:[["docs/reviews/verify_w002.py","--repo-root",".","--negative"]],
         28:[["docs/reviews/verify_w003.py","--repo-root",".","--negative"],
             ["docs/reviews/verify_w003_owner.py","."]],
-        29:[["contracts/C01/test_c01_draft_contract.py"]],
+        29:[["contracts/C01/test_c01_draft_contract.py"],
+            ["contracts/C01/test_c01_v0_2_review.py"]],
     }
     upstream_ok = True
     for args in commands.get(pr,[]):
@@ -331,6 +332,10 @@ def run_upstream(root, pr):
         print(result.stdout)
         print(result.stderr)
         print("UPSTREAM_EXIT",result.returncode)
+        if pr == 29 and "test_c01_v0_2_review.py" in args[0]:
+            count_ok = "Ran 29 tests" in (result.stdout + result.stderr)
+            print("A10_C01_UPSTREAM_TESTCOUNT_29", count_ok)
+            if not count_ok: upstream_ok = False
         if result.returncode != 0:
             print("UPSTREAM_HOLD_EXACT_HEAD_TEST_FAILED",pr," ".join(args))
             upstream_ok = False
