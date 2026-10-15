@@ -1,0 +1,13 @@
+ContractId,CanonicalScope,Owner,RelatedWBS,RequiredNegativeEvidence,Status
+C-01,Strong IDs / state / versioned event,A0,W012/W013,Unknown schema rejected; mismatched Workpiece/Epoch cannot finalize,PROPOSED_NOT_FROZEN
+C-02,IAreaCapture ILineCapture FrameRef ReadBack,A3,W028/W029/W030,SDK buffer reuse cannot mutate live FrameRef; shared line parent,PROPOSED_NOT_FROZEN
+C-03,IPLCGateway SignalRegistry WritePolicy,A2,W006/W023/W026,All physical writes prohibited SIM_ONLY; FINS negatives,PROPOSED_NOT_FROZEN
+C-04,IWorkpieceTracker IAcquisitionCoordinator,A1,W035/W036,Same barcode different item; no trustworthy slot => HOLD,PROPOSED_NOT_FROZEN
+C-05,IStationDecision IAggregateDecision,A1,W039/W040,ERROR/MISSING never OK; only CH02-CH11 with CH01 prerequisite,PROPOSED_NOT_FROZEN
+C-06,IPeerLink ReliableEnvelope PERSISTED_ACK,A5,W042/W043,"Duplicate MessageId different PayloadHash rejects, ACK persisted",PROPOSED_NOT_FROZEN
+C-07,IAssetStore metadata lossless codec,A6,W059/W060/W061,"AVAILABLE requires verified URI and byte/pixel sha, parent capture unique",PROPOSED_NOT_FROZEN
+C-08,DB migration Outbox Inbox Query,A6,W018/W043,"Separate WAL databases, transaction rollback/idempotence",PROPOSED_NOT_FROZEN
+C-09,IModelAndAlgorithm ROI TransformChain,A4,W050/W052,ROI out of view never hides NG; mock not metrology,PROPOSED_NOT_FROZEN
+C-10,ProductSolution Draft Release Deployment,A7,W083/W084/W085/W086/W087,Draft never active; two-node/virtual-PLC readback before COMMIT,PROPOSED_NOT_FROZEN
+C-11,UIReadAPI commands snapshots cursor,A8,W015/W016,Untrusted/unknown write command denied; Core lifecycle independent,PROPOSED_NOT_FROZEN
+C-12,AuthAudit AlarmEnvelope Telemetry EntityRegistry,A9,W008/W019/W089,ACK != CLEAR; immutable cross-host audit links,PROPOSED_NOT_FROZEN
