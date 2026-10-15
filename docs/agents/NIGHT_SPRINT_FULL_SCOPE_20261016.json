@@ -1,0 +1,4770 @@
+{
+  "schema": "aoi.night-sprint-fullscope-routing.v1",
+  "created_date": "2026-10-16",
+  "mode": "SIM_ONLY",
+  "disclaimer": "SCOPE_MATRIX_NOT_TEST_CERTIFICATION;NO_WBS_PROMOTION;NO_FIELD_AUTHORIZATION",
+  "main_sha_at_generation": "cf11c7d436910c2d5da4566572b65c5d13c86fa4",
+  "source_principle": "Original PLAN and immutable reference files are readonly. Routing does not change original owner or DependsOn.",
+  "source_files": {
+    "wbs": {
+      "path": "reference/plan_v1.1/WBS_TASKS_130.csv",
+      "git_blob": "82c8506c9c2e34085b3bad93d253712dc6c08584"
+    },
+    "rq": {
+      "path": "reference/plan_v1.1/RQ_114_COVERAGE.csv",
+      "git_blob": "b0fd8dbac070ede7701ed92e8d978511120f3a18"
+    },
+    "sc": {
+      "path": "reference/plan_v1.1/SCENARIO_MATRIX.csv",
+      "git_blob": "bf2cc3abe268c1491a6d0c5e6fee4e2f6d6da74e"
+    },
+    "ui": {
+      "path": "reference/plan_v1.1/UI_STAGE_INTEGRATION_MATRIX.csv",
+      "git_blob": "7099948f57de6d1dc2013d02ce599f118fa94a1d"
+    },
+    "fg": {
+      "path": "reference/plan_v1.1/FIELD_GATES_14.csv",
+      "git_blob": "6395cfdd96ac141526fa831b90b1902e9e8418e2"
+    }
+  },
+  "counts": {
+    "wbs": 130,
+    "rq": 114,
+    "tc": 114,
+    "scenarios": 52,
+    "ui": 10,
+    "field_gates": 14
+  },
+  "owner_issue_routing": {
+    "A0": {
+      "issue": 42,
+      "name": "A0",
+      "phase": "Architecture/Contract/Release"
+    },
+    "A1": {
+      "issue": 43,
+      "name": "Agent01"
+    },
+    "A5": {
+      "issue": 43,
+      "name": "Agent01"
+    },
+    "A2": {
+      "issue": 44,
+      "name": "Agent02"
+    },
+    "A3": {
+      "issue": 44,
+      "name": "Agent02"
+    },
+    "A4": {
+      "issue": 45,
+      "name": "Agent03"
+    },
+    "A6": {
+      "issue": 45,
+      "name": "Agent03"
+    },
+    "A8": {
+      "issue": 46,
+      "name": "Agent04"
+    },
+    "A9": {
+      "issue": 46,
+      "name": "Agent04"
+    },
+    "A10": {
+      "issue": 47,
+      "name": "Agent05"
+    },
+    "A7": {
+      "issue": 48,
+      "name": "Agent06"
+    }
+  },
+  "wbs": [
+    {
+      "id": "W001",
+      "phase": "S00",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [],
+      "priority": "P0",
+      "title": "冻结v2.0文件哈希与来源",
+      "acceptance": "验收根目录及原始包SHA256可复算",
+      "ledger_status": "VERIFIED",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W002",
+      "phase": "S00",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W001"
+      ],
+      "priority": "P0",
+      "title": "整理旧事实与新设计差异",
+      "acceptance": "D1030/D1000及扫码冲突不被默认裁决",
+      "ledger_status": "VERIFIED",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W003",
+      "phase": "S00",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W001"
+      ],
+      "priority": "P0",
+      "title": "拆分21模块职责与目录所有权",
+      "acceptance": "21模块唯一主Owner、依赖方向无环",
+      "ledger_status": "IMPLEMENTED_PENDING_A10_REVIEW",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W004",
+      "phase": "S00",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W003"
+      ],
+      "priority": "P0",
+      "title": "冻结领域DTO与事件契约v1",
+      "acceptance": "主从Envelope和IDs有合同测试",
+      "ledger_status": "DRAFT_NOT_FROZEN",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W005",
+      "phase": "S00",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W001"
+      ],
+      "priority": "P0",
+      "title": "逐项映射114需求与验收",
+      "acceptance": "114项全覆盖、78P0/36P1可追溯",
+      "ledger_status": "NOT_STARTED",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W006",
+      "phase": "S00",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W002"
+      ],
+      "priority": "P0",
+      "title": "梳理45信号与14现场门禁",
+      "acceptance": "7 BLOCKED+7 OPEN且生产写全禁用",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W007",
+      "phase": "S00",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W001"
+      ],
+      "priority": "P0",
+      "title": "复核SDK和编译ABI",
+      "acceptance": "Qt Quick/QML及Windows QtQuickControls2/核心插件经SDK实际清点，至少构建QML hello并列出未测目标；ABI/版本一致",
+      "ledger_status": "LINUX_ONLY_EVIDENCE_AVAILABLE",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W008",
+      "phase": "S00",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W002"
+      ],
+      "priority": "P0",
+      "title": "模拟/实机安全威胁评审",
+      "acceptance": "无需用户确认无法连实机PLC",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W009",
+      "phase": "S00",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W005"
+      ],
+      "priority": "P0",
+      "title": "量化模拟基准与未知现场SLO",
+      "acceptance": "不把模拟速度说成实际产线指标",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W010",
+      "phase": "S00",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W004",
+        "W005"
+      ],
+      "priority": "P0",
+      "title": "确定协作冻结/ADR/PR协议",
+      "acceptance": "公共合同仅经A0审批升级",
+      "ledger_status": "PARTIAL_ZIP_HANDOFF_PREPARED",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W011",
+      "phase": "S01",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W007",
+        "W010"
+      ],
+      "priority": "P0",
+      "title": "搭建跨平台CMake/Presets/CI",
+      "acceptance": "Linux C++20/Qt Quick Debug和Release可构建；Windows QtQuick模块缺失须阻断，不以Qt Widgets编译代替",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W012",
+      "phase": "S01",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W004",
+        "W011"
+      ],
+      "priority": "P0",
+      "title": "实现领域ID与状态枚举",
+      "acceptance": "标识不可混用且构建合同自测",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W013",
+      "phase": "S01",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W012"
+      ],
+      "priority": "P0",
+      "title": "实现Schema序列化与合同回归",
+      "acceptance": "旧版本拒绝或协商、未知字段不默默篡改",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W014",
+      "phase": "S01",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W011",
+        "W012"
+      ],
+      "priority": "P0",
+      "title": "搭建双角色Core与DI启动",
+      "acceptance": "两个真实进程同一二进制以不同role独立启动，owner A1 独占 apps/aoi-core/**",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W015",
+      "phase": "S01",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W011",
+        "W013"
+      ],
+      "priority": "P0",
+      "title": "搭建Qt Quick/QML Shell",
+      "acceptance": "无Core时提示未连接且不崩溃",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W016",
+      "phase": "S01",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W013",
+        "W014"
+      ],
+      "priority": "P0",
+      "title": "本机IPC读查询/订阅/命令",
+      "acceptance": "UI与Core真实IPC；匿名/未知修改命令统一拒绝并留审计，无RBAC期间只能安全只读",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W017",
+      "phase": "S01",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W014"
+      ],
+      "priority": "P0",
+      "title": "实现受控有界生产队列和生命周期",
+      "acceptance": "callback无IO与UI回压；队列故障有事件",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W018",
+      "phase": "S01",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W011",
+        "W012"
+      ],
+      "priority": "P0",
+      "title": "建立SQLite迁移与本机数据边界",
+      "acceptance": "双机不共享SQLite，迁移失败留证",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W019",
+      "phase": "S01",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W012",
+        "W018"
+      ],
+      "priority": "P0",
+      "title": "统一日志与审计事件封套",
+      "acceptance": "字段关联、脱敏、轮转限额、错误有日志",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W020",
+      "phase": "S01",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W014",
+        "W015"
+      ],
+      "priority": "P0",
+      "title": "编写仿真运行管理器CLI",
+      "acceptance": "可分别启停主从Core/两UI/虚拟PLC",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W021",
+      "phase": "S01",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W008",
+        "W014"
+      ],
+      "priority": "P0",
+      "title": "实现编译时及运行时IO隔离",
+      "acceptance": "sim启动解析IPv4/IPv6/域名后非回环一律拒绝；如无OS级隔离证据不得称外联不可能",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W022",
+      "phase": "S01",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W011",
+        "W013"
+      ],
+      "priority": "P0",
+      "title": "CI合并质量门与契约检查",
+      "acceptance": "缺校验与日志不得合并main",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W023",
+      "phase": "S02",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W013",
+        "W021"
+      ],
+      "priority": "P0",
+      "title": "虚拟PLC FINS/UDP最小协议栈",
+      "acceptance": "真实UDP请求响应的ID/SID/长度校验",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W024",
+      "phase": "S02",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W023"
+      ],
+      "priority": "P0",
+      "title": "实现FINS WORD/BADC/BA编解码",
+      "acceptance": "1/2WORD浮点和条码NUL/CR回归",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W025",
+      "phase": "S02",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W006",
+        "W023"
+      ],
+      "priority": "P0",
+      "title": "45条信号只读字典和冲突扫描",
+      "acceptance": "45信号字段完整，D1013/D1000/D1030/D2000重叠风险可见",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W026",
+      "phase": "S02",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W021",
+        "W025"
+      ],
+      "priority": "P0",
+      "title": "写入授权网关/模拟物理隔离",
+      "acceptance": "生产默认拒绝；模拟只可写virtual端点",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W027",
+      "phase": "S02",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W023",
+        "W024"
+      ],
+      "priority": "P0",
+      "title": "模拟PLC扫码/触发/出料的分支时序",
+      "acceptance": "CamDone、D1016和D2099语义独立",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W028",
+      "phase": "S02",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W014",
+        "W017"
+      ],
+      "priority": "P0",
+      "title": "模拟7台海康面阵SDK",
+      "acceptance": "UserSet/参数目标与读回/回调/断开/重连",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W029",
+      "phase": "S02",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W014",
+        "W017"
+      ],
+      "priority": "P0",
+      "title": "模拟2套Itek采集卡",
+      "acceptance": "一设备一原帧/共享触发/双通道关联",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W030",
+      "phase": "S02",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W028",
+        "W029"
+      ],
+      "priority": "P0",
+      "title": "封装帧内存所有权与有界池",
+      "acceptance": "SDK复用缓冲不污染仍在处理的帧",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W031",
+      "phase": "S02",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W028",
+        "W029"
+      ],
+      "priority": "P0",
+      "title": "准备可复现采集图集/元数据",
+      "acceptance": "seed可控、标出模拟图/通道/工件",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W032",
+      "phase": "S02",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W028",
+        "W029"
+      ],
+      "priority": "P0",
+      "title": "模拟读回/掉帧/超时/丢行",
+      "acceptance": "定点故障返回可复现SDK错误",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W033",
+      "phase": "S02",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W016",
+        "W018",
+        "W020",
+        "W021",
+        "W023",
+        "W028",
+        "W029"
+      ],
+      "priority": "P0",
+      "title": "双机五进程联动脚手架",
+      "acceptance": "真实五进程、两个SQLite WAL独立且UI↔Core IPC可连；非回环目标被拒绝；端口/进程证据可复核",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W034",
+      "phase": "S02",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W027",
+        "W031",
+        "W033"
+      ],
+      "priority": "P0",
+      "title": "确定性场景驱动/时间注入",
+      "acceptance": "规范化业务事件摘要同seed可复算；排除UTC/PID/临时路径等非确定字段并使用因果屏障避免线程交错漂移",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W035",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W017",
+        "W018",
+        "W012"
+      ],
+      "priority": "P0",
+      "title": "唯一工件与槽位账本",
+      "acceptance": "同条码多件不撞；无可信槽位不猜",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W036",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W030",
+        "W035",
+        "W027"
+      ],
+      "priority": "P0",
+      "title": "CaptureExpected与帧唯一绑定",
+      "acceptance": "使用可审计的CaptureExpected和合成触发序列/槽位证据关联，SIM专用扩展不冒充现役PLC字段；歧义帧隔离",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W037",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W036"
+      ],
+      "priority": "P0",
+      "title": "Epoch/重拍/乱序隔离状态机",
+      "acceptance": "旧Epoch和旧Attempt不被重计",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W038",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W017",
+        "W036"
+      ],
+      "priority": "P0",
+      "title": "有界调度和取消超时",
+      "acceptance": "不同工件并行、UI阻塞不影响检测",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W039",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W038"
+      ],
+      "priority": "P0",
+      "title": "工位执行/质量双轴状态",
+      "acceptance": "NG≠ERROR≠MISSING，缺图不默认OK",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W040",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W037",
+        "W039"
+      ],
+      "priority": "P0",
+      "title": "完整通道预期集及最终汇总",
+      "acceptance": "10检测通道+定位前置；缺一不OK",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W041",
+      "phase": "S03",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W035",
+        "W024"
+      ],
+      "priority": "P0",
+      "title": "上料条码与末端核码来源抽象",
+      "acceptance": "raw与normalized版本保存；错码阻断",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W042",
+      "phase": "S03",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W013",
+        "W014"
+      ],
+      "priority": "P0",
+      "title": "主从协议握手/版本鉴权",
+      "acceptance": "双机握手具认证与重放负测，跨机事件不用UTC推因果；SIM凭据不得复用生产",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W043",
+      "phase": "S03",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W018",
+        "W042"
+      ],
+      "priority": "P0",
+      "title": "耐久Outbox/Inbox/PERSISTED_ACK",
+      "acceptance": "断电/ACK丢失不重复业务效果",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W044",
+      "phase": "S03",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W043"
+      ],
+      "priority": "P0",
+      "title": "重试/死信/流控/旧Epoch拒绝",
+      "acceptance": "断网60秒重连后去重、隔离迟到数据",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W045",
+      "phase": "S03",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W035",
+        "W042",
+        "W043"
+      ],
+      "priority": "P0",
+      "title": "主从工件与结果镜像投递",
+      "acceptance": "业务消息使用可靠持久Peer通道；从机只上报本侧结果不写Final；完成与ACK不同",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W046",
+      "phase": "S03",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W026",
+        "W027",
+        "W036"
+      ],
+      "priority": "P0",
+      "title": "采图与CamDone握手分离",
+      "acceptance": "完成=2不是OK，单组线扫一次ACK",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W047",
+      "phase": "S03",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W026",
+        "W040",
+        "W041"
+      ],
+      "priority": "P0",
+      "title": "D1016/D2099出料/码分支模拟",
+      "acceptance": "正常和失败不同顺序可校验",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W048",
+      "phase": "S04",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W026",
+        "W057"
+      ],
+      "priority": "P0",
+      "title": "定位XYU仅模拟写+blocked真实映射",
+      "acceptance": "FG-01未确认时真实坐标写拒绝",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W049",
+      "phase": "S04",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W033",
+        "W035",
+        "W039",
+        "W040",
+        "W043",
+        "W045",
+        "W046",
+        "W047",
+        "W048",
+        "W051",
+        "W055",
+        "W058",
+        "W059",
+        "W060",
+        "W061",
+        "W062",
+        "W063"
+      ],
+      "priority": "P0",
+      "title": "首个端到端双机模拟闭环",
+      "acceptance": "每件11路与线扫父资产关联、模拟结果图可读可索引、跨机事务可追溯且缺图不OK、故障不伪造成功",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W050",
+      "phase": "S04",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W030",
+        "W031"
+      ],
+      "priority": "P0",
+      "title": "图像输入规格与OpenCV5处理",
+      "acceptance": "源图hash稳定，异常格式拒绝",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W051",
+      "phase": "S04",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W029",
+        "W050"
+      ],
+      "priority": "P0",
+      "title": "线扫双路分行镜像旋转",
+      "acceptance": "8200x15000拆7500/7499行，主从方向不同",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W052",
+      "phase": "S04",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W050",
+        "W051"
+      ],
+      "priority": "P0",
+      "title": "Sensor/Detection/Display ROI变换",
+      "acceptance": "ROI外NG仍计数，显示ROI不改检测",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W053",
+      "phase": "S04",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W012",
+        "W018"
+      ],
+      "priority": "P0",
+      "title": "模型仓库/sha/shape/类别核验",
+      "acceptance": "模型异常/类表缺失禁止产线OK",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W054",
+      "phase": "S04",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W052",
+        "W053"
+      ],
+      "priority": "P0",
+      "title": "固定步骤算法流水线",
+      "acceptance": "可组合算法链输出像素和有坐标系的图元；失败分支有错误状态且不能通过显示ROI掩盖NG",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W055",
+      "phase": "S04",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W054",
+        "W031"
+      ],
+      "priority": "P0",
+      "title": "可重复模拟算法Provider",
+      "acceptance": "fixture真值与注入ERROR可复现",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W056",
+      "phase": "S04",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W053",
+        "W054"
+      ],
+      "priority": "P1",
+      "title": "OpenVINO通用ONNX/IR真实烟测",
+      "acceptance": "使用既有YOLO回归，非电池缺陷精度证明",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W057",
+      "phase": "S04",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W050",
+        "W052"
+      ],
+      "priority": "P0",
+      "title": "离线定位坐标和补偿链",
+      "acceptance": "X/Y/U变换版次与单位可查；无设备写",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W058",
+      "phase": "S04",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "worker": "Agent01",
+      "depends_on": [
+        "W039",
+        "W054",
+        "W055"
+      ],
+      "priority": "P0",
+      "title": "完整StationRules与失败传播",
+      "acceptance": "OpenCV实际渲染的结果图、bbox/缺陷几何数据与其hash一致；模型ERROR/NG/MISSING保持区分",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W059",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W018",
+        "W030"
+      ],
+      "priority": "P0",
+      "title": "无损资产PENDING/AVAILABLE写入",
+      "acceptance": "原始像素无损回读，结果图+overlay独立索引；断电中间态可恢复不能伪AVAILABLE",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W060",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W051",
+        "W059"
+      ],
+      "priority": "P0",
+      "title": "线扫一帧父资产两路索引",
+      "acceptance": "原始123MB一份引用CH08/09或CH10/11",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W061",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W018",
+        "W035"
+      ],
+      "priority": "P0",
+      "title": "DB工件/结果/索引及迁移",
+      "acceptance": "重试不重复计结果、跨机DB独立",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W062",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W043",
+        "W061"
+      ],
+      "priority": "P1",
+      "title": "业务事件与Outbox单事务落库",
+      "acceptance": "杀进程重启后结果可重发无丢",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W063",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W061",
+        "W040"
+      ],
+      "priority": "P0",
+      "title": "查询投影与分页/订阅缓存",
+      "acceptance": "按WorkpieceId定位全通道和状态",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W064",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W059",
+        "W061"
+      ],
+      "priority": "P0",
+      "title": "一致性备份及灾难恢复",
+      "acceptance": "WAL+图片+方案整体复原且验hash",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W065",
+      "phase": "S04",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W059",
+        "W064"
+      ],
+      "priority": "P0",
+      "title": "磁盘满/损坏时安全策略",
+      "acceptance": "不丢原图仍宣称成功；触发HOLD/报警",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W066",
+      "phase": "S04",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W030",
+        "W051",
+        "W059"
+      ],
+      "priority": "P0",
+      "title": "高内存真实尺寸线扫压力",
+      "acceptance": "pool高水位/中断/内存泄漏日志",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W067",
+      "phase": "S04",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W016",
+        "W058",
+        "W063"
+      ],
+      "priority": "P0",
+      "title": "图片预览缓存与轻量IPC",
+      "acceptance": "Core仅提供真实处理结果图预览和帧龄；不把原图或UI本地硬编码模拟结果当生产数据",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W068",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W015",
+        "W067"
+      ],
+      "priority": "P0",
+      "title": "4x3 11结果卡+第12汇总",
+      "acceptance": "2K和1080p同屏不滚动",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W069",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W068"
+      ],
+      "priority": "P0",
+      "title": "每卡Freshness/Host/Workpiece",
+      "acceptance": "历史帧/断线/缺图不显示绿色LIVE",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W070",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W052",
+        "W068"
+      ],
+      "priority": "P0",
+      "title": "大图平移缩放和矢量缺陷联动",
+      "acceptance": "不重解码原图、坐标/缺陷框一致",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W071",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W063",
+        "W068"
+      ],
+      "priority": "P0",
+      "title": "同件11图集及查询",
+      "acceptance": "与实时各站最近图严格区分",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W072",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W025",
+        "W015"
+      ],
+      "priority": "P1",
+      "title": "整机交互地图层级场景",
+      "acceptance": "ST/设备/相机/通信线点选正确",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W073",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W025",
+        "W072"
+      ],
+      "priority": "P0",
+      "title": "PLC详细参数表编辑草稿",
+      "acceptance": "现值旧值草稿值分列，禁止即时写",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W074",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W072",
+        "W073",
+        "W019"
+      ],
+      "priority": "P0",
+      "title": "地图/表/日志联动路由",
+      "acceptance": "D1013/ST09互相选中且冲突红标",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W075",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W068",
+        "W052"
+      ],
+      "priority": "P0",
+      "title": "卡片齿轮直达工位配置只读UI/待授权命令",
+      "acceptance": "不丢产品/工位/通道上下文；G06未整合前保存/发布控件明确不可用且Core拒写",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W076",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W052",
+        "W075"
+      ],
+      "priority": "P0",
+      "title": "多层ROI画框及撤销/重做",
+      "acceptance": "ROI画框/拖动/坐标转换与撤销/重做可复现；W084之前仅本地草稿，禁止改Active",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W077",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W053",
+        "W075"
+      ],
+      "priority": "P0",
+      "title": "模型/相机/线扫共享参数页",
+      "acceptance": "相机目标/实际分列、线扫共享参数影响两路；W083/W084整合前只能待保存草稿，不得改生产",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W078",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W019",
+        "W074"
+      ],
+      "priority": "P0",
+      "title": "报警日志中心只读UI骨架与Trace跳转",
+      "acceptance": "无真实事件显示无数据/未就绪，不能硬编码假报警；G06后再验根报警聚合与ACK/CLEAR",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W079",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W063",
+        "W068"
+      ],
+      "priority": "P1",
+      "title": "基础实时计数与趋势界面/预留正式统计",
+      "acceptance": "无真实工件事件明确显示无数据；W100口径冻结后须在G07重新验收图表/良率/缺陷统计",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W080",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W068",
+        "W070"
+      ],
+      "priority": "P1",
+      "title": "DPI和高帧率渲染优化",
+      "acceptance": "1920/2560 100/125/150%DPI无遮挡",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W081",
+      "phase": "S05",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W016",
+        "W069",
+        "W070"
+      ],
+      "priority": "P0",
+      "title": "Core持续运行及UI重连",
+      "acceptance": "UI崩溃可重启，Core任务不受影响",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W082",
+      "phase": "S05",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W068",
+        "W080"
+      ],
+      "priority": "P0",
+      "title": "可重复UI操作和截图自动化",
+      "acceptance": "来源为真实运行Qt，非HTML截图",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W083",
+      "phase": "S06",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "worker": "Agent06",
+      "depends_on": [
+        "W012",
+        "W053",
+        "W025"
+      ],
+      "priority": "P0",
+      "title": "整机与产品配置schema",
+      "acceptance": "同模型不同产品独立阈值/ROI及不可变引用、完整机型schema与真实Hash验证",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W084",
+      "phase": "S06",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "worker": "Agent06",
+      "depends_on": [
+        "W083",
+        "W061"
+      ],
+      "priority": "P0",
+      "title": "按工位保存草稿与乐观锁",
+      "acceptance": "ProductA单站更改不影响B或Active",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W085",
+      "phase": "S06",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "worker": "Agent06",
+      "depends_on": [
+        "W084",
+        "W053",
+        "W055"
+      ],
+      "priority": "P0",
+      "title": "完整校验/模型hash/发布冻结",
+      "acceptance": "模型/标定/设备配置hash、必填DetectionROI和产品规则完全校验；不合格禁止Release",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W086",
+      "phase": "S06",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "worker": "Agent06",
+      "depends_on": [
+        "W085",
+        "W044",
+        "W032"
+      ],
+      "priority": "P0",
+      "title": "双机方案Staging与设备准备（非最终Prepared）",
+      "acceptance": "只确认两机设备准备结果；vPLC产品参数尚未回读前绝不可报告PREPARED_BOTH或生产READY",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W087",
+      "phase": "S06",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "worker": "Agent06",
+      "depends_on": [
+        "W086",
+        "W037",
+        "W088"
+      ],
+      "priority": "P0",
+      "title": "两机Commit/Epoch/回滚核验",
+      "acceptance": "单侧失败/断线/PLC读回不符一律FAILED_SAFE；旧Release恢复须证实设备+PLC读回一致",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W088",
+      "phase": "S06",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W085",
+        "W086",
+        "W026"
+      ],
+      "priority": "P0",
+      "title": "模拟PLC产品尺寸双侧写回",
+      "acceptance": "FINS FLOAT32每量2WORD，主/从D3010..20完整读回验证及超时/错误拒绝PREPARED_BOTH",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W089",
+      "phase": "S06",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W008",
+        "W016"
+      ],
+      "priority": "P0",
+      "title": "核心RBAC与会话/命令守卫",
+      "acceptance": "无/过期会话、未知IPC命令、越权操作全部后端拒绝；完成授权后才能解锁修改类命令",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W090",
+      "phase": "S06",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W084",
+        "W089"
+      ],
+      "priority": "P0",
+      "title": "高风险两人审批和变更审计",
+      "acceptance": "管理员也不能绕过FG/互锁",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W091",
+      "phase": "S06",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W019",
+        "W038"
+      ],
+      "priority": "P1",
+      "title": "23报警字典和根因聚合",
+      "acceptance": "Where/What/Impact/How与因果关系",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W092",
+      "phase": "S06",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W091",
+        "W089"
+      ],
+      "priority": "P1",
+      "title": "报警ACK/CLEAR独立条件",
+      "acceptance": "ACK不会把真实故障变绿",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W093",
+      "phase": "S06",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W091",
+        "W064"
+      ],
+      "priority": "P1",
+      "title": "事故包与敏感信息脱敏",
+      "acceptance": "日志和图像索引可查、无凭据泄漏",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W094",
+      "phase": "S06",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W076",
+        "W077",
+        "W083",
+        "W084",
+        "W087",
+        "W089",
+        "W090"
+      ],
+      "priority": "P0",
+      "title": "草稿版本对比+一键换型UI",
+      "acceptance": "Qt保存后重开可读A草稿且B/Active不变；发布进度取Core状态，不可绕过审批或PLC互锁",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W095",
+      "phase": "S06",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W086",
+        "W087",
+        "W088",
+        "W090"
+      ],
+      "priority": "P0",
+      "title": "换型中断/失败/回滚专项测试",
+      "acceptance": "半机新方案不READY、读回错不报成功",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W096",
+      "phase": "S07",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W054",
+        "W059",
+        "W089"
+      ],
+      "priority": "P0",
+      "title": "离线实验独立进程/账户/DB",
+      "acceptance": "无任何生产PLC凭据/套接字/计件",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W097",
+      "phase": "S07",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W096",
+        "W071"
+      ],
+      "priority": "P0",
+      "title": "单图/批量/同件11图重跑",
+      "acceptance": "缺图保持MISSING、文件hash验证",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W098",
+      "phase": "S07",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W097",
+        "W084"
+      ],
+      "priority": "P1",
+      "title": "旧新方案A/B对照与可解释报告",
+      "acceptance": "无标注真值不出精度数字",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W099",
+      "phase": "S07",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W056",
+        "W097"
+      ],
+      "priority": "P1",
+      "title": "模型/类别/真值样本兼容验证",
+      "acceptance": "示例YOLO不是电池生产精度签收",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W100",
+      "phase": "S07",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W063",
+        "W040"
+      ],
+      "priority": "P1",
+      "title": "日周首检良率/重拍不重复",
+      "acceptance": "周良率按OK总数/有效件总数",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W101",
+      "phase": "S07",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W100",
+        "W053"
+      ],
+      "priority": "P1",
+      "title": "缺陷字典/人工复判追加记录",
+      "acceptance": "0空料1良品排除；首次事件不覆盖",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W102",
+      "phase": "S07",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W064",
+        "W071"
+      ],
+      "priority": "P0",
+      "title": "同件11图+原图追溯导出",
+      "acceptance": "单件从扫码到PLC均可查且哈希核对",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W103",
+      "phase": "S07",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "worker": "Agent04",
+      "depends_on": [
+        "W091",
+        "W092",
+        "W102"
+      ],
+      "priority": "P1",
+      "title": "日志搜索/报警一键排障",
+      "acceptance": "ST09/D1013可回溯帧与root alarm",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W104",
+      "phase": "S07",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W005",
+        "W095",
+        "W097",
+        "W100",
+        "W103"
+      ],
+      "priority": "P0",
+      "title": "114用例执行驱动与证据格式",
+      "acceptance": "SIM仅NOT_RUN/SIM_PASS/SIM_FAIL/SIM_BLOCKED；Field仅FIELD_PENDING/FIELD_PASS/FIELD_FAIL；模拟不适用需审批豁免原因",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W105",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W104"
+      ],
+      "priority": "P0",
+      "title": "21类异常基线与扩展场景",
+      "acceptance": "每种故障有注入、观测、断言、日志",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W106",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W044",
+        "W062",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "双机断线/ACK丢失/DB故障注入",
+      "acceptance": "复连不重复计数，不无条件假OK",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W107",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W032",
+        "W037",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "掉帧/重拍/晚帧/内存复用",
+      "acceptance": "不串件、原始图像hash稳定",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W108",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W026",
+        "W088",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "PLC禁写/权限/编码/地址冲突负测",
+      "acceptance": "生产配置无真实写且SIM隔离未破",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W109",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W066",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "并发件数/实际123MB压力与耗时",
+      "acceptance": "不虚构现场节拍阈值",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W110",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W082",
+        "W104"
+      ],
+      "priority": "P0",
+      "title": "完整UI六一级工作区回归",
+      "acceptance": "11卡/地图/表/诊断/试跑/换型闭环",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W111",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W090",
+        "W105"
+      ],
+      "priority": "P1",
+      "title": "安全威胁/权限/输入模糊测试",
+      "acceptance": "无任意D写/任意文件读/越权换型",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W112",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W064",
+        "W102",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "断电/存储/恢复/备份演练",
+      "acceptance": "PENDING重建且跨机资产不误挂",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W113",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W087",
+        "W095",
+        "W105"
+      ],
+      "priority": "P0",
+      "title": "换型发布跨机异常注入",
+      "acceptance": "双机Hash/Epoch不一致必须HOLD",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W114",
+      "phase": "S08",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W104",
+        "W106",
+        "W107",
+        "W108",
+        "W109",
+        "W110",
+        "W111",
+        "W112",
+        "W113"
+      ],
+      "priority": "P0",
+      "title": "逐项重跑114证据与缺口标注",
+      "acceptance": "114需求每项SIM适用断言有独立执行证据且P0全部通过；FIELD_PENDING不转换为SIM_PASS或现场PASS",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W115",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W110",
+        "W114"
+      ],
+      "priority": "P0",
+      "title": "Linux真实GUI与业务回归",
+      "acceptance": "真应用启停、UI/Core进程隔离",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W116",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W007",
+        "W115"
+      ],
+      "priority": "P0",
+      "title": "Windows x64 Qt/C++独立构建",
+      "acceptance": "PE x64 ABI/版本/路径可审计",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W117",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W116"
+      ],
+      "priority": "P0",
+      "title": "Qt平台/OpenCV/OpenVINO插件闭包",
+      "acceptance": "真实干净解压启动Qt Quick双UI与双Core；qwindows.dll、QtQuick/QML插件及ONNX/IR前端完整，真实ONNX加载",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W118",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W120"
+      ],
+      "priority": "P0",
+      "title": "Wine下五进程GUI/双机模拟",
+      "acceptance": "从已保存Windows ZIP实测Wine下5 PE进程/双QML窗口/vPLC通讯/模型烟测；失败保留产物但不得报PASS",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W119",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W120"
+      ],
+      "priority": "P0",
+      "title": "用户Windows本机模拟验证手册",
+      "acceptance": "无外部Windows证据时标NOT_VERIFIED",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W120",
+      "phase": "S09",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W115",
+        "W117"
+      ],
+      "priority": "P0",
+      "title": "源码/发布包/许可证/哈希/迁移包",
+      "acceptance": "SourceZIP与WinZIP均可从干净目录重建/启动，许可、sha256、QML/QtQuick插件、迁移资源齐全；必须先于Wine保存",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W121",
+      "phase": "S09",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W114",
+        "W120",
+        "W118"
+      ],
+      "priority": "P0",
+      "title": "两轮代码及产物验收复核",
+      "acceptance": "第1轮接口/源/构建审计+第2轮业务/安全/模拟场景复审均有独立签署与失败复测，不能用PLAN审核代替",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W122",
+      "phase": "S09",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W119",
+        "W120",
+        "W121"
+      ],
+      "priority": "P0",
+      "title": "SIM_READY版本签收",
+      "acceptance": "全部SIM范围P0及签收条件有真实可复查记录；未完成场景/Win PE验证不能伪装SIM_READY，14个FG仍FIELD_PENDING",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "FULL_OFFLINE_SCOPE",
+      "overnight_verified": false
+    },
+    {
+      "id": "W123",
+      "phase": "HARDWARE",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W122"
+      ],
+      "priority": "P1",
+      "title": "海康SDK实机适配/7台读回",
+      "acceptance": "7台SN/UserSet/TriggerSource逐一核验",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W124",
+      "phase": "HARDWARE",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W122"
+      ],
+      "priority": "P1",
+      "title": "Itek板卡实机适配/双光方向",
+      "acceptance": "实际Full/FrameLost/拆路方向签证",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W125",
+      "phase": "HARDWARE",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W122"
+      ],
+      "priority": "P1",
+      "title": "现役PLC只读抓取与信号复核",
+      "acceptance": "D1030/D1000/D1013/字长真实消费确认",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W126",
+      "phase": "HARDWARE",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "worker": "Agent02",
+      "depends_on": [
+        "W125",
+        "W123",
+        "W124"
+      ],
+      "priority": "P1",
+      "title": "维护状态逐站白名单写测",
+      "acceptance": "审批互锁和限额状态下真实演练",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W127",
+      "phase": "HARDWARE",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "worker": "Agent03",
+      "depends_on": [
+        "W123",
+        "W124"
+      ],
+      "priority": "P1",
+      "title": "真实电池模型/标注图集及标定",
+      "acceptance": "精度/误漏检符合工厂签署指标",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W128",
+      "phase": "HARDWARE",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "worker": "Agent05",
+      "depends_on": [
+        "W126",
+        "W127"
+      ],
+      "priority": "P1",
+      "title": "真实节拍/IO/磁盘与稳定运行",
+      "acceptance": "真实工艺SLO/RPO签署并满足",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W129",
+      "phase": "HARDWARE",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W125",
+        "W126",
+        "W127",
+        "W128"
+      ],
+      "priority": "P1",
+      "title": "14现场门禁闭环审查",
+      "acceptance": "14项均有有效现场证据方可现场批准",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    },
+    {
+      "id": "W130",
+      "phase": "HARDWARE",
+      "owner": "A0",
+      "assigned_issue": 42,
+      "worker": "A0",
+      "depends_on": [
+        "W129"
+      ],
+      "priority": "P1",
+      "title": "产线分步切换/试生产/回退",
+      "acceptance": "真实Windows+PLC/机器人+质量签核",
+      "ledger_status": "NOT_VERIFIED_IN_LEDGER",
+      "overnight_track": "BLOCKED_HARDWARE_FIELD_ONLY",
+      "overnight_verified": false
+    }
+  ],
+  "requirements": [
+    {
+      "id": "RQ-001",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W068",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-001"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-002",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W080",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-002"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-003",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W067",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-003"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-004",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W070",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-004"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-005",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W069",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-005"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-006",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W069",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-006"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-007",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W071",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-007"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-008",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W075",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-008"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-009",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W052",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-009"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-010",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W076",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-010"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-011",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W053",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-011"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-012",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W029",
+      "supporting_wbs": "W051,W060",
+      "tc_ids": [
+        "TC-012"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-013",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W051",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-013"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-014",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W051",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-014"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-015",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W051",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-015"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-016",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W028",
+      "supporting_wbs": "W032,W077",
+      "tc_ids": [
+        "TC-016"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-017",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W036",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-017"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-018",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W046",
+      "supporting_wbs": "W039,W040",
+      "tc_ids": [
+        "TC-018"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-019",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W024",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-019"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-020",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W024",
+      "supporting_wbs": "W025,W041",
+      "tc_ids": [
+        "TC-020"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-021",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W025",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-021"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-022",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W026",
+      "supporting_wbs": "W048,W108",
+      "tc_ids": [
+        "TC-022"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-023",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W025",
+      "supporting_wbs": "W026,W108",
+      "tc_ids": [
+        "TC-023"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-024",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W047",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-024"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-025",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W047",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-025"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-026",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W014",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-026"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-027",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W081",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-027"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-028",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W035",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-028"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-029",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W043",
+      "supporting_wbs": "W044,W106",
+      "tc_ids": [
+        "TC-029"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-030",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W037",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-030"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-031",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W037",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-031"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-032",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W040",
+      "supporting_wbs": "W058,W114",
+      "tc_ids": [
+        "TC-032"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-033",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W039",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-033"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-034",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W041",
+      "supporting_wbs": "W047,W107",
+      "tc_ids": [
+        "TC-034"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-035",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W062",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-035"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-036",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W059",
+      "supporting_wbs": "W064,W112",
+      "tc_ids": [
+        "TC-036"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-037",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W060",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-037"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-038",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W059",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-038"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-039",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W065",
+      "supporting_wbs": "W091,W109",
+      "tc_ids": [
+        "TC-039"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-040",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "priority": "P0",
+      "primary_wbs": "W033",
+      "supporting_wbs": "W028,W029,W049,W051,W060,W068",
+      "tc_ids": [
+        "TC-040"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-041",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W038",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-041"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-042",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W083",
+      "supporting_wbs": "W084,W085",
+      "tc_ids": [
+        "TC-042"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-043",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W084",
+      "supporting_wbs": "W073,W076,W094",
+      "tc_ids": [
+        "TC-043"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-044",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W084",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-044"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-045",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W086",
+      "supporting_wbs": "W087,W088,W095",
+      "tc_ids": [
+        "TC-045"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-046",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W087",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-046"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-047",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W087",
+      "supporting_wbs": "W095,W113",
+      "tc_ids": [
+        "TC-047"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-048",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W074",
+      "supporting_wbs": "W072,W073",
+      "tc_ids": [
+        "TC-048"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-049",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W074",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-049"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-050",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W073",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-050"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-051",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W073",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-051"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-052",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W091",
+      "supporting_wbs": "W078,W103",
+      "tc_ids": [
+        "TC-052"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-053",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W092",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-053"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-054",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W091",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-054"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-055",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W103",
+      "supporting_wbs": "W019,W062",
+      "tc_ids": [
+        "TC-055"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-056",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W100",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-056"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-057",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W101",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-057"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-058",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W096",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-058"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-059",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W089",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-059"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-060",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W090",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-060"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-061",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W102",
+      "supporting_wbs": "W059",
+      "tc_ids": [
+        "TC-061"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-062",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W080",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-062"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-063",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W072",
+      "supporting_wbs": "W074,W073",
+      "tc_ids": [
+        "TC-063"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-064",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W074",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-064"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-065",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W025",
+      "supporting_wbs": "W073,W074",
+      "tc_ids": [
+        "TC-065"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-066",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W025",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-066"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-067",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W073",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-067"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-068",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W073",
+      "supporting_wbs": "W026,W108",
+      "tc_ids": [
+        "TC-068"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-069",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W091",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-069"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-070",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W091",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-070"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-071",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W092",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-071"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-072",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W078",
+      "supporting_wbs": "W091,W103",
+      "tc_ids": [
+        "TC-072"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-073",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W019",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-073"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-074",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W093",
+      "supporting_wbs": "W103,W019",
+      "tc_ids": [
+        "TC-074"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-075",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "priority": "P1",
+      "primary_wbs": "W042",
+      "supporting_wbs": "W019,W103",
+      "tc_ids": [
+        "TC-075"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-076",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W019",
+      "supporting_wbs": "W093",
+      "tc_ids": [
+        "TC-076"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-077",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W059",
+      "supporting_wbs": "W058,W060",
+      "tc_ids": [
+        "TC-077"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-078",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W060",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-078"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-079",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W059",
+      "supporting_wbs": "W064,W112",
+      "tc_ids": [
+        "TC-079"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-080",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W059",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-080"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-081",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W064",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-081"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-082",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W072",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-082"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-083",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P1",
+      "primary_wbs": "W094",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-083"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-084",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P0",
+      "primary_wbs": "W083",
+      "supporting_wbs": "W053,W084",
+      "tc_ids": [
+        "TC-084"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-085",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W029",
+      "supporting_wbs": "W077,W088",
+      "tc_ids": [
+        "TC-085"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-086",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W054",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-086"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-087",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W052",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-087"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-088",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W076",
+      "supporting_wbs": "W052,W058,W094",
+      "tc_ids": [
+        "TC-088"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-089",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P0",
+      "primary_wbs": "W084",
+      "supporting_wbs": "W075,W076,W094",
+      "tc_ids": [
+        "TC-089"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-090",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P1",
+      "primary_wbs": "W084",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-090"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-091",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P0",
+      "primary_wbs": "W085",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-091"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-092",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "priority": "P0",
+      "primary_wbs": "W087",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-092"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-093",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W032",
+      "supporting_wbs": "W091,W107",
+      "tc_ids": [
+        "TC-093"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-094",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W027",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-094"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-095",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W024",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-095"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-096",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W048",
+      "supporting_wbs": "W021,W026,W108",
+      "tc_ids": [
+        "TC-096"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-097",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W035",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-097"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-098",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W037",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-098"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-099",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W043",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-099"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-100",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "priority": "P1",
+      "primary_wbs": "W043",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-100"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-101",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "priority": "P0",
+      "primary_wbs": "W030",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-101"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-102",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W081",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-102"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-103",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W096",
+      "supporting_wbs": "W089,W104",
+      "tc_ids": [
+        "TC-103"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-104",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W098",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-104"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-105",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W100",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-105"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-106",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "priority": "P0",
+      "primary_wbs": "W101",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-106"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-107",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "priority": "P1",
+      "primary_wbs": "W082",
+      "supporting_wbs": "W118",
+      "tc_ids": [
+        "TC-107"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-108",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W090",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-108"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-109",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W035",
+      "supporting_wbs": "W036,W045",
+      "tc_ids": [
+        "TC-109"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-110",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "priority": "P0",
+      "primary_wbs": "W044",
+      "supporting_wbs": "W043,W106",
+      "tc_ids": [
+        "TC-110"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-111",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W071",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-111"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-112",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W091",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-112"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-113",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "priority": "P0",
+      "primary_wbs": "W089",
+      "supporting_wbs": "",
+      "tc_ids": [
+        "TC-113"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "RQ-114",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "priority": "P1",
+      "primary_wbs": "W097",
+      "supporting_wbs": "W053,W059",
+      "tc_ids": [
+        "TC-114"
+      ],
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    }
+  ],
+  "scenarios": [
+    {
+      "id": "SC-001",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "related_wbs": [
+        "W049"
+      ],
+      "fault": "相邻两工件独立11通道正常处理",
+      "expected": "主机恰好两次FinalResult;从机结果已落库;每件11图对应一ID",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-002",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W035",
+        "W037"
+      ],
+      "fault": "两件使用完全相同raw_barcode",
+      "expected": "两件WorkpieceId不同且槽位/图像不串",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-003",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W069",
+        "W071"
+      ],
+      "fault": "11卡实时图片来自不同拍照时刻与工件",
+      "expected": "实时卡显示各自WorkpieceId;同件图库只有目标工件",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-004",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W036",
+        "W046"
+      ],
+      "fault": "SDK硬触发前帧后PLC请求",
+      "expected": "AcquisitionCoordinator唯一关联,无软件软触发误动作",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-005",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W036",
+        "W046"
+      ],
+      "fault": "先PLC请求后有效帧",
+      "expected": "合法deadline内一对一关联;过期标MISSING",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-006",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W032",
+        "W039",
+        "W107"
+      ],
+      "fault": "面阵无帧/SDK超时",
+      "expected": "站位MISSING/ERROR,不产生整料OK",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-007",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W030",
+        "W037",
+        "W107"
+      ],
+      "fault": "SDK FrameId重复或内存buffer复用",
+      "expected": "新帧不覆盖仍在推理/保存的图像;重复隔离",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-008",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W051",
+        "W060",
+        "W066"
+      ],
+      "fault": "线扫8200x15000拆分正常",
+      "expected": "shared capture group一帧,CH08/09或CH10/11双路分行7500/7499",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-009",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W032",
+        "W091",
+        "W107"
+      ],
+      "fault": "线扫丢行/帧损坏",
+      "expected": "两条派生通道检测状态受影响;无错误CamDone;报警",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-010",
+      "owner": "A3",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W032",
+        "W037",
+        "W107"
+      ],
+      "fault": "SDK掉线后迟帧到达并重连",
+      "expected": "旧Attempt/Epoch进入quarantine且不计结果",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-011",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W037",
+        "W040",
+        "W100"
+      ],
+      "fault": "重拍AttemptNo递增",
+      "expected": "保留原Attempt审计但Final只按有效Attempt",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-012",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W037",
+        "W043",
+        "W107"
+      ],
+      "fault": "上一Epoch帧晚于下一Epoch到达",
+      "expected": "不得补新Epoch的缺图;标隔离",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-013",
+      "owner": "A1",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W040",
+        "W049"
+      ],
+      "fault": "漏一个关键检测通道",
+      "expected": "最终状态HOLD/UNDECIDED,不写模拟OK",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-014",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W023",
+        "W024"
+      ],
+      "fault": "FINS WORD/2WORD float32 BADC测试矢量",
+      "expected": "报文长度/SID/endcode正确且解码与样例一致",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-015",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W024",
+        "W025",
+        "W108"
+      ],
+      "fault": "D2000旧读20WORD但PLC提供10WORD",
+      "expected": "原始raw_words保存,长度冲突警告,不猜后段零",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-016",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W025",
+        "W026",
+        "W108"
+      ],
+      "fault": "D1013双用途或D1000/D1030地址重叠",
+      "expected": "Registry红标且真实生产写入拒绝",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-017",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W039",
+        "W046",
+        "W047",
+        "W055"
+      ],
+      "fault": "CamDone=2但MockInference报NG",
+      "expected": "采图应答和最终D1016独立;不算整件OK",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-018",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W047",
+        "W108"
+      ],
+      "fault": "末端正常扫码完成",
+      "expected": "模拟 D1016(OK/NG)后D2099=2顺序符合被批准分支",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-019",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W041",
+        "W047",
+        "W108"
+      ],
+      "fault": "末端扫码失败或错位",
+      "expected": "D2099=3/4先于D1016=2,错误不可当NG缺陷数字",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-020",
+      "owner": "A2",
+      "assigned_issue": 44,
+      "related_wbs": [
+        "W021",
+        "W026",
+        "W108"
+      ],
+      "fault": "对非127.0.0.1端点尝试模拟写",
+      "expected": "连接/写被阻断且生成审计事件;不得有外向实际PLC UDP包",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-021",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W043",
+        "W044",
+        "W106"
+      ],
+      "fault": "断从机PeerLink60s后重连",
+      "expected": "本地Outbox重发,主机最终仅一次计数",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-022",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W043",
+        "W106"
+      ],
+      "fault": "相同MessageId相同hash重复发两次",
+      "expected": "接收端InboxDedup只应用一次但可再次ACK",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-023",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W043",
+        "W044",
+        "W106"
+      ],
+      "fault": "相同MessageId不同payload_hash",
+      "expected": "拒绝并报警,不静默覆盖原内容",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-024",
+      "owner": "A5",
+      "assigned_issue": 43,
+      "related_wbs": [
+        "W043",
+        "W062",
+        "W106"
+      ],
+      "fault": "ACK发出前或后Kill Slave Core",
+      "expected": "PERSISTED与APPLIED区分,重启无业务效果丢失或加倍",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-025",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W059",
+        "W064",
+        "W112"
+      ],
+      "fault": "AssetStore fsync后但DB提交前kill",
+      "expected": "启动可reconcile PENDING/孤儿,保留证据不伪AVAILABLE",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-026",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W059",
+        "W060"
+      ],
+      "fault": "无损压缩原图后重新解码",
+      "expected": "像素数值/位深/stride规范化规则的hash匹配",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-027",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W065",
+        "W091",
+        "W112"
+      ],
+      "fault": "磁盘满或图片损坏",
+      "expected": "不丢图却报告保存成功,生成HOLD/Alarm",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-028",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W064",
+        "W102",
+        "W112"
+      ],
+      "fault": "SQLite WAL运行中创建备份并异机恢复",
+      "expected": "完整数据与图片/Release/model hash能恢复且追溯查询无孤儿",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-029",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W052",
+        "W076",
+        "W110"
+      ],
+      "fault": "DetectionROI外检测框但DisplayROI裁掉",
+      "expected": "整料NG仍计且UI报画面外缺陷并支持全图定位",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-030",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W053",
+        "W058",
+        "W099"
+      ],
+      "fault": "模型不存在、shape不符、超时",
+      "expected": "站Result ERROR,最终不可OK,保存故障现场",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-031",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W096",
+        "W098",
+        "W104"
+      ],
+      "fault": "同一张源图用Draft与Active离线A/B",
+      "expected": "结果归OFFLINE schema,不上报vPLC不计产量",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-032",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "related_wbs": [
+        "W083",
+        "W084",
+        "W094"
+      ],
+      "fault": "产品A单站保存草稿后切B",
+      "expected": "A Draft变, B配置不变且Active未更改",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-033",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "related_wbs": [
+        "W084",
+        "W090"
+      ],
+      "fault": "多人同 base_revision 修改同一站",
+      "expected": "一方乐观锁失败,不会后写覆盖",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-034",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "related_wbs": [
+        "W086",
+        "W087",
+        "W088",
+        "W095"
+      ],
+      "fault": "换型From A To B 双机Prep+Readback+Commit",
+      "expected": "双方同Release/Epoch/设备目标值,打开Ready",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-035",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "related_wbs": [
+        "W087",
+        "W095",
+        "W113"
+      ],
+      "fault": "从机Prepared后断网或PLC readback不符",
+      "expected": "进入FAILED_SAFE/HOLD,不开放新料,不得仅DB回滚",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-036",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W089",
+        "W090",
+        "W111"
+      ],
+      "fault": "无权限用户直接发送IPC配置/写值命令",
+      "expected": "Core后端拒绝;有审计/报警;UI权限不可绕过",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-037",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W091",
+        "W092",
+        "W110"
+      ],
+      "fault": "报警已ACK而设备仍故障",
+      "expected": "Alarm remains ACTIVE直到恢复条件满足",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-038",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W019",
+        "W042",
+        "W103"
+      ],
+      "fault": "跨Master/Slave UTC时钟模拟偏移",
+      "expected": "保留时钟质量/因果序列号,不会用UTC比较顺序错配",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-039",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W081",
+        "W082",
+        "W110"
+      ],
+      "fault": "用户关闭重开Qt UI",
+      "expected": "Core持续处理真实11通道,UI重连快照无假LIVE",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-040",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W072",
+        "W073",
+        "W074",
+        "W110"
+      ],
+      "fault": "点击D1013信号表和设备地图热点",
+      "expected": "ST09设备/CH08/09/PLC连线互相定位且标风险",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-041",
+      "owner": "A6",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W100",
+        "W101",
+        "W114"
+      ],
+      "fault": "一块NG含多缺陷/重拍且重新统计",
+      "expected": "NG件数=1,缺陷数按实例,日周产量不翻倍",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-042",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "related_wbs": [
+        "W116",
+        "W117",
+        "W118",
+        "W120"
+      ],
+      "fault": "从发布ZIP解压运行Windows PE 5进程",
+      "expected": "实际EXE+Qt插件+模型前端加载,证据区分Wine与原生",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-043",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W068",
+        "W070",
+        "W080",
+        "W110"
+      ],
+      "fault": "在2K、1080p与高DPI操作11路视图",
+      "expected": "11图及12格同屏不需滚主视区,坐标和框准确",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-044",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W025",
+        "W091",
+        "W108"
+      ],
+      "fault": "模拟D99/D100心跳丢失或复位请求",
+      "expected": "不将心跳/Ready等于全机可生产;故障可见,未核现场点标未知",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-045",
+      "owner": "A7",
+      "assigned_issue": 48,
+      "related_wbs": [
+        "W087",
+        "W095",
+        "W113"
+      ],
+      "fault": "双机换型中断电并在仅一机Commit后重启",
+      "expected": "禁止双机分裂脑Ready；启动恢复持久DeploymentRecord，直到双方Release/Epoch/PLC读回一致保持HOLD",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-046",
+      "owner": "A9",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W016",
+        "W089",
+        "W111"
+      ],
+      "fault": "S01阶段未经授权用户直发未知IPC修改命令",
+      "expected": "未完成W089 RBAC前一律拒绝且有审计；上线RBAC后也拒绝越权变更",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-047",
+      "owner": "A8",
+      "assigned_issue": 46,
+      "related_wbs": [
+        "W025",
+        "W073",
+        "W074"
+      ],
+      "fault": "PLC LegacySourceValue与ActualLiveValue、Draft不一致",
+      "expected": "图形和表格同源，旧静态候选不得显示为现场已确认，也不自动开放写",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-048",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "related_wbs": [
+        "W117",
+        "W118"
+      ],
+      "fault": "从Windows发布包删除一个必需QtQuick/QML import plugin",
+      "expected": "发布闭包审计必须失败，恢复插件后两Qt UI可从干净目录运行",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-049",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W052",
+        "W058",
+        "W076"
+      ],
+      "fault": "对同件只改变DisplayROI裁切范围",
+      "expected": "前后FinalQuality和全部DetectionROI结果完全一致，画面外缺陷仍可定位",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-050",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "related_wbs": [
+        "W034",
+        "W049"
+      ],
+      "fault": "同seed下改变进程PID/UTC时间和日志目录重演场景",
+      "expected": "规范化业务事件digest一致且因果序确定；原始审计时间仍保存",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-051",
+      "owner": "A4",
+      "assigned_issue": 45,
+      "related_wbs": [
+        "W096",
+        "W108",
+        "W111"
+      ],
+      "fault": "离线Lab主动尝试向vPLC/生产IPC发写入命令",
+      "expected": "网络/权限边界拒绝，生产DB/Outbox/PLC字节计数无变化",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    },
+    {
+      "id": "SC-052",
+      "owner": "A10",
+      "assigned_issue": 47,
+      "related_wbs": [
+        "W006",
+        "W026",
+        "W108",
+        "W122"
+      ],
+      "fault": "模拟114用例大部分通过但FG仍未核",
+      "expected": "SIM_READY候选不得将14个FG自动标已核，也不开放Field写策略",
+      "execution_state": "NOT_RUN",
+      "overnight_tested": false
+    }
+  ],
+  "ui": [
+    {
+      "id": "UI01",
+      "feature": "双机系统状态/IPC",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W015",
+        "W016",
+        "W033",
+        "W081"
+      ],
+      "evidence": "真实Core连接状态；断线离线提示",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI02",
+      "feature": "11路结果图/12格汇总",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W058",
+        "W067",
+        "W068",
+        "W069",
+        "W070",
+        "W080"
+      ],
+      "evidence": "真实结果位图和工作件ID；DPI截图",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI03",
+      "feature": "单件11图集",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W060",
+        "W063",
+        "W071",
+        "W102"
+      ],
+      "evidence": "同WorkpieceId且图片资产hash可对账",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI04",
+      "feature": "设备地图与信号表",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W025",
+        "W072",
+        "W073",
+        "W074"
+      ],
+      "evidence": "24字段/信号ID双向联动；旧/现/草稿字段独立",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI05",
+      "feature": "单站ROI及模型/相机配置",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W075",
+        "W076",
+        "W077",
+        "W083",
+        "W084",
+        "W089",
+        "W094"
+      ],
+      "evidence": "保存真正执行PatchStationDraft且权限后端鉴权；Active不变",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI06",
+      "feature": "报警/事件日志中心",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W019",
+        "W078",
+        "W091",
+        "W092",
+        "W103"
+      ],
+      "evidence": "S05基础日志可读；G06根因/ACK/CLEAR;G07追溯一键定位",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI07",
+      "feature": "质量日周统计与缺陷图表",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W063",
+        "W079",
+        "W100",
+        "W101"
+      ],
+      "evidence": "真工件Finalized事件口径+SQL oracle+重复件不多计",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI08",
+      "feature": "产品草稿/发布/换型",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W083",
+        "W084",
+        "W085",
+        "W086",
+        "W087",
+        "W088",
+        "W090",
+        "W094"
+      ],
+      "evidence": "双机/PLC readback+Epoch一致；失败HOLD；审批成功",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI09",
+      "feature": "离线试跑与AB对比",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W096",
+        "W097",
+        "W098",
+        "W099"
+      ],
+      "evidence": "独立进程/DB与无生产PLC权限；真fixture输出和证据",
+      "overnight_tested": false
+    },
+    {
+      "id": "UI10",
+      "feature": "权限/审计维护",
+      "assigned_issue": 46,
+      "required_tasks": [
+        "W089",
+        "W090",
+        "W093",
+        "W094"
+      ],
+      "evidence": "越权IPC拒绝；事故包可导出；访问审计",
+      "overnight_tested": false
+    }
+  ],
+  "field_gates": [
+    {
+      "id": "FG-01",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-02",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-03",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-04",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-05",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-06",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-07",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-08",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-09",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-10",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-11",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-12",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-13",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    },
+    {
+      "id": "FG-14",
+      "production_write_allowed": "FALSE",
+      "field_status": "FIELD_PENDING",
+      "overnight_signed": false
+    }
+  ]
+}
