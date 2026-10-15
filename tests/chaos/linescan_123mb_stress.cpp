@@ -89,8 +89,10 @@ int main(int argc,char** argv) {
         std::memcpy(tampered.ptr<uint8_t>(0),oddPhysicalRows.ptr<uint8_t>(0),kWidth);
         if (std::memcmp(tampered.ptr(),physical.ptr(),kExpectedBytes)!=0) ++caught;
         oddPhysicalRows.ptr<uint8_t>(0)[0]^=1;
-        if (oddPhysicalRows.cols!=kWidth-1) ++caught; // reject malformed width fixture
-        if (oddPhysicalRows.rows!=7499) ++caught; // reject truncated line fixture
+        const cv::Mat malformedWidth=oddPhysicalRows(cv::Rect(0,0,kWidth-1,oddPhysicalRows.rows));
+        if (malformedWidth.cols!=kWidth || malformedWidth.rows!=7500) ++caught;
+        const cv::Mat missingLastRow=oddPhysicalRows(cv::Rect(0,0,kWidth,oddPhysicalRows.rows-1));
+        if (missingLastRow.rows!=7500 || missingLastRow.cols!=kWidth) ++caught;
         need(caught==3,"failure to detect stress negative fixtures");
         cv::Mat roi=physical(cv::Rect(0,0,64,64));
         cv::Mat mirrored;
