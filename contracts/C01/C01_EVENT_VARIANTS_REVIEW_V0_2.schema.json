@@ -1,0 +1,702 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aoi:c01:envelope:review-v0.2",
+  "title": "AOI C01 review-only event variants",
+  "description": "Architecture proposal, not a frozen C01 or production authorization. Runtime and SQLite invariants must be tested separately.",
+  "type": "object",
+  "required": [
+    "SchemaVersion",
+    "MessageId",
+    "PayloadHash",
+    "EventId",
+    "SequenceNo",
+    "OccurredUtc",
+    "HostId",
+    "Epoch",
+    "TraceId",
+    "EventKind",
+    "Data"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "SchemaVersion": {
+      "const": "C01-REVIEW-0.2"
+    },
+    "MessageId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "PayloadHash": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "EventId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "SequenceNo": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "OccurredUtc": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "HostId": {
+      "enum": [
+        "MASTER",
+        "SLAVE"
+      ]
+    },
+    "Epoch": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "TraceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+    },
+    "EventKind": {
+      "enum": [
+        "WORKPIECE_RESULT",
+        "ALARM_TRANSITION",
+        "DEPLOYMENT",
+        "ASSET",
+        "UI_SNAPSHOT",
+        "AUTH_AUDIT"
+      ]
+    },
+    "Data": {
+      "type": "object"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "EventKind": {
+          "const": "WORKPIECE_RESULT"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "WorkpieceId",
+            "ReleaseId",
+            "ChannelId",
+            "CaptureId",
+            "AttemptNo",
+            "PhysicalDeviceId",
+            "CaptureGroupId",
+            "ProcessingStatus",
+            "QualityStatus"
+          ],
+          "properties": {
+            "WorkpieceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ReleaseId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ChannelId": {
+              "type": "string",
+              "pattern": "^CH(0[1-9]|1[01])$"
+            },
+            "CaptureId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "AttemptNo": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "PhysicalDeviceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "CaptureGroupId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ProcessingStatus": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "RUNNING",
+                "SUCCEEDED",
+                "ERROR",
+                "CANCELLED",
+                "TIMEOUT"
+              ]
+            },
+            "QualityStatus": {
+              "type": "string",
+              "enum": [
+                "UNDECIDED",
+                "OK",
+                "NG",
+                "MISSING",
+                "SKIPPED_BY_VERIFIED_CONDITION"
+              ]
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "ProcessingStatus": {
+                    "enum": [
+                      "PENDING",
+                      "RUNNING",
+                      "ERROR",
+                      "CANCELLED",
+                      "TIMEOUT"
+                    ]
+                  }
+                },
+                "required": [
+                  "ProcessingStatus"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "QualityStatus": {
+                    "not": {
+                      "const": "OK"
+                    }
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    },
+    {
+      "properties": {
+        "EventKind": {
+          "const": "ALARM_TRANSITION"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "AlarmId",
+            "EntityId",
+            "Transition",
+            "ReasonCode"
+          ],
+          "properties": {
+            "AlarmId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "EntityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "Transition": {
+              "enum": [
+                "RAISE",
+                "ACK",
+                "CLEAR"
+              ]
+            },
+            "ReasonCode": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ActorId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "AcknowledgementId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ClearEvidenceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "Transition": {
+                    "const": "ACK"
+                  }
+                },
+                "required": [
+                  "Transition"
+                ]
+              },
+              "then": {
+                "required": [
+                  "ActorId",
+                  "AcknowledgementId"
+                ]
+              }
+            },
+            {
+              "if": {
+                "properties": {
+                  "Transition": {
+                    "const": "CLEAR"
+                  }
+                },
+                "required": [
+                  "Transition"
+                ]
+              },
+              "then": {
+                "required": [
+                  "ActorId",
+                  "ClearEvidenceId"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    },
+    {
+      "properties": {
+        "EventKind": {
+          "const": "DEPLOYMENT"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "DeploymentId",
+            "ReleaseId",
+            "Phase"
+          ],
+          "properties": {
+            "DeploymentId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "ReleaseId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "Phase": {
+              "enum": [
+                "CREATED",
+                "STAGED",
+                "PREPARING_DEVICES",
+                "PREPARED_BOTH",
+                "COMMITTING",
+                "COMMITTED",
+                "FAILED_SAFE",
+                "ROLLED_BACK"
+              ]
+            },
+            "CoreReadbacks": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "HostId",
+                  "StagedReleaseHash",
+                  "DeviceReadbackHash",
+                  "ReadBackMatched"
+                ],
+                "properties": {
+                  "HostId": {
+                    "enum": [
+                      "MASTER",
+                      "SLAVE"
+                    ]
+                  },
+                  "StagedReleaseHash": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "DeviceReadbackHash": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "ReadBackMatched": {
+                    "const": true
+                  }
+                }
+              },
+              "minItems": 2,
+              "maxItems": 2,
+              "uniqueItems": true,
+              "allOf": [
+                {
+                  "contains": {
+                    "properties": {
+                      "HostId": {
+                        "const": "MASTER"
+                      }
+                    },
+                    "required": [
+                      "HostId"
+                    ]
+                  },
+                  "minContains": 1
+                },
+                {
+                  "contains": {
+                    "properties": {
+                      "HostId": {
+                        "const": "SLAVE"
+                      }
+                    },
+                    "required": [
+                      "HostId"
+                    ]
+                  },
+                  "minContains": 1
+                }
+              ]
+            },
+            "VplcReadback": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "ParametersHash",
+                "ReadBackMatched",
+                "Simulated"
+              ],
+              "properties": {
+                "ParametersHash": {
+                  "type": "string",
+                  "pattern": "^[0-9a-f]{64}$"
+                },
+                "ReadBackMatched": {
+                  "const": true
+                },
+                "Simulated": {
+                  "const": true
+                }
+              }
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "Phase": {
+                    "const": "PREPARED_BOTH"
+                  }
+                },
+                "required": [
+                  "Phase"
+                ]
+              },
+              "then": {
+                "required": [
+                  "CoreReadbacks",
+                  "VplcReadback"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    },
+    {
+      "properties": {
+        "EventKind": {
+          "const": "ASSET"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "AssetId",
+            "FrameId",
+            "CaptureGroupId",
+            "PhysicalDeviceId",
+            "AttemptNo",
+            "ChannelIds",
+            "State"
+          ],
+          "properties": {
+            "AssetId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "FrameId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "CaptureGroupId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "PhysicalDeviceId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "AttemptNo": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "ChannelIds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^CH(0[1-9]|1[01])$"
+              },
+              "minItems": 1,
+              "maxItems": 2,
+              "uniqueItems": true
+            },
+            "State": {
+              "enum": [
+                "PENDING",
+                "WRITING",
+                "AVAILABLE",
+                "CORRUPT"
+              ]
+            },
+            "StorageUri": {
+              "type": "string",
+              "pattern": "^(?!.*(?:/|^)\\.\\.(?:/|$))(?!.*(?:/|^)\\.(?:/|$))(?!.*//)assets/[A-Za-z0-9._/-]+$",
+              "minLength": 8
+            },
+            "EncodedSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "DecodedPixelSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "SizeBytes": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "State": {
+                    "const": "AVAILABLE"
+                  }
+                },
+                "required": [
+                  "State"
+                ]
+              },
+              "then": {
+                "required": [
+                  "StorageUri",
+                  "EncodedSha256",
+                  "DecodedPixelSha256",
+                  "SizeBytes"
+                ]
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    },
+    {
+      "properties": {
+        "EventKind": {
+          "const": "UI_SNAPSHOT"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "SnapshotId",
+            "SourceHost",
+            "Cursor",
+            "Digest",
+            "Connection",
+            "IsLive",
+            "EntityVersion"
+          ],
+          "properties": {
+            "SnapshotId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "SourceHost": {
+              "enum": [
+                "MASTER",
+                "SLAVE"
+              ]
+            },
+            "Cursor": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "Digest": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "Connection": {
+              "enum": [
+                "FRESH",
+                "STALE",
+                "DISCONNECTED"
+              ]
+            },
+            "IsLive": {
+              "type": "boolean"
+            },
+            "EntityVersion": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": {
+                  "Connection": {
+                    "const": "DISCONNECTED"
+                  }
+                },
+                "required": [
+                  "Connection"
+                ]
+              },
+              "then": {
+                "properties": {
+                  "IsLive": {
+                    "const": false
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    },
+    {
+      "properties": {
+        "EventKind": {
+          "const": "AUTH_AUDIT"
+        },
+        "Data": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "SubjectId",
+            "Action",
+            "EntityId",
+            "Decision",
+            "ReasonCode",
+            "AuditHash"
+          ],
+          "properties": {
+            "SubjectId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "Action": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "EntityId": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "Decision": {
+              "enum": [
+                "ALLOW",
+                "DENY"
+              ]
+            },
+            "ReasonCode": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160,
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]*$"
+            },
+            "AuditHash": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        }
+      },
+      "required": [
+        "EventKind",
+        "Data"
+      ]
+    }
+  ]
+}
