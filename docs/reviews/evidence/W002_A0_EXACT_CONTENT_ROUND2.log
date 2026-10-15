@@ -1,0 +1,25 @@
+$ python3 docs/reviews/verify_w002.py --repo-root . --negative
+EXIT_CODE=0
+MUTATION_REJECTED signal_address_tampered
+MUTATION_REJECTED signal_write_enabled
+MUTATION_REJECTED fg_write_unlocked
+MUTATION_REJECTED fake_field_signoff
+MUTATION_REJECTED field_blocker_erased
+MUTATION_REJECTED D1013_alias_removed
+{
+  "blocked": 7,
+  "critical_conflicts": 6,
+  "field_gates": 14,
+  "mutation_negative_rejections": 6,
+  "open": 7,
+  "production_write_allowed": 0,
+  "signals": 45,
+  "source_sha256": {
+    "docs/plan/v1.1-original/FIELD_GATES_14.csv": "becb31eca305f4d30ebccb2473d2a3da3cfb1dda9c9ed20302d5bb02892c028d",
+    "docs/reviews/W002_FIELD_GATE_OPEN_14.csv": "3c271a7bde5d9025315d62700bb00cc98e7b36f04363fa1cf107847d5bf4ff90",
+    "docs/reviews/W002_STATIC_FACTS_45.csv": "40567e23a8ef394f3e3d1aa88b7947b31727e974341c2bd858955e96b1bbb169",
+    "reference/spec_v2_machine_readable/field_verification_gates.csv": "610c07a03419c48d175b59859acf20b1b88766adf52e3d2fbac1d76563d8a476",
+    "reference/spec_v2_machine_readable/plc_signal_registry.csv": "f6dfde1388ce72f08fd2c2847266e99a62f81f33f8ca1aeb0b9f1aab7efdfa1c"
+  },
+  "status": "STATIC_EVIDENCE_PASS_A10_REVIEW_REQUIRED_NOT_FIELD_ACCEPTED"
+}
