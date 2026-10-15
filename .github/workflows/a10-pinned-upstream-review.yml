@@ -42,6 +42,7 @@ jobs:
           set -euo pipefail
           python3 ci/a10_pinned_upstream_review.py --repo /tmp/a10-upstream --pr "$PR_ID" --sha "$PINNED_SHA" --round 1 | tee "/tmp/pr${PR_ID}-round1.log"
       - name: Independent round 2
+        if: always()
         shell: bash
         env:
           PR_ID: ${{ matrix.pr }}
