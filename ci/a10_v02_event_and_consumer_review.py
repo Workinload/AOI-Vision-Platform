@@ -36,7 +36,17 @@ def main():
     path=root/"contracts/C01/C01_EVENT_VARIANTS_REVIEW_V0_2.schema.json"
     blob=path.read_bytes();schema=json.loads(blob)
     Draft202012Validator.check_schema(schema)
-    validate=Draft202012Validator(schema,format_checker=FormatChecker())
+    # jsonschema 'format' is optional. Without the rfc3339 validator,
+    # FormatChecker may silently ACCEPT malformed date-time values.
+    checker = FormatChecker()
+    from jsonschema.exceptions import FormatError
+    try:
+        checker.check("bad_date_time_not_rfc3339", "date-time")
+    except FormatError:
+        print("A10_FORMAT_CHECKER_VERIFIED", "bad RFC3339 date rejected")
+    else:
+        raise AssertionError("MISSING_RFC3339_FORMAT_PLUGIN_FAIL_CLOSED")
+    validate=Draft202012Validator(schema,format_checker=checker)
     spec=importlib.util.spec_from_file_location("c01_review_samples",root/"contracts/C01/test_c01_v0_2_review.py")
     mod=importlib.util.module_from_spec(spec);spec.loader.exec_module(mod)
     def succeeds(msg,s=validate):return not list(s.iter_errors(msg))
