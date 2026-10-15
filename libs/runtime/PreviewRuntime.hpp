@@ -12,7 +12,7 @@
 #include <functional>
 namespace aoi::runtime {
 struct Event { QString id, workpiece, release, capture, channel, processing, quality; quint64 epoch=0; unsigned attempt=0; };
-struct Piece { QString id, barcode, release; quint64 epoch=1; QHash<QString,Event> channel; QSet<QString> seen; QString reason="not_complete"; QString outcome="HOLD"; };
+struct Piece { QString id, barcode, release; quint64 epoch=1; QHash<QString,Event> channel; QHash<QString,QString> seen; QString reason="not_complete"; QString outcome="HOLD"; };
 class Engine {
  QHash<QString,Piece> pieces_; QString selected_; quint64 seq_=0; QQueue<Event> pending_; int rejects_=0; int capacity_=128;
 public:
@@ -25,11 +25,12 @@ public:
  bool apply(const Event &e) {
   auto it=pieces_.find(e.workpiece);
   if(it==pieces_.end()||e.id.isEmpty()||e.capture.isEmpty()||e.epoch!=it->epoch||e.release!=it->release||e.attempt==0|| !validChannel(e.channel)) {++rejects_;return false;}
-  Piece &p=it.value(); if(p.seen.contains(e.id)){return true;}
+  Piece &p=it.value(); const QString signature=e.workpiece+"|"+e.release+"|"+e.capture+"|"+e.channel+"|"+e.processing+"|"+e.quality+"|"+QString::number(e.epoch)+"|"+QString::number(e.attempt);
+  if(p.seen.contains(e.id)){if(p.seen.value(e.id)==signature)return true;++rejects_;return false;}
   auto prior=p.channel.constFind(e.channel);
   if(prior!=p.channel.cend() && e.attempt<prior->attempt){++rejects_;return false;}
   if(prior!=p.channel.cend() && e.attempt==prior->attempt && prior->capture!=e.capture){++rejects_;return false;}
-  p.seen.insert(e.id);p.channel.insert(e.channel,e);recompute(p);++seq_;return true;
+  p.seen.insert(e.id,signature);p.channel.insert(e.channel,e);recompute(p);++seq_;return true;
  }
  static bool validChannel(const QString &c) { if(c.size()!=4||!c.startsWith("CH"))return false; bool ok=false;int n=c.mid(2).toInt(&ok);return ok&&n>=1&&n<=11&&c==QString("CH%1").arg(n,2,10,QChar('0')); }
  static void recompute(Piece &p) {
