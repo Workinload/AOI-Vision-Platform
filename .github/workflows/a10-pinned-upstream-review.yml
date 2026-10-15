@@ -36,7 +36,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --user jsonschema==4.23.0
+          python3 -m pip install --user 'jsonschema[format]==4.23.0'
           python3 -c "import jsonschema,importlib.metadata; print('JSON_SCHEMA_VERSION',importlib.metadata.version('jsonschema'))"
       - name: Independent round 1
         shell: bash
@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --user jsonschema==4.23.0
+          python3 -m pip install --user 'jsonschema[format]==4.23.0'
           python3 ci/a10_c01_runtime_schema.py --schema /tmp/a10-upstream/contracts/C01/CORRELATION_ENVELOPE_DRAFT.schema.json | tee /tmp/pr29-schema-runtime.log
       - name: Extra A10 W003 manifest and C01 six-event checks ROUND 1
         if: always()
