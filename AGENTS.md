@@ -26,3 +26,8 @@
 - `C00_DRAFT.md` 与 PLAN 的 C-07～C-12 编号 **确有冲突**，在 C01 由 A0 统一规范前，各 Agent 不得自创合同字段/编号；见 `GIT_FIRST_PLAN_v1.2.md`。
 - 两台 Core、两套 SQLite WAL/资产/日志、两套 Qt UI 和独立 vPLC 必须是真实隔离的五个 OS 进程；结果图、设备地图、报警、PLC 信号和 UI 只能使用真实 Core/DB/模拟链路，不得伪造实时数据。
 - 真正可申请 `SIM_READY` 必须过 W001～W122 对应门禁、114 原始 TC 与 52 情景及 Linux/Windows 所需证据；Windows 原生与现场 `FIELD_ACCEPTED` 分开。缺测试一律 `NOT_VERIFIED`。
+
+## A7 / Agent06 人员路由（CR-A0-004，待独立审查）
+- 用户已批准新增 **Agent06** 独立负责 A7 的 `MOD-13 SolutionManager` 和 `MOD-14 DeploymentManager`；A7 原设计 Owner、W083～W087 原 WBS DependsOn 均不改变。
+- `docs/agents/CHAT_START_Agent06.md` 为专属工作令；**已在 Issue #11 登记 AGENT06_STARTED 并在 Draft PR #14 交付隔离预研 Mock**。路由 PR #12 的更正 HEAD 尚须 A10 独立复核后由 A0 决定是否合并；该登记不代表正式 WBS 已完成、CI 通过或生产许可。
+- W083～W087 可在隔离分支准备 Draft/Mock 测试；必须在各自的正式依赖 VERIFIED、C01 公共合同批准、独立 A10 测试及 A0 合并批准后才可进入 main。现场和 PLC 生产写仍禁用。

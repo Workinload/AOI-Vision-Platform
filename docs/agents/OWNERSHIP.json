@@ -110,6 +110,9 @@
     ],
     "AOI-Agent05": [
       "A10"
+    ],
+    "AOI-Agent06": [
+      "A7"
     ]
   },
   "immutable": [
@@ -122,12 +125,33 @@
   ],
   "collaboration_mode": "GIT_FIRST_PR",
   "source_of_truth": "main commit SHA for development; exact immutable SOURCE ZIP SHA256 for releases",
-  "unassigned_worker_roles": [
-    "A7"
-  ],
+  "unassigned_worker_roles": [],
   "warnings": [
-    "A7 has no active assigned worker yet; pending chat mapping is NOT an authorization to act",
+    "Agent06 started per Issue #11; W083-W087 are dependency blocked, and CR-A0-004 integration awaits exact-head independent A10 QA",
     "WBS acceptance remains controlled by exact DependsOn + A10 independent QA",
     "GitHub personal private repo currently lacks proven enforceable rulesets"
-  ]
+  ],
+  "worker_activation": {
+    "AOI-Agent06": {
+      "design_role": "A7",
+      "implementation_modules": [
+        "MOD-13",
+        "MOD-14"
+      ],
+      "task_ids": [
+        "W083",
+        "W084",
+        "W085",
+        "W086",
+        "W087"
+      ],
+      "assignment_decision": "USER_APPROVED_A0_AUTHORIZED",
+      "chat_status": "AGENT06_STARTED",
+      "wbs_status": "NOT_STARTED_DEPENDENCIES_BLOCKED",
+      "merge_authority": "A0_AFTER_DEPENDENCIES_AND_INDEPENDENT_A10_QA",
+      "change_request": "CR-A0-004",
+      "startup_evidence": "GitHub Issue #11 comment 6190633300; isolation Draft PR #14 HEAD 26e1e78bf784ab0d9617ed235aa10371e8754327",
+      "routing_qa": "A10 HOLD_FOR_STATUS_CORRECTION on prior SHA f9604c681160a3de534f636510937ea153689eeb; corrected head requires new A10 review"
+    }
+  }
 }

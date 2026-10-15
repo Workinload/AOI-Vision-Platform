@@ -5,7 +5,7 @@
 ## 新 Agent 入口
 - `AGENTS.md`：版本/安全/所有权规则；`docs/agents/GIT_WORKFLOW.md`：分支、PR、任务四级门禁、A10 验证。
 - `docs/agents/GIT_FIRST_PLAN_v1.2.md`：130 WBS、12 契约、验收覆盖与 Git 路线修订。
-- `docs/agents/START_HERE.md`：角色启动方式；`docs/agents/CHAT_START_Agent01.md` ～ `Agent05.md`：唯一最新 Git 工作令。
+- `docs/agents/START_HERE.md`：角色启动方式；`docs/agents/CHAT_START_Agent01.md` ～ `CHAT_START_Agent06.md`：六个角色聊天各自的 Git 工作令；Agent06 (A7) 已在 Issue #11 完成启动登记并交付隔离 Mock PR #14；人员路由 PR #12 仍待独立审查和 A0 合并，WBS 未解锁。
 - `docs/plan/v1.1-original/`：原 PLAN v1.1 全套**逐字节只读镜像**，包括 11 份职责提示词、11 份任务卡和风险/退出门禁；不可直接改旧快照。
 - `docs/agents/TASK_LEDGER.json`：**实际验证状态**。原 PLAN WBS `NOT_STARTED` 不会自动同步历史批准决议。
 
