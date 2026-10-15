@@ -29,5 +29,5 @@
 
 ## A7 / Agent06 人员路由（CR-A0-004，待独立审查）
 - 用户已批准新增 **Agent06** 独立负责 A7 的 `MOD-13 SolutionManager` 和 `MOD-14 DeploymentManager`；A7 原设计 Owner、W083～W087 原 WBS DependsOn 均不改变。
-- `docs/agents/CHAT_START_Agent06.md` 为专属工作令；**聊天实际启动前仍为 PENDING_NEW_CHAT_START**。任何已有仓库路由记录都不代表功能已实现、CI 已通过或合并许可已发放。
+- `docs/agents/CHAT_START_Agent06.md` 为专属工作令；**已在 Issue #11 登记 AGENT06_STARTED 并在 Draft PR #14 交付隔离预研 Mock**。路由 PR #12 的更正 HEAD 尚须 A10 独立复核后由 A0 决定是否合并；该登记不代表正式 WBS 已完成、CI 通过或生产许可。
 - W083～W087 可在隔离分支准备 Draft/Mock 测试；必须在各自的正式依赖 VERIFIED、C01 公共合同批准、独立 A10 测试及 A0 合并批准后才可进入 main。现场和 PLC 生产写仍禁用。

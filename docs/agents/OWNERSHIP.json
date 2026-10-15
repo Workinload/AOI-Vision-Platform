@@ -127,7 +127,7 @@
   "source_of_truth": "main commit SHA for development; exact immutable SOURCE ZIP SHA256 for releases",
   "unassigned_worker_roles": [],
   "warnings": [
-    "Agent06 is authorized for A7 routing but the new chat is not yet started; no A7 WBS task is VERIFIED",
+    "Agent06 started per Issue #11; W083-W087 are dependency blocked, and CR-A0-004 integration awaits exact-head independent A10 QA",
     "WBS acceptance remains controlled by exact DependsOn + A10 independent QA",
     "GitHub personal private repo currently lacks proven enforceable rulesets"
   ],
@@ -146,10 +146,12 @@
         "W087"
       ],
       "assignment_decision": "USER_APPROVED_A0_AUTHORIZED",
-      "chat_status": "PENDING_NEW_CHAT_START",
+      "chat_status": "AGENT06_STARTED",
       "wbs_status": "NOT_STARTED_DEPENDENCIES_BLOCKED",
       "merge_authority": "A0_AFTER_DEPENDENCIES_AND_INDEPENDENT_A10_QA",
-      "change_request": "CR-A0-004"
+      "change_request": "CR-A0-004",
+      "startup_evidence": "GitHub Issue #11 comment 6190633300; isolation Draft PR #14 HEAD 26e1e78bf784ab0d9617ed235aa10371e8754327",
+      "routing_qa": "A10 HOLD_FOR_STATUS_CORRECTION on prior SHA f9604c681160a3de534f636510937ea153689eeb; corrected head requires new A10 review"
     }
   }
 }

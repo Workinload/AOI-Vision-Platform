@@ -1,17 +1,17 @@
 # AOI-Agent06 — A7 产品方案 / 双机部署 GitHub-first 专属启动工作令
 
-**状态：A0_USER_APPROVED_ROUTING / PENDING_NEW_CHAT_START；需 CR-A0-004 / 独立审查后纳入正式 main。**
+**状态：A0_USER_APPROVED_ROUTING / AGENT06_STARTED（Issue #11）；CR-A0-004 路由治理仍待针对更正后 SHA 独立 A10 审查及 A0 合并，W083～W087 均未验收。**
 **角色：Agent06（专职 A7）；源设计 Owner 保持 A7，负责 MOD-13 ProductSolutionManager、MOD-14 DeploymentManager；正式 WBS W083～W087。**
 **仓库：** `Workinload/AOI-Vision-Platform`（**Private**）；**正式代码基线：** `main` M00-r003 OFFICIAL_SOURCE（SIM_ONLY、C00-DRAFT、NOT_SIM_READY）。
-**角色工作令在合并前的预审位置：** `governance/agent06-a7-routing`；其父 PR #3 的 Git-first v1.2 尚需 A10 独立签审。不能把预审分支误当已经获批的主线。
+**角色工作令在合并前的预审位置：** `governance/agent06-a7-routing`；父治理 PR #3 已由 A0 合并至 main（d81f5b3fd35dd44963c6c7464cdb3a6f5a124b7c）；当前 Agent06 路由 PR #12 是单独待审核 Draft，不可误称已正式集成。
 **总控：** A0 唯一集成/合同/版本裁定人；A10/Agent05 对他人 PR 独立测试，A10 自己改测试工具由 A0 独立审查。GitHub 所有聊天可能使用 Workinload 同一登录，GitHub 自审不算独立质量审核。
 
 ## 1. 开工时自主核实（无需用户上传源码）
-1. 用 GitHub 插件读取仓库当前 PRIVATE 状态、`main` HEAD SHA、PR #3 的真实状态、CR-A0-004 分支状态。若治理 PR 仍为 Draft，阅读预审文档仅供准备，不得引用为 main 已生效的集成合同。
+1. 用 GitHub 插件读取仓库当前 PRIVATE 状态、`main` HEAD SHA、PR #3 的真实状态、CR-A0-004 分支状态。已合并的 PR #3 仅使 Git-first 规范生效；PR #12 尚待 A10 对新确切 HEAD 重审，不能将路由草案或 C00 误作 C01 正式合同。
 2. 阅读 `AGENTS.md`、`README.md`、`docs/agents/GIT_WORKFLOW.md`、`GIT_FIRST_PLAN_v1.2.md`、`docs/agents/OWNERSHIP.json`、`docs/agents/TASK_LEDGER.json`、`contracts/C00_DRAFT.md`；检查 `docs/plan/v1.1-original/AGENT_TASK_CARDS/A7_TASKS.md` 和 `AGENT_PROMPTS/A7_worker.md`，再核对原 v2.0 设计 03:30/37。
 3. 以 GitHub 实际主线与经审核的 Owner/CR 为准，不使用过时 M00-r001 ZIP；仅从 `/工具开发` 只读获取 Qt6.11.2 / OpenCV5.0.0 / 必要 SDK，禁止提交 SDK、真实 PLC 配置及密钥。
 4. 每项任务逐一核对正式 WBS `DependsOn` 在 `TASK_LEDGER.json` 中 **VERIFIED**，不可从历史计划 `NOT_STARTED` 或别的聊天口述推断完成。由于 W012、W053、W025、W061、W055、W044、W032、W037、W088 等尚未 VERIFIED，**五项 A7 正式任务当前都不可 MERGE_READY**。
-5. 启动后先在 Issue #11 报告 `AGENT06_STARTED` 和主线 SHA，或建立自己的 A7 准备 Issue。只允许在独立工作分支进行安全预研、架构方案、Mock、单元测试及 Draft PR；与 A0 公共接口冲突时仅开 Issue/ContractChangeRequest，不越权编辑合同。
+5. Issue #11 已报告 `AGENT06_STARTED`，且已提交隔离 Mock Draft PR #14（HEAD `26e1e78bf784ab0d9617ed235aa10371e8754327`）。后续须检查实际 GitHub HEAD，不得重复声称尚未启动。只允许在独立工作分支进行安全预研、架构方案、Mock、单元测试及 Draft PR；与 A0 公共接口冲突时仅开 Issue/ContractChangeRequest，不越权编辑合同。
 
 ## 2. 独占代码范围和边界
 A7 路径严格限定为 `libs/solutions/`、`libs/deployment/`、`tests/contract/solution/`、`tests/unit/solution/`、`tests/unit/solutions/`、`tests/unit/deployment/`、`config/product/`。
