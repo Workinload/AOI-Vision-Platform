@@ -312,7 +312,7 @@ def pr29(root,wbs,fg):
     cond=any(k in schema for k in ("if","then","allOf","anyOf","oneOf","not"))
     print("C01_GAP_JSON_SCHEMA_ERROR_PLUS_OK_NOT_DECLARATIVELY_REJECTED",
           not cond, "CONTRACT_NOT_FROZEN")
-    require(not cond, "unexpected schema change requires manual review")
+    require(cond, "C01 corrected schema lost declarative conditional guard")
     return num
 
 
