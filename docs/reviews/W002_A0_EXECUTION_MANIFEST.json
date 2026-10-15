@@ -1,0 +1,12 @@
+{
+  "files": {
+    "docs/reviews/evidence/W002_A0_EXACT_CONTENT_ROUND1.log": "29c6b3116f83ca08d778562bc659f1b6eff9ed0147e41e186ff2df3a6d5c3bc0",
+    "docs/reviews/evidence/W002_A0_EXACT_CONTENT_ROUND2.log": "29c6b3116f83ca08d778562bc659f1b6eff9ed0147e41e186ff2df3a6d5c3bc0",
+    "docs/reviews/verify_w002.py": "f75dcf2764a3ceee0a74a974f5e89a0e1d3887aaa59f728ea94c195f5a8d6525"
+  },
+  "negative_rejections": 6,
+  "positive_result": "EXIT0 each",
+  "runs": 2,
+  "scope": "local content exact, GitHub remote HEAD independent re-run pending",
+  "task": "W002"
+}
