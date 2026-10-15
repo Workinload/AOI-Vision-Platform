@@ -16,7 +16,7 @@ def main():
     check(run("rev-parse","HEAD")==a.sha,"PINNED_HEAD_MISMATCH")
     manifest=json.loads((r/"docs/reviews/W003_A0_20261016_FIXED_VALIDATION_MANIFEST.json").read_text(encoding="utf-8"))
     entries=manifest["file_sha256"]
-    check(len(entries)==9,"expected nine original candidate evidence files")
+    check(len(entries)==8,"expected eight A0 SHA256 manifest entries")
     for path,expected in sorted(entries.items()):
         rel="docs/reviews/"+path
         f=r/rel
@@ -27,6 +27,13 @@ def main():
         content_blob=run("hash-object",rel)
         check(blob==content_blob,"GIT_BLOB_DRIFT "+rel)
         print("A10_GIT_BLOB_SHA_PASS",rel,actual,blob)
+    # Ninth independent Git blob is the manifest itself; it cannot list its own hash.
+    manifest_rel="docs/reviews/W003_A0_20261016_FIXED_VALIDATION_MANIFEST.json"
+    manifest_blob=run("rev-parse","HEAD:"+manifest_rel)
+    need_blob=run("hash-object",manifest_rel)
+    check(manifest_blob==need_blob,"MANIFEST_GIT_BLOB_DRIFT")
+    print("A10_GIT_BLOB_SHA_PASS",manifest_rel,
+          hashlib.sha256((r/manifest_rel).read_bytes()).hexdigest(),manifest_blob)
     orig_plan=json.loads((r/"docs/plan/ORIGINAL_PLAN_SHA256_MANIFEST.json").read_text())
     check(len(orig_plan["original_files"])==55,"original plan count")
     check(orig_plan["archive_sha256"]==manifest["source_reference_sha256"]["original_PLAN_v1.1"],
@@ -42,7 +49,7 @@ def main():
         untouched=list(csv.DictReader(f))
     check(len(untouched)==21 and all(x["State"]=="CANDIDATE_UNAPPROVED" for x in untouched),
           "old review DAG falsely promoted")
-    print("A10_W003_MANIFEST_PASS round="+str(a.round),"file_sha256=9/9","git_blob=9/9",
+    print("A10_W003_MANIFEST_PASS round="+str(a.round),"file_sha256=8/8","git_blob=9/9",
           "original_PLAN=55","module_count=21","logical_edges=30","FROZEN=FALSE",
           "exact_HEAD="+a.sha)
     return 0
