@@ -1,0 +1,2 @@
+AOI_VPLC_READY 127.0.0.1 41990 HEALTH_ONLY
+M00 vPLC ignored unsupported request, bytes= 27

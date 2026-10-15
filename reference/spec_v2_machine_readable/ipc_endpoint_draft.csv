@@ -1,0 +1,12 @@
+﻿Method,Path,Owner,Permission,MeaningCN,Safety
+GET,/v1/snapshot,UIReadAPI,UI_GLOBAL_READ,当前系统全量状态,NO_PRODUCTION_WRITE
+GET,/v1/channels/{id}/preview,UIReadAPI,UI_CHANNEL_READ,最新结果图预览元数据,NO_PRODUCTION_WRITE
+GET,/v1/signals,PLCGateway,PLC_MONITOR_READ,信号表含source/verification/actual,NO_PRODUCTION_WRITE
+GET,/v1/signals/{id}/timeline,PLCGateway,PLC_MONITOR_READ,信号时序只读查询,NO_PRODUCTION_WRITE
+GET,/v1/alarms/{id},AlarmDiagnostics,ALARM_READ,故障证据/影响/排查,NO_PRODUCTION_WRITE
+POST,/v1/alarms/{id}/ack,AlarmDiagnostics,ALARM_ACK,仅确认不自动清除,BACKEND_AUTH
+POST,/v1/solutions/{draftId}/patch-channel,SolutionManager,DRAFT_EDIT,带revision乐观锁,BACKEND_AUTH
+POST,/v1/replay/jobs,ReplayLab,REPLAY_START,隔离生产的离线试跑,NO_PRODUCTION_WRITE
+POST,/v1/deployments,DeploymentManager,DEPLOY_APPROVED,受控请求换型事务,STATE_GATED
+GET,/v1/workpieces/{id}/atlas,DataRepository,TRACE_READ,单件11通道图集,NO_PRODUCTION_WRITE
+GET,/v1/quality/summary,Statistics,QUALITY_READ,准确日周良率及缺陷分布,NO_PRODUCTION_WRITE

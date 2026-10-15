@@ -1,0 +1,30 @@
+{
+  "EventId": "EV-DEMO-0001",
+  "UtcTime": "2026-10-15T00:00:00Z",
+  "HostId": "SLAVE-DEMO",
+  "HostRole": "SLAVE",
+  "SourceModule": "LineCapture",
+  "EventType": "Capture.FrameIncomplete",
+  "Severity": "ERROR",
+  "RunContext": "OFFLINE_LAB",
+  "TraceId": "TRACE-DEMO-1",
+  "Epoch": 1,
+  "WorkpieceId": "WP-DEMO-0001",
+  "CaptureId": "CAP-DEMO-200",
+  "StationId": "ST09",
+  "ChannelId": "CH08",
+  "PhysicalDeviceId": "LINE-S-8",
+  "SignalId": "SIG_CAM_REAR_LINE",
+  "MessageId": null,
+  "AttemptNo": 1,
+  "SolutionReleaseId": null,
+  "MonotonicNs": 123456789,
+  "Outcome": "FAILED",
+  "TextCN": "示例：ST09反面线扫Full帧验证失败",
+  "EvidenceRef": "DEMO-NOT_REAL",
+  "Payload": {
+    "expectedHeight": 15000,
+    "actualHeight": 12000,
+    "status": "FRAME_INCOMPLETE"
+  }
+}

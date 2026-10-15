@@ -1,0 +1,35 @@
+{
+  "invariants": [
+    "11 channels + 9 physical capture devices",
+    "single capture group for each line scan split",
+    "CH01 positioning excluded from 10 defect expected in result",
+    "FieldGate FG-01,FG-02,FG-03,FG-04,FG-05 blocked",
+    "PLC production writes disabled by default",
+    "no release of draft with model undefined",
+    "UI demonstrates results-only and labels synthetic visuals"
+  ],
+  "roles": [
+    "MASTER",
+    "SLAVE"
+  ],
+  "statuses": {
+    "processing": [
+      "EXECUTED",
+      "ERROR",
+      "MISSING",
+      "SKIPPED_VERIFIED",
+      "CANCELED"
+    ],
+    "quality": [
+      "OK",
+      "NG",
+      "UNDECIDED",
+      "NOT_APPLICABLE"
+    ]
+  },
+  "terminal_rules": [
+    "cannot produce OK if required channel missing",
+    "cannot change active release for in-flight workpiece",
+    "acknowledge alarm does not clear fault"
+  ]
+}

@@ -1,0 +1,14 @@
+# ZIP-first, git-friendly
+/build*/
+/runs/
+/evidence/
+*.db
+*.db-shm
+*.db-wal
+*.sock
+*.exe
+*.obj
+*.o
+*.log
+__pycache__/
+.DS_Store

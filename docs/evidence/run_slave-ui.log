@@ -1,0 +1,10 @@
+AOI_M00_FONT_TEST_IMPORT_ID 0
+AOI_M00_FONT_FAMILY QList("Noto Sans CJK JP", "Noto Sans CJK KR", "Noto Sans CJK SC", "Noto Sans CJK TC", "Noto Sans CJK HK", "Noto Sans Mono CJK JP", "Noto Sans Mono CJK KR", "Noto Sans Mono CJK SC", "Noto Sans Mono CJK TC", "Noto Sans Mono CJK HK")
+QFontDatabase: Cannot find font directory /mnt/data/aoi_m00_sdk_cache/unpacked/vision_sdk/components/qt/lib/fonts.
+Note that Qt no longer ships fonts. Deploy some (from https://dejavu-fonts.github.io/ for example) or switch to fontconfig.
+AOI_M00_FONT_AVAILABLE true
+AOI_UI_READY SLAVE SIM_ONLY
+AOI_UI_IPC_CONNECTED SLAVE SIM_ONLY
+AOI_UI_IPC_CONNECTED SLAVE SIM_ONLY
+AOI_UI_IPC_CONNECTED SLAVE SIM_ONLY
+M00_QML_SCREENSHOT_SAVED /mnt/data/aoi_m00_sdk_cache/five_process_evidence/slave_m00.png QSize(1160, 700)

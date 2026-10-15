@@ -1,0 +1,5 @@
+-- AOI M00 OpenCV5 probe enabled: 5.0.0
+-- AOI M00: SIM_ONLY=ON, GUI=ON, Qt=6.11.2 (FINS/Camera/Windows unimplemented)
+-- Configuring done (4.6s)
+-- Generating done (0.0s)
+-- Build files have been written to: /mnt/data/AOI_Vision_Platform_M00_r001/build/linux-sim

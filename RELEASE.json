@@ -1,0 +1,30 @@
+{
+  "a10_final_candidate_signoff": "AOI_Agent05_A10_M00-r003_FINAL_CANDIDATE_SIGNOFF_20261015.md",
+  "a10_patch_sha256": "23ee6d77aa07451197dd6c963d30f4e1acb574a229f73a4fe1426796b081a2dc",
+  "a10_reviewed_candidate_sha256": "3217da7a30c3b60a5232629df738d1476be4897da507aad22708b43e457aa4ae",
+  "candidate_quality_remediation": "A0-CR-002 A10-review-required; test paths only",
+  "contract_version": "C00-DRAFT",
+  "field_gate_status": "FIELD_PENDING_ALL_14",
+  "github_transfer_policy": "PRIVATE_REPOSITORY_ONLY; exact official source tree; no business gate bypass",
+  "integration_role": "A0",
+  "integration_task": "W001",
+  "last_patch_agent": "AOI-Agent05",
+  "last_patch_tasks": [
+    "W005",
+    "W007"
+  ],
+  "mode": "SIM_ONLY",
+  "official_promotion_decision": "A0_PROMOTED_AFTER_A10_CANDIDATE_PASS",
+  "official_release_date": "2026-10-15",
+  "official_scope": "M00 Linux five-process health-only scaffold; SIM_ONLY, C00-DRAFT",
+  "parent_archive_sha256": "159fb58d25782007d5439f50e2df256ff253c979257ef679ac3154ca41884022",
+  "parent_release": "M00-r002",
+  "plan": "v1.1-20261015",
+  "qa_hold_original_r002": "HOLD - 5/6 and missing-screenshot false positive",
+  "release_id": "M00-r003",
+  "scope": "Qt Linux five-process health-only scaffold; no PLC FINS, capture or defect inference",
+  "sim_ready": false,
+  "spec": "v2.0-20261015",
+  "status": "OFFICIAL_SOURCE",
+  "windows": "NOT_VERIFIED"
+}

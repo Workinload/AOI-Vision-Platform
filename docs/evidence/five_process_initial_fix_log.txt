@@ -1,0 +1,2 @@
+PASS: 5 OS processes / 2 role-specific Core DB / Qt Quick UI real IPC / UDP health / deny-write; screenshots=PASS
+EVIDENCE_DIR=/mnt/data/aoi_m00_sdk_cache/five_process_evidence

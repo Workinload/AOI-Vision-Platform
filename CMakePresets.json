@@ -1,0 +1,10 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {"major": 3, "minor": 25, "patch": 0},
+  "configurePresets": [
+    {"name": "linux-sim", "displayName": "Linux Qt6.11 simulation", "generator": "Ninja", "binaryDir": "${sourceDir}/build/linux-sim", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "AOI_SIM_ONLY": "ON", "AOI_BUILD_GUI": "ON", "BUILD_TESTING": "ON"}},
+    {"name": "linux-headless", "generator": "Ninja", "binaryDir": "${sourceDir}/build/linux-headless", "cacheVariables": {"CMAKE_BUILD_TYPE": "Debug", "AOI_SIM_ONLY": "ON", "AOI_BUILD_GUI": "OFF", "BUILD_TESTING": "ON"}}
+  ],
+  "buildPresets": [{"name":"linux-sim","configurePreset":"linux-sim"},{"name":"linux-headless","configurePreset":"linux-headless"}],
+  "testPresets": [{"name":"linux-sim","configurePreset":"linux-sim","output":{"outputOnFailure":true}},{"name":"linux-headless","configurePreset":"linux-headless","output":{"outputOnFailure":true}}]
+}

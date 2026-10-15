@@ -1,0 +1,41 @@
+{
+  "status": "PASS",
+  "five_live_pids": {
+    "vplc": 2025,
+    "master-core": 2026,
+    "slave-core": 2027,
+    "master-ui": 2028,
+    "slave-ui": 2029
+  },
+  "master": {
+    "camera": "NOT_IMPLEMENTED",
+    "db_file": "/mnt/data/aoi_m00_sdk_cache/five_process_evidence/master/sim_bootstrap.sqlite3",
+    "fins": "NOT_IMPLEMENTED",
+    "ipc_path": "/mnt/data/aoi_m00_sdk_cache/five_process_evidence/master/core.ipc.sock",
+    "mode": "SIM_ONLY",
+    "peerlink": "NOT_IMPLEMENTED",
+    "role": "MASTER",
+    "schema": "aoi.core.health.v0",
+    "state": "SCAFFOLD_ONLY",
+    "uptime_ms": 75
+  },
+  "slave": {
+    "camera": "NOT_IMPLEMENTED",
+    "db_file": "/mnt/data/aoi_m00_sdk_cache/five_process_evidence/slave/sim_bootstrap.sqlite3",
+    "fins": "NOT_IMPLEMENTED",
+    "ipc_path": "/mnt/data/aoi_m00_sdk_cache/five_process_evidence/slave/core.ipc.sock",
+    "mode": "SIM_ONLY",
+    "peerlink": "NOT_IMPLEMENTED",
+    "role": "SLAVE",
+    "schema": "aoi.core.health.v0",
+    "state": "SCAFFOLD_ONLY",
+    "uptime_ms": 76
+  },
+  "vplc_udp_health": "PASS",
+  "unsupported_udp_ignored": true,
+  "ipc_denies_write": true,
+  "database_role_isolation": true,
+  "linux_qml_load": "PASS",
+  "screenshots": "PASS",
+  "scope": "M00_SCAFFOLD_ONLY_NOT_FINS"
+}
