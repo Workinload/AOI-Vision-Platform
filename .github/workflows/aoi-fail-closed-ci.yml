@@ -1,0 +1,98 @@
+name: AOI fail-closed provenance and build
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  provenance:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify frozen PLAN and SIM_ONLY gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import csv,hashlib,json,pathlib
+          p=pathlib.Path('docs/plan/v1.1-original')
+          m=json.loads(pathlib.Path('docs/plan/ORIGINAL_PLAN_SHA256_MANIFEST.json').read_text())['original_files']
+          actual={f.relative_to(p).as_posix():f for f in p.rglob('*') if f.is_file()}
+          assert len(m)==len(actual)==55
+          for key,expected in m.items():
+              assert key in actual and hashlib.sha256(actual[key].read_bytes()).hexdigest()==expected,key
+          def rows(name):
+              with (p/name).open(encoding='utf-8-sig',newline='') as f:return list(csv.DictReader(f))
+          w,r,g=rows('WBS_TASKS_130.csv'),rows('RQ_114_COVERAGE.csv'),rows('FIELD_GATES_14.csv')
+          assert len(w)==len({x['TaskId'] for x in w})==130
+          assert len(r)==len({x['RequirementId'] for x in r})==len({x['TestCaseIds'] for x in r})==114
+          assert len(g)==14 and all(x['ProductionWriteAllowed']=='FALSE' for x in g)
+          t={x['TaskId'] for x in w}
+          assert all(d in t for x in w for d in filter(None,x['DependsOn'].split(',')))
+          assert all(x['PrimaryWBS'] in t for x in r)
+          assert all(x['CurrentExecutionState']=='NOT_RUN' for x in r)
+          led=json.loads(pathlib.Path('docs/agents/TASK_LEDGER.json').read_text())
+          assert led['items']['W001']['status']=='VERIFIED'
+          print('PLAN_STATIC_PASS 55/55 hashes; 130 WBS; 114 RQ-TC NOT_RUN; 14 field writes FALSE')
+          PY
+      - name: Reject immutable source modifications on pull requests
+        if: github.event_name == 'pull_request'
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_SHA"
+          python3 - <<'PY'
+          import os,subprocess
+          base=os.environ['BASE_SHA']
+          assert len(base)==40
+          changed=subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines()
+          forbidden=('reference/','docs/plan/v1.1-original/','docs/evidence/')
+          immutable={'BASELINE_LOCK.json','FILE_HASHES.json','SHA256SUMS.txt','INTEGRATION_HISTORY.json','RELEASE.json'}
+          bad=[x for x in changed if x.startswith(forbidden) or x in immutable]
+          if bad:raise SystemExit('IMMUTABLE_MODIFIED: '+repr(bad))
+          print('IMMUTABLE_DIFF_PASS:',len(changed),'paths; owner review remains A0-controlled')
+          PY
+  linux-sdk-ctest:
+    needs: provenance
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require independently verified locked Qt/OpenCV offline SDK
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="$RUNNER_TEMP/aoi_sdk"
+          if [ ! -f "$SDK/SDK_VERIFIED.json" ]; then
+            echo 'BLOCKED_MISSING_SDK: Qt6.11.2/OpenCV5.0.0 offline archive and SHA evidence absent. Do not claim build PASS.' >&2
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json,os,pathlib
+          p=pathlib.Path(os.environ['RUNNER_TEMP'])/'aoi_sdk/SDK_VERIFIED.json'
+          d=json.loads(p.read_text())
+          assert d.get('qt_version')=='6.11.2'
+          assert d.get('opencv_version')=='5.0.0'
+          assert d.get('sdk_source_sha256_verified') is True
+          PY
+      - name: Configure and execute complete CTest
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="$RUNNER_TEMP/aoi_sdk"
+          cmake -S . -B build/ci -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$SDK/components/qt;$SDK/components/opencv" -DAOI_SIM_ONLY=ON -DAOI_BUILD_GUI=ON -DAOI_PROBE_OPENCV5=ON -DBUILD_TESTING=ON
+          cmake --build build/ci --parallel 2
+          QT_QPA_PLATFORM=offscreen QSG_RHI_BACKEND=software ctest --test-dir build/ci --output-on-failure
+      - name: Assert production mode rejected
+        shell: bash
+        run: |
+          if cmake -S . -B build/production-denied -G Ninja -DAOI_SIM_ONLY=OFF; then
+            echo 'FAIL: non-sim mode accepted' >&2
+            exit 1
+          fi
+          echo SIM_ONLY_PRODUCTION_REJECTION_PASS
