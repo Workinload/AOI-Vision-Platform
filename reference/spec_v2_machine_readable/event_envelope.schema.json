@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/aoi/schema/event_envelope/1.0",
+  "title": "AOI Event Envelope 1.0",
+  "description": "Spec draft; schema identity must become organization URL on release",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "EventId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "UtcTime": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "HostId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "HostRole": {
+      "enum": [
+        "MASTER",
+        "SLAVE",
+        "OFFLINE"
+      ]
+    },
+    "SourceModule": {
+      "type": "string",
+      "minLength": 1
+    },
+    "EventType": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Severity": {
+      "enum": [
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL"
+      ]
+    },
+    "RunContext": {
+      "enum": [
+        "PRODUCTION",
+        "MAINTENANCE",
+        "OFFLINE_LAB"
+      ]
+    },
+    "TraceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Epoch": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "WorkpieceId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "CaptureId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "StationId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "ChannelId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "PhysicalDeviceId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "SignalId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "MessageId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "AttemptNo": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "SolutionReleaseId": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "MonotonicNs": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "Outcome": {
+      "enum": [
+        "NONE",
+        "SUCCEEDED",
+        "FAILED",
+        "REJECTED",
+        "RETRYING",
+        "IGNORED"
+      ]
+    },
+    "TextCN": {
+      "type": "string",
+      "minLength": 1
+    },
+    "EvidenceRef": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "Payload": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "EventId",
+    "UtcTime",
+    "HostId",
+    "HostRole",
+    "SourceModule",
+    "EventType",
+    "Severity",
+    "RunContext",
+    "TraceId",
+    "Outcome",
+    "TextCN",
+    "Payload"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "package": "AOI-Vision-Platform",
+  "baseline": "M00-r001",
+  "created_utc": "2026-10-15T00:00:00Z",
+  "spec_version": "v2.0-20261015",
+  "plan_version": "v1.1-20261015",
+  "contract_version": "C00-DRAFT",
+  "build_mode": "SIM_ONLY",
+  "sources": {
+    "spec_v2_zip": {
+      "filename": "AOI_完整开发设计全书_v2.0_20261015.zip",
+      "sha256": "de0f36f5c270e07abedc0e317d8517c8f5e0d86a5a42897120d42b3a1f5dec47",
+      "size": 31170678
+    },
+    "qt_reference_template_zip": {
+      "filename": "VisionForge_Qt6_YOLO11_ONNX_已修复源码与QA.zip",
+      "sha256": "c2ba0f27012750756641a2ab626d5696444b6b51ecd8c66336a019dc07cb06ac",
+      "size": 4164749
+    },
+    "sdk_parts_manifest": {
+      "filename": "SDK_PARTS_MANIFEST.json",
+      "sha256": "adcbf986f508913d4cf9be60ec480c7da7ac966c0285b34bf9e6365aaf4427cf",
+      "size": 5136
+    }
+  },
+  "reference_files": {
+    "acceptance_cases.csv": "56e1262137406ec0beebc9fa51a7ebe94a3acaac1dca49e7db60ba30c54e76fe",
+    "database_extensions_v2.sql": "600fb72523e9424a7cc585ee45084cab72605eb354c41898df775fd8dfb8a791",
+    "database_schema_sqlite.sql": "08c56dd9a56a51829c2e3667632f6392b83b9657fafc13bb08fc0faf6365f6e0",
+    "event_envelope.example.json": "e00261f7ff2d2084dc624be0cc54a3a70f38049d7ef632f0e4858a2311cdb873",
+    "event_envelope.schema.json": "562bfc1f655c017a037ff277eefa3e407cf7f69524174e5146fc6ebcc3c4a9cd",
+    "field_verification_gates.csv": "c56d84b46176ca86afcb11088398005f6af86b7fc85d5ce0f9bf7a295871b6de",
+    "ipc_endpoint_draft.csv": "d1c23ae8bc6e429ee6a6af95d702e773931b1ef7a142672e70048f23e90e13cf",
+    "machine_topology.example.json": "c297a45aeb1c00cebcfc6ba27e2d33c8eccab05cbec12b15c58ac00987175c8c",
+    "module_registry.csv": "2b3927c7d86e21419b596cd57fa2f3eed088302b956f184e221a6eba8585166d",
+    "plc_signal_registry.csv": "97ff0003f2416a1dacf86fecea18ef80ec45fd5f016526333725e0c977e3fee8",
+    "product_solution.schema.json": "a560d7b063fb1683b5345f7c91654a99d9f083077228a2c3ce637c6f4cdc8ef0",
+    "requirements_trace.csv": "0eefa07423263d6449e28299ce394c6df608cd690ff25bcfc050b029032808c2",
+    "safety_and_consistency_invariants.json": "c643e13219e2121b095aed246340f413cd655aebdeba11dff9077d3a164be9fc",
+    "station_channel_map.csv": "1796f7949646faf67d1b9ae013cf65115e97d736a7f458fd07f295093857c47a"
+  },
+  "sdk": {
+    "qt_linux": "6.11.2",
+    "opencv_linux": "5.0.0",
+    "openvino_target": "2025.4.1",
+    "qt_windows": "NOT_CHECKED",
+    "windows_toolchain": "NOT_CHECKED"
+  },
+  "task_status": {
+    "W001": "IMPLEMENTED_PENDING_A10_REVIEW",
+    "W002": "NOT_STARTED",
+    "W003": "IMPLEMENTED_PENDING_A10_REVIEW",
+    "W004": "DRAFT_NOT_FROZEN",
+    "W007": "LINUX_QT_CHECK_IN_PROGRESS"
+  },
+  "scope": {
+    "qt_quick_linux_smoke": "TO_BE_TESTED",
+    "two_role_core": "TO_BE_TESTED",
+    "two_ui_processes": "TO_BE_TESTED",
+    "vplc_udp_health_only": "TO_BE_TESTED",
+    "fins_read_write": "NOT_IMPLEMENTED",
+    "nine_camera_mocks": "NOT_IMPLEMENTED",
+    "final_quality": "NOT_IMPLEMENTED",
+    "windows_x64": "NOT_VERIFIED",
+    "field_gate_count": 14
+  }
+}

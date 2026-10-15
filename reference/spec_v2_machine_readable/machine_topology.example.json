@@ -1,0 +1,676 @@
+{
+  "SchemaVersion": "1.0",
+  "TopologyKind": "INTERACTIVE_LOGICAL_SAFETY_FIRST",
+  "LivePLCConnection": false,
+  "LayoutMeaning": "Approximate canvas layout only; NOT actual CAD, robot coordinates or live inferred conveyor movement",
+  "Nodes": [
+    {
+      "EntityId": "PLC01",
+      "EntityType": "PLC",
+      "DisplayNameCN": "PLC控制器",
+      "LayoutFraction": {
+        "X": 0.12,
+        "Y": 0.2
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "MASTER",
+      "EntityType": "HOST",
+      "DisplayNameCN": "主上位机",
+      "LayoutFraction": {
+        "X": 0.4,
+        "Y": 0.12
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "SLAVE",
+      "EntityType": "HOST",
+      "DisplayNameCN": "从上位机",
+      "LayoutFraction": {
+        "X": 0.7,
+        "Y": 0.12
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "LOADING",
+      "EntityType": "STATION",
+      "DisplayNameCN": "上料扫码及定位",
+      "LayoutFraction": {
+        "X": 0.08,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST01",
+      "EntityType": "STATION",
+      "DisplayNameCN": "转盘ST01",
+      "LayoutFraction": {
+        "X": 0.2,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST02",
+      "EntityType": "STATION",
+      "DisplayNameCN": "极耳整形ST02",
+      "LayoutFraction": {
+        "X": 0.32,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST03",
+      "EntityType": "STATION",
+      "DisplayNameCN": "前短边/正面极耳",
+      "LayoutFraction": {
+        "X": 0.44,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST04",
+      "EntityType": "STATION",
+      "DisplayNameCN": "左长边/反面极耳",
+      "LayoutFraction": {
+        "X": 0.56,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST05",
+      "EntityType": "STATION",
+      "DisplayNameCN": "右长边",
+      "LayoutFraction": {
+        "X": 0.68,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST06",
+      "EntityType": "STATION",
+      "DisplayNameCN": "后短边",
+      "LayoutFraction": {
+        "X": 0.8,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST07",
+      "EntityType": "STATION",
+      "DisplayNameCN": "转盘交接",
+      "LayoutFraction": {
+        "X": 0.9,
+        "Y": 0.51
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST09",
+      "EntityType": "STATION",
+      "DisplayNameCN": "反面线扫",
+      "LayoutFraction": {
+        "X": 0.66,
+        "Y": 0.75
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST10",
+      "EntityType": "STATION",
+      "DisplayNameCN": "正面线扫/末端码",
+      "LayoutFraction": {
+        "X": 0.43,
+        "Y": 0.75
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "ST11",
+      "EntityType": "STATION",
+      "DisplayNameCN": "下料与整料结果",
+      "LayoutFraction": {
+        "X": 0.2,
+        "Y": 0.75
+      },
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-M-1",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-M-1",
+      "ParentEntityId": "LOADING",
+      "HostRole": "MASTER",
+      "LegacySerialOrBoard": "DA2239471",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-M-2",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-M-2",
+      "ParentEntityId": "ST05",
+      "HostRole": "MASTER",
+      "LegacySerialOrBoard": "DA2240690",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-M-3",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-M-3",
+      "ParentEntityId": "ST06",
+      "HostRole": "MASTER",
+      "LegacySerialOrBoard": "DA2240604",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-S-1",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-S-1",
+      "ParentEntityId": "ST03",
+      "HostRole": "SLAVE",
+      "LegacySerialOrBoard": "DA2240585",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-S-2",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-S-2",
+      "ParentEntityId": "ST03",
+      "HostRole": "SLAVE",
+      "LegacySerialOrBoard": "DA2240611",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-S-3",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-S-3",
+      "ParentEntityId": "ST04",
+      "HostRole": "SLAVE",
+      "LegacySerialOrBoard": "DA2240617",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "HIK-S-4",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "HIK-S-4",
+      "ParentEntityId": "ST04",
+      "HostRole": "SLAVE",
+      "LegacySerialOrBoard": "DA2240706",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "LINE-M-2",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "LINE-M-2",
+      "ParentEntityId": "ST10",
+      "HostRole": "MASTER",
+      "LegacySerialOrBoard": "Vulcan-CL Frame Grabber_0",
+      "FieldPhysicalCoordinatesVerified": false
+    },
+    {
+      "EntityId": "LINE-S-8",
+      "EntityType": "CAMERA_OR_FRAME_GRABBER",
+      "DisplayNameCN": "LINE-S-8",
+      "ParentEntityId": "ST09",
+      "HostRole": "SLAVE",
+      "LegacySerialOrBoard": "Vulcan-CL Frame Grabber_0",
+      "FieldPhysicalCoordinatesVerified": false
+    }
+  ],
+  "Links": [
+    {
+      "LinkId": "FLOW-01",
+      "Kind": "PROCESS_ORDER",
+      "From": "LOADING",
+      "To": "ST01",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-02",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST01",
+      "To": "ST02",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-03",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST02",
+      "To": "ST03",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-04",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST03",
+      "To": "ST04",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-05",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST04",
+      "To": "ST05",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-06",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST05",
+      "To": "ST06",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-07",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST06",
+      "To": "ST07",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-08",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST07",
+      "To": "ST09",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-09",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST09",
+      "To": "ST10",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "FLOW-10",
+      "Kind": "PROCESS_ORDER",
+      "From": "ST10",
+      "To": "ST11",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "LINK-M-PLC",
+      "Kind": "FINS_UDP_LOGICAL",
+      "From": "MASTER",
+      "To": "PLC01",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "LINK-S-PLC",
+      "Kind": "FINS_UDP_LOGICAL",
+      "From": "SLAVE",
+      "To": "PLC01",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "LINK-MS",
+      "Kind": "PEER_TCP_LOGICAL",
+      "From": "MASTER",
+      "To": "SLAVE",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-M-1",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-M-1",
+      "To": "LOADING",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-M-2",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-M-2",
+      "To": "ST05",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-M-3",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-M-3",
+      "To": "ST06",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-S-1",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-S-1",
+      "To": "ST03",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-S-2",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-S-2",
+      "To": "ST03",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-S-3",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-S-3",
+      "To": "ST04",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-HIK-S-4",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "HIK-S-4",
+      "To": "ST04",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-LINE-M-2",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "LINE-M-2",
+      "To": "ST10",
+      "RealTimeMovementObserved": false
+    },
+    {
+      "LinkId": "BIND-LINE-S-8",
+      "Kind": "DEVICE_TO_STATION",
+      "From": "LINE-S-8",
+      "To": "ST09",
+      "RealTimeMovementObserved": false
+    }
+  ],
+  "SignalHotspots": [
+    {
+      "SignalId": "SIG_HEARTBEAT_M",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_HEARTBEAT_S",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "DECLARATION_ONLY"
+    },
+    {
+      "SignalId": "SIG_LEGACY_RESET_M",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "DECLARATION_ONLY"
+    },
+    {
+      "SignalId": "SIG_LEGACY_RESET_S",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "DECLARATION_ONLY"
+    },
+    {
+      "SignalId": "SIG_CAM_POS",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [
+        "HIK-M-1"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_FRONT_SHORT",
+      "AnchorEntityId": "ST03",
+      "PhysicalDeviceIds": [
+        "HIK-S-1"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_FRONT_TAB",
+      "AnchorEntityId": "ST03",
+      "PhysicalDeviceIds": [
+        "HIK-S-2"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_LEFT_LONG",
+      "AnchorEntityId": "ST04",
+      "PhysicalDeviceIds": [
+        "HIK-S-3"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_REAR_TAB",
+      "AnchorEntityId": "ST04",
+      "PhysicalDeviceIds": [
+        "HIK-S-4"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_RIGHT_LONG",
+      "AnchorEntityId": "ST05",
+      "PhysicalDeviceIds": [
+        "HIK-M-2"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_REAR_SHORT",
+      "AnchorEntityId": "ST06",
+      "PhysicalDeviceIds": [
+        "HIK-M-3"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_REAR_LINE",
+      "AnchorEntityId": "ST09",
+      "PhysicalDeviceIds": [
+        "LINE-S-8"
+      ],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_CAM_FRONT_LINE",
+      "AnchorEntityId": "ST10",
+      "PhysicalDeviceIds": [
+        "LINE-M-2"
+      ],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_CAM_REAR_LINE_CLEAR_ALIAS",
+      "AnchorEntityId": "PLC01",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_TURNTABLE",
+      "AnchorEntityId": "PLC01",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "PLC_SOURCE_ONLY"
+    },
+    {
+      "SignalId": "SIG_FINAL_QUALITY",
+      "AnchorEntityId": "ST11",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_LINE_REAR_SEQ",
+      "AnchorEntityId": "ST09",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "PLC_SOURCE_ONLY"
+    },
+    {
+      "SignalId": "SIG_LINE_FRONT_SEQ",
+      "AnchorEntityId": "ST10",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "PLC_SOURCE_ONLY"
+    },
+    {
+      "SignalId": "SIG_RESET_S",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_RESET_M",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_YIELD_ALARM",
+      "AnchorEntityId": "PLC01",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "PLC_SOURCE_ONLY"
+    },
+    {
+      "SignalId": "SIG_OPERATOR",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_READY_M",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_READY_S",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_OPERATOR_RESTORE",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_BARCODE_REQUEST",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_BARCODE_WORDS",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_DOWNSTREAM_REQUEST",
+      "AnchorEntityId": "ST11",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_END_BARCODE_WORDS",
+      "AnchorEntityId": "ST10",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_DIM_M_L",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_DIM_M_W",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_DIM_M_T",
+      "AnchorEntityId": "MASTER",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_DIM_S_L",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_DIM_S_W",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_DIM_S_T",
+      "AnchorEntityId": "SLAVE",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_OLD_PLC_X",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_OLD_PLC_Y",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_OLD_PLC_U",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_OLD_UI_X",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_OLD_UI_Y",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_OLD_UI_U",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_M_LINE_ALARM_ALIAS",
+      "AnchorEntityId": "ST10",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_M_LINE_ALARM_ALIAS_2",
+      "AnchorEntityId": "ST10",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "BLOCKED_CONFLICT"
+    },
+    {
+      "SignalId": "SIG_RECIPE_NAME",
+      "AnchorEntityId": "PLC01",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "LEGACY_STATIC_NEEDS_FIELD"
+    },
+    {
+      "SignalId": "SIG_POSITION_AUGMENT",
+      "AnchorEntityId": "LOADING",
+      "PhysicalDeviceIds": [],
+      "ValidationState": "PLC_SOURCE_ONLY"
+    }
+  ],
+  "Notes": "ST08 not shown because no trusted physical process assignment in provided flow; do not infer its operation. Assign physical coordinates only after onsite confirmation."
+}

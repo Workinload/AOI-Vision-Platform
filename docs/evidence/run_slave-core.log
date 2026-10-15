@@ -1,0 +1,1 @@
+AOI_CORE_READY SLAVE /mnt/data/aoi_m00_sdk_cache/five_process_evidence/slave/core.ipc.sock /mnt/data/aoi_m00_sdk_cache/five_process_evidence/slave/sim_bootstrap.sqlite3 SIM_ONLY

@@ -1,0 +1,11 @@
+﻿UIId,Feature,RequiredTasks,FirstUIPhase,FinalRequiredPhase,FinalGate,ExpectedIntegrationEvidence
+UI01,双机系统状态/IPC,"W015,W016,W033,W081",S01,S05,G05,真实Core连接状态；断线离线提示
+UI02,11路结果图/12格汇总,"W058,W067,W068,W069,W070,W080",S05,S05,G05,真实结果位图和工作件ID；DPI截图
+UI03,单件11图集,"W060,W063,W071,W102",S05,S07,G07,同WorkpieceId且图片资产hash可对账
+UI04,设备地图与信号表,"W025,W072,W073,W074",S05,S05,G05,24字段/信号ID双向联动；旧/现/草稿字段独立
+UI05,单站ROI及模型/相机配置,"W075,W076,W077,W083,W084,W089,W094",S05,S06,G06,保存真正执行PatchStationDraft且权限后端鉴权；Active不变
+UI06,报警/事件日志中心,"W019,W078,W091,W092,W103",S05,S07,G07,S05基础日志可读；G06根因/ACK/CLEAR;G07追溯一键定位
+UI07,质量日周统计与缺陷图表,"W063,W079,W100,W101",S05,S07,G07,真工件Finalized事件口径+SQL oracle+重复件不多计
+UI08,产品草稿/发布/换型,"W083,W084,W085,W086,W087,W088,W090,W094",S06,S06,G06,双机/PLC readback+Epoch一致；失败HOLD；审批成功
+UI09,离线试跑与AB对比,"W096,W097,W098,W099",S07,S07,G07,独立进程/DB与无生产PLC权限；真fixture输出和证据
+UI10,权限/审计维护,"W089,W090,W093,W094",S06,S07,G07,越权IPC拒绝；事故包可导出；访问审计

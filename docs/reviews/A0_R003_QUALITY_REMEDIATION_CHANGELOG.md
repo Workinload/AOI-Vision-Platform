@@ -1,0 +1,7 @@
+# A0 M00-r003 candidate — quality-remediation audit trail
+
+1. M00-r002 original candidate (SHA256 `159fb58d25782007d5439f50e2df256ff253c979257ef679ac3154ca41884022`) received independent A10 QA signoff decision `HOLD`, not release approval. Old candidate and official M00-r001 are preserved immutable.
+2. A10 supplied the exact M00-r002-anchored legal patch (`23ee6d77aa07451197dd6c963d30f4e1acb574a229f73a4fe1426796b081a2dc`), for `tests/integration/five_process_smoke.py` and new `tests/integration/a10_traceability_audit.py`. Both scripts were integrated using the original `tools/validate_patch.py` / `tools/integrate_patch.py` into the **unverified** M00-r003 intermediate candidate. W005/W007 statuses remain unchanged.
+3. A0 issued CR-A0-002 covering one temporarily unowned file `tests/patch/test_zip_protocol.py` and applied **exact A10 proposed diff** (dynamic next-release ID), as **A0-controlled candidate-only exception**, not as fraudulent A10 patch. `docs/agents/OWNERSHIP.json` is unmodified.
+4. This source candidate remains `CANDIDATE_UNVERIFIED`, `C00-DRAFT`, `SIM_ONLY`, `sim_ready=false`, `Windows=NOT_VERIFIED`, 14 `FIELD_PENDING`. All protected v2 + PLAN references and source locks remain byte-identical. No production PLC write, device integration or business acceptance is claimed.
+5. A0 original failure logs and A10 HOLD report are preserved; the corrected source must be independently reviewed by A10 **after** fresh QA and may not be renamed as an approved official source until then.

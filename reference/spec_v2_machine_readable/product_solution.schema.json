@@ -1,0 +1,350 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/aoi/product-solution/2.0",
+  "title": "AOI ProductSolution v2 DRAFT",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "SchemaVersion",
+    "DocumentKind",
+    "ProductId",
+    "ProductName",
+    "Revision",
+    "DraftId",
+    "BaseReleaseId",
+    "ReleaseState",
+    "MachineProfileReference",
+    "ProductDimensionsMm",
+    "DeviceSettings",
+    "Channels",
+    "SharedCaptureGroups",
+    "FinalDecision",
+    "ImageRetention",
+    "UiLayout",
+    "ModelArtifacts",
+    "ValidationReportIds",
+    "CanPublish"
+  ],
+  "properties": {
+    "SchemaVersion": {
+      "const": "2.0"
+    },
+    "DocumentKind": {
+      "const": "PRODUCT_SOLUTION_DRAFT_NOT_DEPLOYABLE"
+    },
+    "ProductId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ProductName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "DraftId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "BaseReleaseId": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "minLength": 1
+    },
+    "ReleaseState": {
+      "const": "DRAFT"
+    },
+    "MachineProfileReference": {
+      "type": "object",
+      "required": [
+        "MachineProfileId",
+        "ProfileSha256",
+        "PlcSignalRegistryVersion"
+      ],
+      "properties": {
+        "MachineProfileId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "ProfileSha256": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "PlcSignalRegistryVersion": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "ProductDimensionsMm": {
+      "type": "object",
+      "required": [
+        "Master",
+        "Slave"
+      ],
+      "properties": {
+        "Master": {
+          "type": "object",
+          "required": [
+            "L",
+            "W",
+            "T"
+          ],
+          "properties": {
+            "L": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "W": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "T": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "Slave": {
+          "type": "object",
+          "required": [
+            "L",
+            "W",
+            "T"
+          ],
+          "properties": {
+            "L": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "W": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            },
+            "T": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "exclusiveMinimum": 0
+            }
+          }
+        }
+      }
+    },
+    "DeviceSettings": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "required": [
+          "PhysicalDeviceId",
+          "HostRole",
+          "DeviceType",
+          "CaptureSettings"
+        ],
+        "properties": {
+          "PhysicalDeviceId": {
+            "type": "string"
+          },
+          "HostRole": {
+            "enum": [
+              "MASTER",
+              "SLAVE"
+            ]
+          },
+          "DeviceType": {
+            "enum": [
+              "AREA",
+              "LINE"
+            ]
+          },
+          "CaptureSettings": {
+            "type": "object"
+          }
+        }
+      },
+      "uniqueItems": true
+    },
+    "Channels": {
+      "type": "array",
+      "minItems": 11,
+      "maxItems": 11,
+      "items": {
+        "type": "object",
+        "required": [
+          "ChannelId",
+          "StationId",
+          "PhysicalDeviceId",
+          "HostRole",
+          "DisplayROI",
+          "ModelBindings",
+          "StationRules",
+          "ExpectedInFinal",
+          "Enabled"
+        ],
+        "properties": {
+          "ChannelId": {
+            "type": "string",
+            "pattern": "^CH(0[1-9]|1[01])$"
+          },
+          "StationId": {
+            "type": "string"
+          },
+          "PhysicalDeviceId": {
+            "type": "string"
+          },
+          "HostRole": {
+            "enum": [
+              "MASTER",
+              "SLAVE"
+            ]
+          },
+          "Enabled": {
+            "type": "boolean"
+          },
+          "ExpectedInFinal": {
+            "type": "boolean"
+          },
+          "DisplayROI": {
+            "type": "object",
+            "required": [
+              "Space",
+              "X",
+              "Y",
+              "W",
+              "H"
+            ],
+            "properties": {
+              "Space": {
+                "const": "RESULT_NORMALIZED"
+              },
+              "X": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "Y": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "W": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              },
+              "H": {
+                "type": "number",
+                "exclusiveMinimum": 0,
+                "maximum": 1
+              }
+            }
+          },
+          "ModelBindings": {
+            "type": "array"
+          },
+          "StationRules": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "SharedCaptureGroups": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": {
+        "type": "object",
+        "required": [
+          "CaptureGroupId",
+          "Channels",
+          "SharedPlcSignal"
+        ],
+        "properties": {
+          "CaptureGroupId": {
+            "type": "string"
+          },
+          "Channels": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true
+          },
+          "SharedPlcSignal": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "FinalDecision": {
+      "type": "object"
+    },
+    "ImageRetention": {
+      "type": "object"
+    },
+    "UiLayout": {
+      "type": "object",
+      "required": [
+        "GridColumns",
+        "GridRows",
+        "SummarySlot",
+        "DisplayOrder"
+      ],
+      "properties": {
+        "GridColumns": {
+          "const": 4
+        },
+        "GridRows": {
+          "const": 3
+        },
+        "SummarySlot": {
+          "const": 12
+        },
+        "DisplayOrder": {
+          "type": "array",
+          "minItems": 11,
+          "maxItems": 11,
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "ModelArtifacts": {
+      "type": "array"
+    },
+    "ValidationReportIds": {
+      "type": "array"
+    },
+    "CanPublish": {
+      "const": false
+    }
+  }
+}

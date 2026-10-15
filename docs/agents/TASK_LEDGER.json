@@ -1,0 +1,49 @@
+{
+  "candidate_release": "M00-r003",
+  "candidate_release_status": "OFFICIAL_SOURCE",
+  "items": {
+    "W001": {
+      "approver": "A0",
+      "decision": "A0_APPROVED_VERIFIED_SOURCE_PROVENANCE",
+      "evidence": "docs/reviews/A0_W001_SOURCE_APPROVAL_20261015.md;AOI_Agent05_A10_M00-r001_QA-r001_REPORT.md;AOI_Agent05_A10_M00-r001_QA-r003_GATE_REVIEW.md;AOI_A0_TAKEOVER_TEST_EVIDENCE_20261015.zip",
+      "reviewer": "A10",
+      "scope": "SOURCE_PROVENANCE_ONLY",
+      "status": "VERIFIED"
+    },
+    "W002": {
+      "evidence": "docs/adr/ADR-0004-legacy-unknowns.md",
+      "status": "DRAFT_PREPARED"
+    },
+    "W003": {
+      "evidence": "docs/agents/OWNERSHIP.json;reference/plan_v1.1/MODULE_21_OWNERS.csv",
+      "status": "IMPLEMENTED_PENDING_A10_REVIEW"
+    },
+    "W004": {
+      "evidence": "contracts/C00_DRAFT.md",
+      "status": "DRAFT_NOT_FROZEN"
+    },
+    "W005": {
+      "evidence": "",
+      "status": "NOT_STARTED"
+    },
+    "W007": {
+      "evidence": "docs/evidence/M00_TEST_REPORT.md",
+      "status": "LINUX_ONLY_EVIDENCE_AVAILABLE"
+    },
+    "W010": {
+      "evidence": "docs/agents/ZIP_PROTOCOL.md",
+      "status": "PARTIAL_ZIP_HANDOFF_PREPARED"
+    }
+  },
+  "last_integrated_release": "M00-r003",
+  "next_actions": [
+    "M00-r003 Linux SIM_ONLY source scaffold is officially promoted after independent A10 candidate PASS and A0 post-transition QA; this is not SIM_READY",
+    "W002/W003 preparation plus C01 interface freeze remain unverified before unlocking other business modules",
+    "W005/W007 are NOT VERIFIED; Windows native remains NOT_VERIFIED and 114 TC + 52 scenario tests are NOT EXECUTED",
+    "All 14 field gates remain FIELD_PENDING, production PLC writing remains disabled",
+    "GitHub private repository migration must preserve all 108 original candidate files except documented A0 official metadata changes and promotion review note"
+  ],
+  "plan": "v1.1",
+  "policy": "A0 records integration and A10 independent evidence verification before VERIFIED; not all M00 scaffold features are completed WBS items.",
+  "schema": "aoi.tasks.verification.v1"
+}

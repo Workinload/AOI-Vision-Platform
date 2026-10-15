@@ -1,0 +1,18 @@
+Internal ctest changing into directory: /mnt/data/AOI_Vision_Platform_M00_r001/build/linux-sim
+Test project /mnt/data/AOI_Vision_Platform_M00_r001/build/linux-sim
+    Start 1: opencv5_link_probe
+1/6 Test #1: opencv5_link_probe ...............   Passed    0.00 sec
+    Start 2: domain_contract_test
+2/6 Test #2: domain_contract_test .............   Passed    0.00 sec
+    Start 3: patch_protocol_test
+3/6 Test #3: patch_protocol_test ..............   Passed    9.94 sec
+    Start 4: negative_guard_test
+4/6 Test #4: negative_guard_test ..............   Passed    0.95 sec
+    Start 5: source_contracts_test
+5/6 Test #5: source_contracts_test ............   Passed    0.71 sec
+    Start 6: five_process_smoke
+6/6 Test #6: five_process_smoke ...............   Passed    3.32 sec
+
+100% tests passed, 0 tests failed out of 6
+
+Total Test time (real) =  14.93 sec
