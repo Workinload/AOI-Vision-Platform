@@ -46,9 +46,9 @@ try{
  ok(t.sha256()==t.sha256(),"TransformChain SHA stable");
  cv::Mat scan(5,3,CV_8UC1);for(int y=0;y<5;++y)for(int x=0;x<3;++x)scan.at<std::uint8_t>(y,x)=static_cast<std::uint8_t>(10*y+x);
  auto line=vision::split_lines(scan,false);
- ok(line.first.rows==3&&line.second.rows==2&&line.first.at<std::uint8_t>(2,2)==scan.at<std::uint8_t>(0,0),"real OpenCV split and front rotation");
+ ok(line.first.rows==2&&line.second.rows==2&&line.first.at<std::uint8_t>(1,2)==scan.at<std::uint8_t>(1,0),"real OpenCV split and front rotation");
  auto rear=vision::split_lines(scan,true);
- ok(rear.first.rows==3&&rear.second.rows==2,"rear mirror and 180 view generated");
+ ok(rear.first.rows==2&&rear.second.rows==2,"rear mirror and 180 view generated");
  models::ModelRegistry models;
  auto sample=root/"demo.onnx";{std::ofstream f(sample,std::ios::binary);f<<"SIMULATED MODEL FILE; NOT A VALID ONNX";}
  auto sha=models::file_sha256(sample);

@@ -47,11 +47,11 @@ SplitPair split_lines(const cv::Mat& original,bool slave_rear){
   // 0-index even row == 1-index odd sample; preserve source pixel values.
   cv::Mat image;
   if(slave_rear)cv::flip(original,image,1);else image=original;
-  cv::Mat first((image.rows+1)/2,image.cols,CV_8UC1);
-  cv::Mat second(image.rows/2,image.cols,CV_8UC1);
-  for(int row=0;row<image.rows;++row){
-    cv::Mat& target=(row%2==0)?first:second;
-    std::memcpy(target.ptr<std::uint8_t>(row/2),image.ptr<std::uint8_t>(row),static_cast<std::size_t>(image.cols));
+  cv::Mat first(image.rows/2,image.cols,CV_8UC1);
+  cv::Mat second((image.rows-1)/2,image.cols,CV_8UC1);
+  for(int row=1;row<image.rows;++row){
+    cv::Mat& target=(row%2==1)?first:second;
+    std::memcpy(target.ptr<std::uint8_t>((row-1)/2),image.ptr<std::uint8_t>(row),static_cast<std::size_t>(image.cols));
   }
   if(slave_rear){cv::flip(first,first,-1);cv::flip(second,second,-1);}
   else cv::flip(first,first,-1); // master/front split 1 rotated 180, split 2 unchanged
