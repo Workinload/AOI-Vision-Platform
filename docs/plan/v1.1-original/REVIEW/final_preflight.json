@@ -1,0 +1,38 @@
+{
+  "kind": "AOI_MULTIAgent_PLAN_V1_1_RECHECK_PREFLIGHT_ONLY",
+  "plan_version": "v1.1",
+  "aoi_implementation_executed": false,
+  "hardware_validation_executed": false,
+  "wbs_tasks": 130,
+  "offline_wbs": 122,
+  "future_field_wbs": 8,
+  "requirements": 114,
+  "modules": 21,
+  "field_gates": 14,
+  "simulation_scenarios": 52,
+  "ui_stage_integration_checks": 10,
+  "agent_roles": 11,
+  "dependency_waves": 37,
+  "risk_register": 18,
+  "old_round1_checks": {
+    "passed": 40,
+    "failed": 0
+  },
+  "old_round2_checks": {
+    "passed": 33,
+    "failed": 0
+  },
+  "new_round3_checks": {
+    "passed": 53,
+    "failed": 0
+  },
+  "new_round3_mutation_tests": {
+    "caught": 6,
+    "missed": 0
+  },
+  "open_field_gates": 14,
+  "simulation_test_status": "NOT_RUN",
+  "source_3_baseline_hashes_verified": true,
+  "qtquick_windows_sdk_content_verified": false,
+  "referenced_design_version": "v2.0 2026-10-15"
+}

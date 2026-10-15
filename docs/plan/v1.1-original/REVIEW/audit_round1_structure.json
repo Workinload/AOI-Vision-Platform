@@ -1,0 +1,217 @@
+{
+  "audit": "REVIEW_ROUND1_STRUCTURE",
+  "scope": "PLAN_ONLY_NO_AOI_SOFTWARE_EXECUTION",
+  "check_count": 40,
+  "pass_count": 40,
+  "fail_count": 0,
+  "checks": [
+    {
+      "check": "130 WBS unique and sequential",
+      "pass": true,
+      "detail": "130 count"
+    },
+    {
+      "check": "114 requirements unique and sequential",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "21 modules unique",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "14 field gates unique",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "11 agent roles",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Every WBS has an assigned owner/reviewer and QA segregation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "No missing WBS dependencies",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "WBS dependency DAG acyclic",
+      "pass": true,
+      "detail": "topological waves=37, resolved=130"
+    },
+    {
+      "check": "Topological execution waves agree with WBS, and only W001 initially ready",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "No earlier phase blocked by a future phase",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Offline+hardware exact allocation",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "No WBS already falsely marked completed",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Each 114 RQ primary WBS points to offline task",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "All RQ supporting tasks exist and are unique per RQ",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "RQ Owner agrees with primary WBS",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "114 RQ test case ID has same index",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Baseline priority distribution=78 P0 +36 P1",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "All 114 tests currently NOT_RUN",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Module Owners all valid",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "14 field gates all disallow production writes",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "7 BLOCKED+7 OPEN original gate labels kept",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "All 10 offline exit gates NOT_RUN and FIELD_PENDING",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Every test scenario has a valid unique ID and explicit expected assertion",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Scenarios only refer to existing Task IDs",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Every test scenario NOT_RUN",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Risk registry is non-empty and assigned",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Every Agent has independent prompt",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Every Agent has a detailed execution task-card handoff",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Main explanatory/supporting docs exist",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Main PLAN has stages and gate sections",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "SIM profile is parseable JSON and physical write disabled",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Mandatory packaging checkpoint precedes optional Wine QA",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Deployment readiness only after simulated PLC readback",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Full E2E only after localization, mock algorithm and image write",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Original source project directory present",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "RQ text/spec/test pointers identical to v2.0 original",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "All copied testcase pointers exist in original acceptance cases",
+      "pass": true,
+      "detail": "original tests=114"
+    },
+    {
+      "check": "Module count and IDs match v2.0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Field gate count and IDs match v2.0",
+      "pass": true,
+      "detail": ""
+    },
+    {
+      "check": "Each plan WBS section source ref resolves to source chapter",
+      "pass": true,
+      "detail": ""
+    }
+  ],
+  "summary": {
+    "wbs": 130,
+    "requirements": 114,
+    "modules": 21,
+    "field_gates": 14,
+    "test_scenarios": 52,
+    "topological_waves": 37
+  }
+}

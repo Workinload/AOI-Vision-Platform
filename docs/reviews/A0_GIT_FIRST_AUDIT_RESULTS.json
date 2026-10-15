@@ -1,0 +1,149 @@
+{
+  "scope": "GIT_FIRST_GOVERNANCE_STATIC_ONLY",
+  "base_release": "M00-r003",
+  "base_zip_sha256": "737a140ff2da49da1428edd8152060da1818e0c3981711c105beecff6239f468",
+  "locked_plan_sha256": "154f632edc3d6352c6d57a95b7c1b6e8d038aa8782a34d1d571538c791a87ffe",
+  "locked_v2_sha256": "de0f36f5c270e07abedc0e317d8517c8f5e0d86a5a42897120d42b3a1f5dec47",
+  "baseline_wbs": {
+    "total": 130,
+    "owners": {
+      "A0": 11,
+      "A1": 10,
+      "A10": 30,
+      "A2": 13,
+      "A3": 10,
+      "A4": 10,
+      "A5": 4,
+      "A6": 11,
+      "A7": 5,
+      "A8": 18,
+      "A9": 8
+    },
+    "phases": {
+      "HARDWARE": 8,
+      "S00": 10,
+      "S01": 12,
+      "S02": 12,
+      "S03": 13,
+      "S04": 20,
+      "S05": 15,
+      "S06": 13,
+      "S07": 9,
+      "S08": 10,
+      "S09": 8
+    },
+    "priority": {
+      "P0": 108,
+      "P1": 22
+    },
+    "max_dependency_wave": 37,
+    "zero_dependencies": [
+      "W001"
+    ],
+    "dependency_edges": 300
+  },
+  "requirements": {
+    "count": 114,
+    "p0": 78,
+    "p1": 36,
+    "tc_count": 114,
+    "unlinked_primary_wbs": [],
+    "bad_links": []
+  },
+  "modules": {
+    "count": 21,
+    "a7": [
+      "MOD-13:SolutionManager",
+      "MOD-14:DeploymentManager"
+    ]
+  },
+  "safety": {
+    "plc_total": 45,
+    "plc_writable": 0,
+    "field_gates_total": 14,
+    "field_write_allowed": 0,
+    "field_gates_original_status": {
+      "BLOCKED": 7,
+      "OPEN": 7
+    }
+  },
+  "coverage": {
+    "scenarios": 52,
+    "UI_entries": 10,
+    "gate_entries": 11,
+    "waves_rows": 130,
+    "bad_scenario_links": {},
+    "bad_ui_links": {}
+  },
+  "ownership_findings": {
+    "source_files": 109,
+    "unassigned_wbs_agent_roles": [
+      "A7"
+    ],
+    "source_files_no_owner": [
+      ".gitignore",
+      "tests/patch/test_zip_protocol.py",
+      "tests/unit/opencv5_link_probe.cpp"
+    ],
+    "source_files_multi_owner": [],
+    "role_count": 11,
+    "chats": {
+      "AOI-Agent01": [
+        "A1",
+        "A5"
+      ],
+      "AOI-Agent02": [
+        "A2",
+        "A3"
+      ],
+      "AOI-Agent03": [
+        "A4",
+        "A6"
+      ],
+      "AOI-Agent04": [
+        "A8",
+        "A9"
+      ],
+      "AOI-Agent05": [
+        "A10"
+      ]
+    }
+  },
+  "github_source_contradictions": {
+    "ci_workflow_in_official_source": false,
+    "codeowners_exists": false,
+    "base_adr_zip_only": true,
+    "base_readme_ownership_md_broken": true,
+    "base_agent_start_zip_only": true,
+    "base_root_agents_m00r001": true,
+    "base_plan_git_workflow": true
+  },
+  "ready_wbs": [
+    "W002",
+    "W003",
+    "W005",
+    "W007"
+  ],
+  "plan_third_round_checks": {
+    "total": 53,
+    "pass": 53,
+    "fail": 0
+  },
+  "governance_first_checks": {
+    "total": 67,
+    "pass": 67,
+    "fail": 0
+  },
+  "nonacceptance": [
+    "114_TC_NOT_EXECUTED",
+    "52_SCENARIOS_NOT_EXECUTED",
+    "WINDOWS_NATIVE_NOT_VERIFIED",
+    "ALL_14_FIELD_GATES_PENDING",
+    "GITHUB_CI_NOT_IMPLEMENTED",
+    "BRANCH_RULESETS_NOT_ENFORCED"
+  ],
+  "git_permissions_observed": {
+    "private_rulesets": "403_UPGRADE_TO_PRO_OR_MAKE_PUBLIC",
+    "branch_protection": "403_RESOURCE_NOT_ACCESSIBLE_BY_INTEGRATION"
+  }
+}

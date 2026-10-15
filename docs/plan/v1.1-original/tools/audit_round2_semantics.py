@@ -1,0 +1,51 @@
+#!/usr/bin/env python3
+"""PLAN review 2: independent semantic/safety/task-handoff check. No AOI software executed."""
+import csv,json,sys,re,collections
+from pathlib import Path
+P=Path(__file__).resolve().parents[1]
+def rows(path):
+ with (P/path).open(encoding='utf-8-sig') as f:return list(csv.DictReader(f))
+W=rows('WBS_TASKS_130.csv');R=rows('RQ_114_COVERAGE.csv');F=rows('FIELD_GATES_14.csv');T=rows('SCENARIO_MATRIX.csv');G=rows('EXIT_GATES.csv');Risk=rows('RISK_REGISTER.csv');A=json.loads((P/'AGENT_OWNERS.json').read_text(encoding='utf-8'));W={r['TaskId']:r for r in W}
+plan=(P/'PLAN.md').read_text(encoding='utf-8');sc=(P/'SIMULATION_CONTRACT.md').read_text(encoding='utf-8');prompts='\n'.join(f.read_text(encoding='utf-8') for f in (P/'AGENT_PROMPTS').glob('*.md'))
+conf=json.loads((P/'CONFIG/sim_profile.example.json').read_text(encoding='utf-8'))
+checks=[]
+def check(n,ok,proof):checks.append({'check':n,'pass':bool(ok),'evidence_in_plan':proof});print(('OK' if ok else 'FAIL'),n)
+def hasall(t,terms):return all(x in t for x in terms)
+def related(s):return any(s==r['ScenarioId'] for r in T)
+check('SIM goal is 2 cores + 2 Qt UIs + separate vPLC, not an HTML mock',hasall(plan,['两个','AOI-Core','Qt Quick','vPLC','五进程','不共享进程内存']),'PLAN sections 1,3,5')
+check('Master/Slave same source, different roles and independent durable DB',hasall(plan,['MASTER','SLAVE','同一源码','SQLite WAL','PeerLink','Outbox']),'PLAN sections 1,3,4')
+check('Hardware topology 9 devices/11 channels, 2 line scan shared frame',hasall(sc,['7','ItekSlaveBack','ItekMasterFront','CH08、CH09','CH10、CH11','D1013','D1014']),'SIMULATION_CONTRACT section 3')
+check('Actual 123MB tests separated from tiny routine fixtures',hasall(sc,['8200','15000']) and hasall(plan,['123,000,000','小尺寸快速样例','真尺寸压力样例']),'PLAN sections 3,7')
+check('Three PLC completion meanings separate',hasall(plan,['FRAME_READY','CAM_HANDSHAKE_COMPLETE','PRODUCT_FINAL_RESULT','D1016','D2099']),'PLAN section 3')
+check('Quality fail closed on missing/error/ambiguous',hasall(plan,['MISSING','ERROR','IDENTITY_AMBIGUOUS','HOLD','不可判定']),'PLAN sections 2,4,7')
+check('No production write in sim profile, endpoint localhost only',conf['build_mode']=='SIM_ONLY' and conf['io_policy']['production_plc_writes_enabled'] is False and conf['io_policy']['bind_loopback_only'] is True and all(s.startswith('127.0.0.1:') for s in conf['io_policy']['allowed_virtual_plc_endpoints']),'CONFIG/sim_profile.example.json')
+check('Field gate state explicitly segregated from sim and all deny production write',len(F)==14 and all(r['ProductionWriteAllowed']=='FALSE' and r['FieldStatus']!='FIELD_VERIFIED' for r in F) and hasall(plan,['SIM_READY','FIELD_ACCEPTED','FIELD_PENDING']),'PLAN sections 1,2 and FIELD_GATES')
+check('Critical PLC unknowns all included',hasall(plan,['D1030','D1000','D1013','D2000','D2099','D1016']),'PLAN section 2,7')
+check('PLC write and byte-order negative scenarios present', all(related(f'SC-{i:03}') for i in [14,15,16,17,18,19,20,44]),'SCENARIO_MATRIX')
+check('Future hardware adapters isolated after sim checkpoint',all(W[f'W{i:03}']['Phase']=='HARDWARE' for i in range(123,131)) and W['W123']['DependsOn']=='W122','WBS_TASKS_130')
+check('Real-time monitor 11 image tiles + 12th summary','11 图' in plan and '第 12 格' in plan and hasall(sc,['CH01','CH11']),'PLAN sections 1,5 and SIMULATION_CONTRACT')
+check('Map/table same source + Draft cannot write PLC',hasall(plan,['EntityRegistry','SignalId','Actual/Legacy/Draft/Applied','PLC表','不修改']),'PLAN sections 1,5,7')
+check('Product draft never touches Active; readback+Epoch release',hasall(plan,['PatchStationDraft','Active Release','PREPARED_BOTH','ReadBack','FAILED_SAFE']),'PLAN sections 5,7')
+check('E2E/cutover rollback tests present', all(related(f'SC-{i:03}') for i in [32,33,34,35]),'SCENARIO_MATRIX')
+check('Algorithm simulation clearly separated from real battery recognition',hasall(plan,['MockInference','通用 OpenVINO','不把假检测','电池缺陷精度']),'PLAN sections 1,7')
+check('Lossless raw asset test and crash recovery',all(related(f'SC-{i:03}') for i in [25,26,27,28]),'SCENARIO_MATRIX')
+check('Outbox and Inbox durable, ACK not Completed',hasall(plan,['Outbox','Inbox','PERSISTED_ACK','COMPLETED']),'PLAN section 4,7')
+check('UI process crash does not interrupt Core tests',related('SC-039') and hasall(plan,['Core 不停','UI 关闭重开']),'SC-039 and PLAN section 5')
+check('RBAC enforced in Core, approval and ACK/CLEAR separate',hasall(plan,['Core/RBAC','双人审批','ACK 与 CLEAR']) and all(related(f'SC-{i:03}') for i in [36,37]),'PLAN 7 and SCENARIO_MATRIX')
+check('Statistics count only finalized production pieces, no retry double count',hasall(plan,['离线试跑不参与生产指标','重拍同件不加产量']) and related('SC-041'),'PLAN section 7 and SC-041')
+check('Core and Qt source Qt6.11.2/QML/C++20 and OpenCV5 single version',hasall(plan,['Qt **6.11.2**','C++20','Qt Quick/QML','OpenCV **5.0.0','OpenVINO **2025.4.1**']),'PLAN section 2')
+check('Offline 114 RQs and TC statuses not claimed PASS prematurely',len(R)==114 and all(r['CurrentExecutionState']=='NOT_RUN' for r in R) and all(r['Status']=='NOT_RUN' for r in G if r['Gate']!='FIELD'),'RQ_114_COVERAGE, EXIT_GATES')
+check('Subagent prompts include scope/path/interface/reviewer/forbidden real PLC',all('独占路径' in x.read_text(encoding='utf-8') and '不连接现场地址' in x.read_text(encoding='utf-8') for x in (P/'AGENT_PROMPTS').glob('*.md')) and len(list((P/'AGENT_PROMPTS').glob('*.md')))==11,'AGENT_PROMPTS')
+check('Codebase ownership and scalable agent staffing without self-review',hasall(plan,['至少 6 个实际 Agent','独立 QA','A0','A10','独占修改路径']),'PLAN sections 6,10')
+check('Task handoff is actionable without every Agent filtering 130 row file',all((P/'AGENT_TASK_CARDS'/f'A{i}_TASKS.md').exists() for i in range(11)) and all('AGENT_TASK_CARDS/' in f.read_text(encoding='utf-8') for f in (P/'AGENT_PROMPTS').glob('*.md')),'AGENT_TASK_CARDS and AGENT_PROMPTS')
+check('Windows build first archive and then actual Wine exe test',W['W118']['DependsOn']=='W120' and 'W118' not in W['W120']['DependsOn'] and hasall(plan,['先保存源码','Windows Release ZIP','之后','Wine']),'WBS W118/W120, PLAN S09')
+check('No native Windows or field tests falsely claimed',hasall(plan,['NOT_VERIFIED','不能以','现场','不执行']) and all(r['ExecutionStatus']=='NOT_RUN' for r in T),'PLAN, SCENARIO_MATRIX')
+check('Plan review is not confused with code QA',hasall(plan,['本计划文件的两轮审核只代表计划的交叉检查','不代表未来代码或实机测试已完成']),'PLAN section 12')
+check('Time drift, log rotation, register field completeness explicitly tasked',all(x in W[k]['Deliverable']+W[k]['Acceptance'] for k,x in [('W019','轮转'),('W025','24字段'),('W042','时钟'),('W083','独立阈值')]),'W019 W025 W042 W083')
+check('Risk owner/category coverage is broad',len(Risk)>=15 and {'Critical','High'}.issubset({r['Severity'] for r in Risk}),'RISK_REGISTER')
+check('Scenario program has 40+ tests with evidence and actual status NOT_RUN',len(T)>=40 and all(r['MandatoryEvidence'] and r['ExecutionStatus']=='NOT_RUN' for r in T),'SCENARIO_MATRIX')
+check('Coordination kickoff does not claim dependent tasks already READY',hasall(plan,['第一个严格可执行的 Ready 任务','W001','37 层 DAG']) and 'W001' not in W['W001']['DependsOn'],'PLAN section 12 and DEPENDENCY_WAVES_37.csv')
+report={'audit':'REVIEW_ROUND2_SEMANTICS','scope':'PLAN_SEMANTIC_AND_SAFETY_NOT_SOFTWARE_EXECUTION','check_count':len(checks),'pass_count':sum(x['pass'] for x in checks),'fail_count':sum(not x['pass'] for x in checks),'checks':checks}
+(P/'REVIEW'/'audit_round2_semantics.json').write_text(json.dumps(report,ensure_ascii=False,indent=2),encoding='utf-8')
+print(json.dumps({k:report[k] for k in ('audit','check_count','pass_count','fail_count')},ensure_ascii=False))
+sys.exit(1 if report['fail_count'] else 0)

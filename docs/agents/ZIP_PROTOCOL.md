@@ -1,16 +1,9 @@
-# ZIP-first agent delivery protocol (no Git remote)
+# 历史 ZIP 交接协议：仅灾备用途，不再是默认开发主流程
 
-**All five subchats start from one single immutable `AOI_Vision_Platform_M00_r001_SOURCE.zip`.** One ZIP cannot be regarded as shared writable storage. A new base can only be issued by A0 after A10 review.
+本文件曾用于 M00-r001 的无 Git 协作。`docs/adr/ADR-0005-GITHUB-FIRST.md` 已将默认团队交付方式改为**GitHub Git branch + Pull Request + 独立 QA**。不得按旧版“所有 Agent 必须从 r001 ZIP 创建补丁、再交给 A0 手工集成”指令开展新的正式任务。
 
-1. A0 provides current source ZIP and a role-specific chat prompt in `docs/agents/CHAT_START_*.md`. Each agent unzips under its private workspace (never source `/AOI开发项目` or `/工具开发`).
-2. Before starting a WBS task, read the `reference/plan_v1.1/WBS_TASKS_130.csv` row and check *all* prerequisites in A0's verified task ledger. If unavailable, only perform planning/review, do not falsely mark as implemented.
-3. An agent changes **owned paths only** (`OWNERSHIP.json`). CMake root belongs to A10; shared contracts/typed IDs to A0; cross-module changes require a CR approval first.
-4. Make patch with `python3 tools/create_patch.py --base /path/M00-r001_SOURCE.zip --worktree /path/unpacked/worktree --agent AOI-Agent02 --tasks W023,W024 --out /path/AOI_PATCH_Agent02_base_M00-r001.zip`.
-5. `create_patch.py` validates base ZIP hashes, file ownership, exact base archive SHA256, and computes changed-file SHA256. The patch ZIP only includes `patch.json` plus source payload under `payload/`. No absolute paths, symlinks, `..`, executables, full SDKs, or build outputs.
-6. **Actual integration is blocked automatically** if any task DependsOn has not been marked `VERIFIED` in `docs/agents/TASK_LEDGER.json` of the exact base ZIP. Patch creation can prepare a blocked task but cannot bypass the integration gate. Upload that patch ZIP in current A0 main chat. A0 first checks `python3 tools/validate_patch.py --base current-source.zip --patch agent-patch.zip`, reviews source/tests; never copy agent files over current worktree by hand.
-7. If valid, `python3 tools/integrate_patch.py --base current-source.zip --patch agent-patch.zip --out AOI_Vision_Platform_M00_r002_CANDIDATE.zip --release-id M00-r002` creates an immutable **candidate** copy. A10 independently builds/runs tests; A0 approves promotion to official release and archives old known-good ZIP.
-8. If base archive SHA256 differs, STOP. Rebase/recreate patch on the current integrated ZIP; do not force apply. Tasks from different agents can only share current base until one is integrated, at which point later patches based on old archive need refresh/rebase.
-9. Never merge patch claims blindly: tests can be falsified, and any modification to write policy, product identity, model/result statuses, interface boundaries or schema must receive A0 + A10 review.
-10. Deliver final report with `AgentId, TaskIds, BaselineSHA256, changed files, commands, exit codes, evidence and gaps`.
+只有当 GitHub 临时不可用、且 **A0 书面批准**并锁定精确源码 SHA 和任务依赖时，才允许使用 `tools/create_patch.py`、`tools/validate_patch.py`、`tools/integrate_patch.py` 作为灾备封存工具。该协议仍有以下约束：只允许修改个人所有权路径；不跳过 `DependsOn`、WBS 正式 ledger、A10 独立复查；不允许外部现场生产写；ZIP manifest 必须可复算。
 
-**Legacy and site evidence remain read-only.** `SIM_READY` means real system tests W001..W122, not M00 smoke success. Preserve the 14 field gates as `FIELD_PENDING`.
+注意：`tools/create_patch.py` 只认识五个历史聊天身份，不支持直接生成 A0 所有权补丁；其工具支持范围和 `tests/patch/` 所有权约束属于历史局限，**不得**通过冒名他人解锁。GitHub 日常 PR 不依赖 ZIP 版本号作为任务门禁。
+
+历史原文保存在完整正式 `M00-r003 OFFICIAL_SOURCE.zip` 中，SHA256：`737a140ff2da49da1428edd8152060da1818e0c3981711c105beecff6239f468`。

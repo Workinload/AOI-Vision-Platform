@@ -1,0 +1,131 @@
+﻿TaskId,Phase,Owner,Reviewer,DependsOn,Priority,Title,Deliverable,Acceptance,SpecRefs,ExitEvidence,Status
+W001,S00,A0,A10,,P0,冻结v2.0文件哈希与来源,锁定版本表/原始证据只读边界,验收根目录及原始包SHA256可复算,00:00;00:01,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W002,S00,A0,A10,W001,P0,整理旧事实与新设计差异,遗留接口事实矩阵与不确定台账,D1030/D1000及扫码冲突不被默认裁决,00:01;00:04;02:20,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W003,S00,A0,A10,W001,P0,拆分21模块职责与目录所有权,模块边界/Owner表,21模块唯一主Owner、依赖方向无环,01:11;01:17,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W004,S00,A0,A10,W003,P0,冻结领域DTO与事件契约v1,JSON Schema/Proto与兼容规则,主从Envelope和IDs有合同测试,01:13;01:15,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W005,S00,A10,A0,W001,P0,逐项映射114需求与验收,RQ→WBS→TC表,114项全覆盖、78P0/36P1可追溯,06:61;07:README,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W006,S00,A2,A10,W002,P0,梳理45信号与14现场门禁,只读信号注册表冻结版,7 BLOCKED+7 OPEN且生产写全禁用,02:20;06:62,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W007,S00,A10,A0,W001,P0,复核SDK和编译ABI,锁Qt6.11.2/QtQuick/QML模块与Windows SDK/工具链可用性；来源/分卷哈希,Qt Quick/QML及Windows QtQuickControls2/核心插件经SDK实际清点，至少构建QML hello并列出未测目标；ABI/版本一致,00:02;06:66,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W008,S00,A9,A10,W002,P0,模拟/实机安全威胁评审,攻击面与隔离策略,无需用户确认无法连实机PLC,05:50;05:53,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W009,S00,A10,A0,W005,P0,量化模拟基准与未知现场SLO,负载矩阵/待签节拍表,不把模拟速度说成实际产线指标,00:05;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W010,S00,A0,A10,"W004,W005",P0,确定协作冻结/ADR/PR协议,工作树与接口变更机制,公共合同仅经A0审批升级,01:17;06:60,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W011,S01,A10,A0,"W007,W010",P0,搭建跨平台CMake/Presets/CI,Linux/Windows工具链CMake Presets、QtQuick/QML最小应用构建、可重复CI,Linux C++20/Qt Quick Debug和Release可构建；Windows QtQuick模块缺失须阻断，不以Qt Widgets编译代替,01:17;06:66,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W012,S01,A0,A10,"W004,W011",P0,实现领域ID与状态枚举,libdomain强类型DTO,标识不可混用且构建合同自测,01:15;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W013,S01,A0,A10,W012,P0,实现Schema序列化与合同回归,schema版本/兼容编解码,旧版本拒绝或协商、未知字段不默默篡改,01:13;07:README,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W014,S01,A1,A10,"W011,W012",P0,搭建双角色Core与DI启动,apps/aoi-core 同源码MASTER/SLAVE参数化启动与DI,两个真实进程同一二进制以不同role独立启动，owner A1 独占 apps/aoi-core/**,01:10;01:14,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W015,S01,A8,A10,"W011,W013",P0,搭建Qt Quick/QML Shell,AOI-UI独立进程与导航骨架,无Core时提示未连接且不崩溃,04:40;04:44,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W016,S01,A8,A10,"W013,W014",P0,本机IPC读查询/订阅/命令,UIReadAPI 快照订阅/增量游标；所有尚未具备Core后端授权的修改命令默认拒绝,UI与Core真实IPC；匿名/未知修改命令统一拒绝并留审计，无RBAC期间只能安全只读,01:13;01:15,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W017,S01,A1,A10,W014,P0,实现受控有界生产队列和生命周期,Core事件总线与队列监视,callback无IO与UI回压；队列故障有事件,01:14;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W018,S01,A6,A10,"W011,W012",P0,建立SQLite迁移与本机数据边界,两个独立WAL DB/迁移器,双机不共享SQLite，迁移失败留证,03:38;03:31,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W019,S01,A9,A10,"W012,W018",P0,统一日志与审计事件封套,JSONL/跨机时钟质量/轮转压缩与TraceId,字段关联、脱敏、轮转限额、错误有日志,05:51;05:52,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W020,S01,A10,A0,"W014,W015",P0,编写仿真运行管理器CLI,simctl up/down/status/reset,可分别启停主从Core/两UI/虚拟PLC,06:61;01:10,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W021,S01,A2,A10,"W008,W014",P0,实现编译时及运行时IO隔离,SIM_ONLY编译期剔除真实硬件驱动、强制IPv4/IPv6回环端点白名单与出站否决,sim启动解析IPv4/IPv6/域名后非回环一律拒绝；如无OS级隔离证据不得称外联不可能,05:50;02:22,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W022,S01,A10,A0,"W011,W013",P0,CI合并质量门与契约检查,格式静检/unit/schemas/test报告,缺校验与日志不得合并main,06:61;06:66,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W023,S02,A2,A10,"W013,W021",P0,虚拟PLC FINS/UDP最小协议栈,独立vplc进程/寄存器状态机,真实UDP请求响应的ID/SID/长度校验,02:20;02:23,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W024,S02,A2,A10,W023,P0,实现FINS WORD/BADC/BA编解码,packet golden vectors,1/2WORD浮点和条码NUL/CR回归,02:20;02:24,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W025,S02,A2,A10,"W006,W023",P0,45条信号只读字典和冲突扫描,SignalRegistry加载器与最少24字段中文说明,45信号字段完整，D1013/D1000/D1030/D2000重叠风险可见,02:22;04:42,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W026,S02,A2,A10,"W021,W025",P0,写入授权网关/模拟物理隔离,WritePolicy+AuthorizedPlcTxn,生产默认拒绝；模拟只可写virtual端点,05:50;02:22,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W027,S02,A2,A10,"W023,W024",P0,模拟PLC扫码/触发/出料的分支时序,情景脚本与事务轨迹,CamDone、D1016和D2099语义独立,02:23;02:24,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W028,S02,A3,A10,"W014,W017",P0,模拟7台海康面阵SDK,IAreaCapture/HikMock,UserSet/参数目标与读回/回调/断开/重连,02:21;02:23,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W029,S02,A3,A10,"W014,W017",P0,模拟2套Itek采集卡,ILineCapture/ItekMock,一设备一原帧/共享触发/双通道关联,02:21;02:23,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W030,S02,A3,A10,"W028,W029",P0,封装帧内存所有权与有界池,FrameRef+stable backing buffer,SDK复用缓冲不污染仍在处理的帧,01:14;02:21,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W031,S02,A3,A10,"W028,W029",P0,准备可复现采集图集/元数据,fixture manifest+sha256,seed可控、标出模拟图/通道/工件,03:36;02:21,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W032,S02,A3,A10,"W028,W029",P0,模拟读回/掉帧/超时/丢行,设备故障注入接口,定点故障返回可复现SDK错误,02:23;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W033,S02,A10,A0,"W016,W018,W020,W021,W023,W028,W029",P0,双机五进程联动脚手架,MasterCore/SlaveCore/两UI/VPLC,真实五进程、两个SQLite WAL独立且UI↔Core IPC可连；非回环目标被拒绝；端口/进程证据可复核,01:10;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W034,S02,A10,A0,"W027,W031,W033",P0,确定性场景驱动/时间注入,scenarios YAML+virtual clock,规范化业务事件摘要同seed可复算；排除UTC/PID/临时路径等非确定字段并使用因果屏障避免线程交错漂移,06:61;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W035,S03,A1,A10,"W017,W018,W012",P0,唯一工件与槽位账本,WorkpieceTracker ledger,同条码多件不撞；无可信槽位不猜,01:12;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W036,S03,A1,A10,"W030,W035,W027",P0,CaptureExpected与帧唯一绑定,AcquisitionCoordinator,使用可审计的CaptureExpected和合成触发序列/槽位证据关联，SIM专用扩展不冒充现役PLC字段；歧义帧隔离,02:23;01:12,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W037,S03,A1,A10,W036,P0,Epoch/重拍/乱序隔离状态机,Attempt与Quarantine,旧Epoch和旧Attempt不被重计,01:16;01:12,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W038,S03,A1,A10,"W017,W036",P0,有界调度和取消超时,ProductionScheduler,不同工件并行、UI阻塞不影响检测,01:14;01:11,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W039,S03,A1,A10,W038,P0,工位执行/质量双轴状态,StationDecision,NG≠ERROR≠MISSING，缺图不默认OK,01:16;03:35,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W040,S03,A1,A10,"W037,W039",P0,完整通道预期集及最终汇总,AggregateDecision,10检测通道+定位前置；缺一不OK,01:12;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W041,S03,A1,A10,"W035,W024",P0,上料条码与末端核码来源抽象,BarcodeIdentity/EndBarcodeProvider,raw与normalized版本保存；错码阻断,02:24;01:18,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W042,S03,A5,A10,"W013,W014",P0,主从协议握手/版本鉴权,PeerLink HostId身份认证/Schema协商/重放防护与时钟质量,双机握手具认证与重放负测，跨机事件不用UTC推因果；SIM凭据不得复用生产,01:13;01:15,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W043,S03,A5,A10,"W018,W042",P0,耐久Outbox/Inbox/PERSISTED_ACK,事务接口+消息去重,断电/ACK丢失不重复业务效果,01:15;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W044,S03,A5,A10,W043,P0,重试/死信/流控/旧Epoch拒绝,Peer recovery worker,断网60秒重连后去重、隔离迟到数据,01:13;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W045,S03,A5,A10,"W035,W042,W043",P0,主从工件与结果镜像投递,Workpiece/ChannelResult消息路径,业务消息使用可靠持久Peer通道；从机只上报本侧结果不写Final；完成与ACK不同,01:10;01:15,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W046,S03,A2,A10,"W026,W027,W036",P0,采图与CamDone握手分离,PLC handshake actor,完成=2不是OK，单组线扫一次ACK,02:20;02:23,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W047,S03,A2,A10,"W026,W040,W041",P0,D1016/D2099出料/码分支模拟,PLC result transaction coordinator,正常和失败不同顺序可校验,02:20;02:24,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W048,S04,A2,A10,"W026,W057",P0,定位XYU仅模拟写+blocked真实映射,Positioning gateway guard,FG-01未确认时真实坐标写拒绝,02:20;02:24,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W049,S04,A10,A0,"W033,W035,W039,W040,W043,W045,W046,W047,W048,W051,W055,W058,W059,W060,W061,W062,W063",P0,首个端到端双机模拟闭环,2件交错+11通道带实际结果图/overlay资产、两套DB与Durable Peer消息/vPLC响应的端到端演示,每件11路与线扫父资产关联、模拟结果图可读可索引、跨机事务可追溯且缺图不OK、故障不伪造成功,01:18;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W050,S04,A3,A10,"W030,W031",P0,图像输入规格与OpenCV5处理,像素格式/尺寸/stride校验,源图hash稳定，异常格式拒绝,02:21;03:34,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W051,S04,A3,A10,"W029,W050",P0,线扫双路分行镜像旋转,Split+Orientation实现,8200x15000拆7500/7499行，主从方向不同,02:21;03:34,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W052,S04,A4,A10,"W050,W051",P0,Sensor/Detection/Display ROI变换,TransformChain与坐标回算,ROI外NG仍计数，显示ROI不改检测,03:34;03:32,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W053,S04,A4,A10,"W012,W018",P0,模型仓库/sha/shape/类别核验,ModelRegistry,模型异常/类表缺失禁止产线OK,03:35;03:32,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W054,S04,A4,A10,"W052,W053",P0,固定步骤算法流水线,OpenCV前后处理、检测规则引擎及结构化Overlay/结果图生成接口,可组合算法链输出像素和有坐标系的图元；失败分支有错误状态且不能通过显示ROI掩盖NG,03:35;03:32,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W055,S04,A4,A10,"W054,W031",P0,可重复模拟算法Provider,DeterministicMockInference,fixture真值与注入ERROR可复现,03:35;03:36,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W056,S04,A4,A10,"W053,W054",P1,OpenVINO通用ONNX/IR真实烟测,隔离真实ModelProvider和验证报告,使用既有YOLO回归，非电池缺陷精度证明,03:35;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W057,S04,A3,A10,"W050,W052",P0,离线定位坐标和补偿链,CalibrationPositioning mock,X/Y/U变换版次与单位可查；无设备写,02:24;03:32,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W058,S04,A1,A10,"W039,W054,W055",P0,完整StationRules与失败传播,不可变StationResult+检测输出结果图/结构化overlay渲染,OpenCV实际渲染的结果图、bbox/缺陷几何数据与其hash一致；模型ERROR/NG/MISSING保持区分,03:35;01:16,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W059,S04,A6,A10,"W018,W030",P0,无损资产PENDING/AVAILABLE写入,原图/结果图AssetStore PENDING/AVAILABLE原子写入与无损校验,原始像素无损回读，结果图+overlay独立索引；断电中间态可恢复不能伪AVAILABLE,03:31;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W060,S04,A6,A10,"W051,W059",P0,线扫一帧父资产两路索引,CaptureGroup资产映射,原始123MB一份引用CH08/09或CH10/11,03:31;02:21,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W061,S04,A6,A10,"W018,W035",P0,DB工件/结果/索引及迁移,SQLite索引与唯一键,重试不重复计结果、跨机DB独立,03:38;03:31,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W062,S04,A6,A10,"W043,W061",P1,业务事件与Outbox单事务落库,事务工作单元,杀进程重启后结果可重发无丢,01:15;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W063,S04,A6,A10,"W061,W040",P0,查询投影与分页/订阅缓存,Stats/QueryReadModel,按WorkpieceId定位全通道和状态,03:38;03:33,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W064,S04,A6,A10,"W059,W061",P0,一致性备份及灾难恢复,OnlineBackup+manifest恢复脚本,WAL+图片+方案整体复原且验hash,03:31;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W065,S04,A6,A10,"W059,W064",P0,磁盘满/损坏时安全策略,AssetHealth和降级限制,不丢原图仍宣称成功；触发HOLD/报警,03:38;05:50,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W066,S04,A10,A0,"W030,W051,W059",P0,高内存真实尺寸线扫压力,真实123MB帧负载剖析,pool高水位/中断/内存泄漏日志,02:21;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W067,S04,A8,A10,"W016,W058,W063",P0,图片预览缓存与轻量IPC,result-only preview service,Core仅提供真实处理结果图预览和帧龄；不把原图或UI本地硬编码模拟结果当生产数据,04:45;03:34,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W068,S05,A8,A10,"W015,W067",P0,4x3 11结果卡+第12汇总,真实Qt Quick工作台,2K和1080p同屏不滚动,04:40;04:45,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W069,S05,A8,A10,W068,P0,每卡Freshness/Host/Workpiece,异步卡状态和文字标识,历史帧/断线/缺图不显示绿色LIVE,04:45;04:40,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W070,S05,A8,A10,"W052,W068",P0,大图平移缩放和矢量缺陷联动,Qt Scene Graph viewer,不重解码原图、坐标/缺陷框一致,04:40;03:34,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W071,S05,A8,A10,"W063,W068",P0,同件11图集及查询,workpiece gallery,与实时各站最近图严格区分,04:41;04:45,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W072,S05,A8,A10,"W025,W015",P1,整机交互地图层级场景,MachineScene拓扑+状态,ST/设备/相机/通信线点选正确,04:42;04:46,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W073,S05,A8,A10,"W025,W072",P0,PLC详细参数表编辑草稿,SignalTable字段排序/过滤/编辑,现值旧值草稿值分列，禁止即时写,04:42;02:22,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W074,S05,A8,A10,"W072,W073,W019",P0,地图/表/日志联动路由,EntityRegistry+deep links,D1013/ST09互相选中且冲突红标,04:46;04:43,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W075,S05,A8,A10,"W068,W052",P0,卡片齿轮直达工位配置只读UI/待授权命令,StationWorkbench产品/工位/通道上下文与Core参数只读呈现,不丢产品/工位/通道上下文；G06未整合前保存/发布控件明确不可用且Core拒写,04:41;04:47,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W076,S05,A8,A10,"W052,W075",P0,多层ROI画框及撤销/重做,ROI designer,ROI画框/拖动/坐标转换与撤销/重做可复现；W084之前仅本地草稿，禁止改Active,04:47;03:34,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W077,S05,A8,A10,"W053,W075",P0,模型/相机/线扫共享参数页,工程Inspector,相机目标/实际分列、线扫共享参数影响两路；W083/W084整合前只能待保存草稿，不得改生产,04:47;03:35,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W078,S05,A8,A10,"W019,W074",P0,报警日志中心只读UI骨架与Trace跳转,消费W019真实Core事件与可观测基础报警的只读界面，完整根因聚合由W091接线,无真实事件显示无数据/未就绪，不能硬编码假报警；G06后再验根报警聚合与ACK/CLEAR,04:43;04:48,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W079,S05,A8,A10,"W063,W068",P1,基础实时计数与趋势界面/预留正式统计,基于W063已有不可变生产事件的基础计数；日周良率最终由W100定义,无真实工件事件明确显示无数据；W100口径冻结后须在G07重新验收图表/良率/缺陷统计,04:49;03:39,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W080,S05,A8,A10,"W068,W070",P1,DPI和高帧率渲染优化,截图、图像重载计数,1920/2560 100/125/150%DPI无遮挡,04:40;04:45,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W081,S05,A8,A10,"W016,W069,W070",P0,Core持续运行及UI重连,UI断链恢复快照,UI崩溃可重启，Core任务不受影响,01:14;04:45,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W082,S05,A10,A0,"W068,W080",P0,可重复UI操作和截图自动化,Qt自动导航截图工具,来源为真实运行Qt，非HTML截图,06:61;04:40,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W083,S06,A7,A10,"W012,W053,W025",P0,整机与产品配置schema,MachineProfile+ProductSolution,同模型不同产品独立阈值/ROI及不可变引用、完整机型schema与真实Hash验证,03:30;03:37,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W084,S06,A7,A10,"W083,W061",P0,按工位保存草稿与乐观锁,PatchStationDraft,ProductA单站更改不影响B或Active,03:30;03:37,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W085,S06,A7,A10,"W084,W053,W055",P0,完整校验/模型hash/发布冻结,immutable SolutionRelease,模型/标定/设备配置hash、必填DetectionROI和产品规则完全校验；不合格禁止Release,03:30;03:35,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W086,S06,A7,A10,"W085,W044,W032",P0,双机方案Staging与设备准备（非最终Prepared）,DeploymentManager STAGED/PREPARING_DEVICES、两机模拟设备应用和ReadBack,只确认两机设备准备结果；vPLC产品参数尚未回读前绝不可报告PREPARED_BOTH或生产READY,03:30;03:37,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W087,S06,A7,A10,"W086,W037,W088",P0,两机Commit/Epoch/回滚核验,PLC和双机所有readback成功后进入PREPARED_BOTH、COMMIT及Epoch/回滚完整核验,单侧失败/断线/PLC读回不符一律FAILED_SAFE；旧Release恢复须证实设备+PLC读回一致,03:30;03:37,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W088,S06,A2,A10,"W085,W086,W026",P0,模拟PLC产品尺寸双侧写回,虚拟D3010..20与读取确认,FINS FLOAT32每量2WORD，主/从D3010..20完整读回验证及超时/错误拒绝PREPARED_BOTH,02:20;03:30,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W089,S06,A9,A10,"W008,W016",P0,核心RBAC与会话/命令守卫,AuthAudit服务,无/过期会话、未知IPC命令、越权操作全部后端拒绝；完成授权后才能解锁修改类命令,05:50;05:53,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W090,S06,A9,A10,"W084,W089",P0,高风险两人审批和变更审计,approval ticket+append audit,管理员也不能绕过FG/互锁,05:53;05:50,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W091,S06,A9,A10,"W019,W038",P1,23报警字典和根因聚合,AlarmDiagnostics,Where/What/Impact/How与因果关系,05:51;04:48,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W092,S06,A9,A10,"W091,W089",P1,报警ACK/CLEAR独立条件,AlarmLifecycle,ACK不会把真实故障变绿,04:43;05:51,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W093,S06,A9,A10,"W091,W064",P1,事故包与敏感信息脱敏,incident bundle exporter,日志和图像索引可查、无凭据泄漏,05:52;04:43,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W094,S06,A8,A10,"W076,W077,W083,W084,W087,W089,W090",P0,草稿版本对比+一键换型UI,工位ROI/模型/设备修改→PatchStationDraft与RBAC审计；方案diff/双机换型真实Qt交互,Qt保存后重开可读A草稿且B/Active不变；发布进度取Core状态，不可绕过审批或PLC互锁,04:49;04:41,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W095,S06,A10,A0,"W086,W087,W088,W090",P0,换型中断/失败/回滚专项测试,Deployment failure matrix,半机新方案不READY、读回错不报成功,06:65;03:30,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W096,S07,A4,A10,"W054,W059,W089",P0,离线实验独立进程/账户/DB,ReplayLab sandbox,无任何生产PLC凭据/套接字/计件,03:36;03:32,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W097,S07,A4,A10,"W096,W071",P0,单图/批量/同件11图重跑,Lab 3 modes,缺图保持MISSING、文件hash验证,03:36;04:47,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W098,S07,A4,A10,"W097,W084",P1,旧新方案A/B对照与可解释报告,差异框/耗时/失败样本,无标注真值不出精度数字,03:36;03:35,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W099,S07,A4,A10,"W056,W097",P1,模型/类别/真值样本兼容验证,Model acceptance adapter,示例YOLO不是电池生产精度签收,03:32;03:36,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W100,S07,A6,A10,"W063,W040",P1,日周首检良率/重拍不重复,StatisticsRebuild,周良率按OK总数/有效件总数,03:39;03:33,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W101,S07,A6,A10,"W100,W053",P1,缺陷字典/人工复判追加记录,DefectStats/Rejudge,0空料1良品排除；首次事件不覆盖,03:39;03:33,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W102,S07,A6,A10,"W064,W071",P0,同件11图+原图追溯导出,追溯包/模型与Release清单,单件从扫码到PLC均可查且哈希核对,03:31;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W103,S07,A9,A10,"W091,W092,W102",P1,日志搜索/报警一键排障,统一跨模块trace索引,ST09/D1013可回溯帧与root alarm,05:51;04:43,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W104,S07,A10,A0,"W005,W095,W097,W100,W103",P0,114用例执行驱动与证据格式,114原始TC执行器与双轨证据：SIM状态+现场状态独立列,SIM仅NOT_RUN/SIM_PASS/SIM_FAIL/SIM_BLOCKED；Field仅FIELD_PENDING/FIELD_PASS/FIELD_FAIL；模拟不适用需审批豁免原因,06:61;07:README,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W105,S08,A10,A0,W104,P0,21类异常基线与扩展场景,fault matrix YAML,每种故障有注入、观测、断言、日志,06:65;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W106,S08,A10,A0,"W044,W062,W105",P0,双机断线/ACK丢失/DB故障注入,durability E2E logs,复连不重复计数，不无条件假OK,01:15;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W107,S08,A10,A0,"W032,W037,W105",P0,掉帧/重拍/晚帧/内存复用,capture chaos cases,不串件、原始图像hash稳定,02:23;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W108,S08,A10,A0,"W026,W088,W105",P0,PLC禁写/权限/编码/地址冲突负测,packet capture + deny cases,生产配置无真实写且SIM隔离未破,02:22;05:50,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W109,S08,A10,A0,"W066,W105",P0,并发件数/实际123MB压力与耗时,P50/P95/P99/内存/磁盘报告,不虚构现场节拍阈值,06:61;03:38,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W110,S08,A10,A0,"W082,W104",P0,完整UI六一级工作区回归,自动点击录像/真实截图,11卡/地图/表/诊断/试跑/换型闭环,04:44;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W111,S08,A10,A0,"W090,W105",P1,安全威胁/权限/输入模糊测试,security deny report,无任意D写/任意文件读/越权换型,05:53;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W112,S08,A10,A0,"W064,W102,W105",P0,断电/存储/恢复/备份演练,恢复校验与哈希证据,PENDING重建且跨机资产不误挂,03:38;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W113,S08,A10,A0,"W087,W095,W105",P0,换型发布跨机异常注入,commit/rollback audit proof,双机Hash/Epoch不一致必须HOLD,03:37;06:65,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W114,S08,A10,A0,"W104,W106,W107,W108,W109,W110,W111,W112,W113",P0,逐项重跑114证据与缺口标注,114x status/evidence/index,114需求每项SIM适用断言有独立执行证据且P0全部通过；FIELD_PENDING不转换为SIM_PASS或现场PASS,06:61;06:63,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W115,S09,A10,A0,"W110,W114",P0,Linux真实GUI与业务回归,运行日志/Qt截图/CTest,真应用启停、UI/Core进程隔离,06:66;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W116,S09,A10,A0,"W007,W115",P0,Windows x64 Qt/C++独立构建,Windows Release artifacts,PE x64 ABI/版本/路径可审计,06:66;01:17,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W117,S09,A10,A0,W116,P0,Qt平台/OpenCV/OpenVINO插件闭包,Windows QtQuick/QML imports+qwindows+OpenCV5+OpenVINO前端与CPU插件完整依赖闭包,真实干净解压启动Qt Quick双UI与双Core；qwindows.dll、QtQuick/QML插件及ONNX/IR前端完整，真实ONNX加载,06:66;00:05,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W118,S09,A10,A0,W120,P0,Wine下五进程GUI/双机模拟,Wine日志/图像/真实EXE启动,从已保存Windows ZIP实测Wine下5 PE进程/双QML窗口/vPLC通讯/模型烟测；失败保留产物但不得报PASS,06:66;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W119,S09,A10,A0,W120,P0,用户Windows本机模拟验证手册,离线运行自检与缺口,无外部Windows证据时标NOT_VERIFIED,06:66;06:61,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W120,S09,A10,A0,"W115,W117",P0,源码/发布包/许可证/哈希/迁移包,SourceZIP+WindowsZIP+SHA256,SourceZIP与WinZIP均可从干净目录重建/启动，许可、sha256、QML/QtQuick插件、迁移资源齐全；必须先于Wine保存,06:66;06:60,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W121,S09,A0,A10,"W114,W120,W118",P0,两轮代码及产物验收复核,明确分离的两轮代码/交付独立审阅报告+修复与证据重跑,第1轮接口/源/构建审计+第2轮业务/安全/模拟场景复审均有独立签署与失败复测，不能用PLAN审核代替,06:63;06:66,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W122,S09,A0,A10,"W119,W120,W121",P0,SIM_READY版本签收,ReleaseManifest与遗留清单,全部SIM范围P0及签收条件有真实可复查记录；未完成场景/Win PE验证不能伪装SIM_READY，14个FG仍FIELD_PENDING,06:60;06:66,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W123,HARDWARE,A3,A10,W122,P1,海康SDK实机适配/7台读回,HikRealAdapter及硬件证据,7台SN/UserSet/TriggerSource逐一核验,02:21;06:62,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W124,HARDWARE,A3,A10,W122,P1,Itek板卡实机适配/双光方向,ItekRealAdapter及vlcf核验,实际Full/FrameLost/拆路方向签证,02:21;06:62,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W125,HARDWARE,A2,A10,W122,P1,现役PLC只读抓取与信号复核,FG证据与只读通讯报告,D1030/D1000/D1013/字长真实消费确认,02:20;06:62,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W126,HARDWARE,A2,A10,"W125,W123,W124",P1,维护状态逐站白名单写测,PLC读回/机器人坐标/出料去向记录,审批互锁和限额状态下真实演练,06:64;02:24,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W127,HARDWARE,A4,A10,"W123,W124",P1,真实电池模型/标注图集及标定,质量精度与工艺签署报告,精度/误漏检符合工厂签署指标,03:32;06:62,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W128,HARDWARE,A10,A0,"W126,W127",P1,真实节拍/IO/磁盘与稳定运行,P99+容量+现场长时测试,真实工艺SLO/RPO签署并满足,06:61;06:64,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W129,HARDWARE,A0,A10,"W125,W126,W127,W128",P1,14现场门禁闭环审查,每FG的版本指纹/读回/签字,14项均有有效现场证据方可现场批准,06:62;06:64,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED
+W130,HARDWARE,A0,A10,W129,P1,产线分步切换/试生产/回退,FactoryAcceptance与生产移交,真实Windows+PLC/机器人+质量签核,06:66;06:60,测试记录+相关源码路径+日志/截图/哈希,NOT_STARTED

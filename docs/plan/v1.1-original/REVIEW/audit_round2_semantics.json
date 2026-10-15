@@ -1,0 +1,174 @@
+{
+  "audit": "REVIEW_ROUND2_SEMANTICS",
+  "scope": "PLAN_SEMANTIC_AND_SAFETY_NOT_SOFTWARE_EXECUTION",
+  "check_count": 33,
+  "pass_count": 33,
+  "fail_count": 0,
+  "checks": [
+    {
+      "check": "SIM goal is 2 cores + 2 Qt UIs + separate vPLC, not an HTML mock",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,3,5"
+    },
+    {
+      "check": "Master/Slave same source, different roles and independent durable DB",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,3,4"
+    },
+    {
+      "check": "Hardware topology 9 devices/11 channels, 2 line scan shared frame",
+      "pass": true,
+      "evidence_in_plan": "SIMULATION_CONTRACT section 3"
+    },
+    {
+      "check": "Actual 123MB tests separated from tiny routine fixtures",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 3,7"
+    },
+    {
+      "check": "Three PLC completion meanings separate",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 3"
+    },
+    {
+      "check": "Quality fail closed on missing/error/ambiguous",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 2,4,7"
+    },
+    {
+      "check": "No production write in sim profile, endpoint localhost only",
+      "pass": true,
+      "evidence_in_plan": "CONFIG/sim_profile.example.json"
+    },
+    {
+      "check": "Field gate state explicitly segregated from sim and all deny production write",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,2 and FIELD_GATES"
+    },
+    {
+      "check": "Critical PLC unknowns all included",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 2,7"
+    },
+    {
+      "check": "PLC write and byte-order negative scenarios present",
+      "pass": true,
+      "evidence_in_plan": "SCENARIO_MATRIX"
+    },
+    {
+      "check": "Future hardware adapters isolated after sim checkpoint",
+      "pass": true,
+      "evidence_in_plan": "WBS_TASKS_130"
+    },
+    {
+      "check": "Real-time monitor 11 image tiles + 12th summary",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,5 and SIMULATION_CONTRACT"
+    },
+    {
+      "check": "Map/table same source + Draft cannot write PLC",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,5,7"
+    },
+    {
+      "check": "Product draft never touches Active; readback+Epoch release",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 5,7"
+    },
+    {
+      "check": "E2E/cutover rollback tests present",
+      "pass": true,
+      "evidence_in_plan": "SCENARIO_MATRIX"
+    },
+    {
+      "check": "Algorithm simulation clearly separated from real battery recognition",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 1,7"
+    },
+    {
+      "check": "Lossless raw asset test and crash recovery",
+      "pass": true,
+      "evidence_in_plan": "SCENARIO_MATRIX"
+    },
+    {
+      "check": "Outbox and Inbox durable, ACK not Completed",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 4,7"
+    },
+    {
+      "check": "UI process crash does not interrupt Core tests",
+      "pass": true,
+      "evidence_in_plan": "SC-039 and PLAN section 5"
+    },
+    {
+      "check": "RBAC enforced in Core, approval and ACK/CLEAR separate",
+      "pass": true,
+      "evidence_in_plan": "PLAN 7 and SCENARIO_MATRIX"
+    },
+    {
+      "check": "Statistics count only finalized production pieces, no retry double count",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 7 and SC-041"
+    },
+    {
+      "check": "Core and Qt source Qt6.11.2/QML/C++20 and OpenCV5 single version",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 2"
+    },
+    {
+      "check": "Offline 114 RQs and TC statuses not claimed PASS prematurely",
+      "pass": true,
+      "evidence_in_plan": "RQ_114_COVERAGE, EXIT_GATES"
+    },
+    {
+      "check": "Subagent prompts include scope/path/interface/reviewer/forbidden real PLC",
+      "pass": true,
+      "evidence_in_plan": "AGENT_PROMPTS"
+    },
+    {
+      "check": "Codebase ownership and scalable agent staffing without self-review",
+      "pass": true,
+      "evidence_in_plan": "PLAN sections 6,10"
+    },
+    {
+      "check": "Task handoff is actionable without every Agent filtering 130 row file",
+      "pass": true,
+      "evidence_in_plan": "AGENT_TASK_CARDS and AGENT_PROMPTS"
+    },
+    {
+      "check": "Windows build first archive and then actual Wine exe test",
+      "pass": true,
+      "evidence_in_plan": "WBS W118/W120, PLAN S09"
+    },
+    {
+      "check": "No native Windows or field tests falsely claimed",
+      "pass": true,
+      "evidence_in_plan": "PLAN, SCENARIO_MATRIX"
+    },
+    {
+      "check": "Plan review is not confused with code QA",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 12"
+    },
+    {
+      "check": "Time drift, log rotation, register field completeness explicitly tasked",
+      "pass": true,
+      "evidence_in_plan": "W019 W025 W042 W083"
+    },
+    {
+      "check": "Risk owner/category coverage is broad",
+      "pass": true,
+      "evidence_in_plan": "RISK_REGISTER"
+    },
+    {
+      "check": "Scenario program has 40+ tests with evidence and actual status NOT_RUN",
+      "pass": true,
+      "evidence_in_plan": "SCENARIO_MATRIX"
+    },
+    {
+      "check": "Coordination kickoff does not claim dependent tasks already READY",
+      "pass": true,
+      "evidence_in_plan": "PLAN section 12 and DEPENDENCY_WAVES_37.csv"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema_version": "sim-config-draft-v1",
+  "warning": "EXAMPLE PLAN ONLY - NOT AN IMPLEMENTED CONFIG; DO NOT CONNECT REAL DEVICES",
+  "build_mode": "SIM_ONLY",
+  "io_policy": {
+    "physical_io_enabled": false,
+    "production_plc_writes_enabled": false,
+    "bind_loopback_only": true,
+    "allowed_virtual_plc_endpoints": ["127.0.0.1:19600"],
+    "allow_unverified_address_writes": false
+  },
+  "vplc": {"address": "127.0.0.1", "udp_port": 19600},
+  "master": {
+    "role": "MASTER", "peer": "127.0.0.1:19701", "ui_ipc": "127.0.0.1:19711",
+    "db_path": "runs/{run_id}/master/db/aoi.sqlite",
+    "asset_root": "runs/{run_id}/master/assets",
+    "camera_provider": "HikMock+ItekMock"
+  },
+  "slave": {
+    "role": "SLAVE", "peer": "127.0.0.1:19702", "ui_ipc": "127.0.0.1:19712",
+    "db_path": "runs/{run_id}/slave/db/aoi.sqlite",
+    "asset_root": "runs/{run_id}/slave/assets",
+    "camera_provider": "HikMock+ItekMock"
+  },
+  "model_provider": "DETERMINISTIC_MOCK",
+  "fixture_seed": 20261015,
+  "record_pcap_if_available": true,
+  "hardware_field_gates": "ALL_FIELD_PENDING",
+  "test_only": true
+}
