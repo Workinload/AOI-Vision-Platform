@@ -11,8 +11,8 @@ MOD-09,ModelAndAlgorithm,A4,AOI-Agent03,AOI-Core,TRUE,interface+fake+unit+integr
 MOD-10,CalibrationPositioning,A3,AOI-Agent02,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10
 MOD-11,StationDecision,A1,AOI-Agent01,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10
 MOD-12,AggregateDecision,A1,AOI-Agent01,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10
-MOD-13,SolutionManager,A7,AOI-Agent06,AOI-Core,TRUE,interface+fake+unit+integration+health,USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_HOLD_PENDING_NEW_HEAD_REVIEW
-MOD-14,DeploymentManager,A7,AOI-Agent06,AOI-Core,TRUE,interface+fake+unit+integration+health,USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_HOLD_PENDING_NEW_HEAD_REVIEW
+MOD-13,SolutionManager,A7,AOI-Agent06,AOI-Core,TRUE,interface+fake+unit+integration+health,USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_PASS_MERGED
+MOD-14,DeploymentManager,A7,AOI-Agent06,AOI-Core,TRUE,interface+fake+unit+integration+health,USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_PASS_MERGED
 MOD-15,AssetStore,A6,AOI-Agent03,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10
 MOD-16,DataRepository,A6,AOI-Agent03,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10
 MOD-17,Statistics,A6,AOI-Agent03,AOI-Core,TRUE,interface+fake+unit+integration+health,PLAN_V1.1_PROVISIONAL_PENDING_A10

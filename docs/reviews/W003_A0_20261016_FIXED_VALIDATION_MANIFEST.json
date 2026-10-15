@@ -1,0 +1,26 @@
+{
+  "task": "W003",
+  "original_origin": "PLAN_v1.1_21_modules+v2_registry",
+  "reason": "correct CSV export and stale PR12 route status",
+  "local_executions": {
+    "negative_round_1_exit": 0,
+    "negative_round_2_exit": 0,
+    "owner_script_exit": 0,
+    "negative_mutations_rejected_each": 7
+  },
+  "only_logical_DAG": "CANDIDATE_UNAPPROVED",
+  "independent_A10_status": "NEW_EXACT_SHA_REVIEW_REQUIRED",
+  "file_sha256": {
+    "W003_MODULE_21_OWNER_REVIEW.csv": "a975dbf92818c079f5104adaa95e5d8d82fe44256189b14d21c0ef3d1592264e",
+    "W003_MODULE_DAG_CANDIDATE.csv": "564f3497c4e10a04ee3cc15daac44db2d4b9b841bf7ffee0cf500a619cf4ea0c",
+    "verify_w003.py": "5eb04b0e0e33ea554942256e9fc4e364bc86e08ed88c229b8491687908dd71bb",
+    "verify_w003_owner.py": "c1fab3dd53fe4ed7e5ef24f132d74442d3cf659b8ce77d0e7ff9d0b86fb88f5b",
+    "W003_A0_MODULE_ROUTING_REVIEW.md": "92c0eaadf877982f2427674e27ff351d090f40450bae8893f3984dc750ba4d95",
+    "evidence/W003_A0_20261016_NEW_ROUND1.log": "48ac9617a757cad959075d15f038104a1a9d3f47718b0fee51b91e12f87526ba",
+    "evidence/W003_A0_20261016_NEW_ROUND2.log": "48ac9617a757cad959075d15f038104a1a9d3f47718b0fee51b91e12f87526ba",
+    "evidence/W003_A0_20261016_OWNER_POSITIVE.log": "0cee51c4fb3353b62f3a54f08fdf256a7d81d106c11481962e99658723107833"
+  },
+  "source_reference_sha256": {
+    "original_PLAN_v1.1": "154f632edc3d6352c6d57a95b7c1b6e8d038aa8782a34d1d571538c791a87ffe"
+  }
+}

@@ -1,0 +1,25 @@
+MUTATION_REJECTED duplicate_module
+MUTATION_REJECTED wrong_owner
+MUTATION_REJECTED wrong_chat
+MUTATION_REJECTED invented_provider
+MUTATION_REJECTED dependency_cycle
+MUTATION_REJECTED false_dag_freeze
+MUTATION_REJECTED false_a7_status
+{
+  "A7_modules": 2,
+  "cycles": 0,
+  "logical_edges_candidate": 30,
+  "mutation_negative_rejections": 7,
+  "plan_modules": 21,
+  "routing_status": "AGENT06_STARTED_PR12_A10_PASS_MERGED",
+  "source_sha256": {
+    "docs/plan/v1.1-original/MODULE_21_OWNERS.csv": "f34a3c2dcc7351da892845cdfb2d29e59c37e20e1bd2e69e6221d85a45234850",
+    "docs/reviews/W003_MODULE_21_OWNER_REVIEW.csv": "a975dbf92818c079f5104adaa95e5d8d82fe44256189b14d21c0ef3d1592264e",
+    "docs/reviews/W003_MODULE_DAG_CANDIDATE.csv": "564f3497c4e10a04ee3cc15daac44db2d4b9b841bf7ffee0cf500a619cf4ea0c",
+    "reference/spec_v2_machine_readable/module_registry.csv": "81dd62b2fb674bd27ca1a2da8c441ba3408ec99a8bce00abc6801f70983b3aed"
+  },
+  "status": "STATIC_PREP_PASS_ROUTING_GATE_AND_A10_PENDING",
+  "v2_registry_modules": 21,
+  "wbs_status": "NOT_VERIFIED",
+  "worker_routes": 21
+}

@@ -37,7 +37,7 @@ def verify(plan,registry,proposed,dag):
         assert actual["ModuleName"]==orig["ModuleName"], ("v2 registry drift",k)
         assert row["WorkerChat"]==ROUTES[orig["DevOwner"]], ("incorrect worker assignment",k)
         if orig["DevOwner"]=="A7":
-            assert row["Decision"]=="USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_HOLD_PENDING_NEW_HEAD_REVIEW", "invalid A7 approval claim"
+            assert row["Decision"]=="USER_APPROVED_CHAT_STARTED_ROUTING_PR12_A10_PASS_MERGED", "invalid A7 approval claim"
         assert d[k]["State"]=="CANDIDATE_UNAPPROVED", "DAG falsely frozen"
         assert d[k]["Meaning"]=="LOGICAL_DATA_DEPENDENCY_NOT_DIRECT_CODE_IMPORT", "DAG implementation claim"
     edges={k:[x for x in row["ProposedConsumesProviderModuleIds"].split(";") if x] for k,row in d.items()}
@@ -55,7 +55,7 @@ def verify(plan,registry,proposed,dag):
         state[node]=2
     for k in a:visit(k)
     assert sum(r["DevOwner"]=="A7" for r in proposed)==2, "A7 module count"
-    return {"plan_modules":21,"v2_registry_modules":21,"worker_routes":21,"A7_modules":2,"logical_edges_candidate":30,"cycles":0,"routing_status":"AGENT06_STARTED_PR12_A10_REVIEW_REQUIRED","wbs_status":"NOT_VERIFIED"}
+    return {"plan_modules":21,"v2_registry_modules":21,"worker_routes":21,"A7_modules":2,"logical_edges_candidate":30,"cycles":0,"routing_status":"AGENT06_STARTED_PR12_A10_PASS_MERGED","wbs_status":"NOT_VERIFIED"}
 
 def mutation_negatives(arrays):
     tests=[

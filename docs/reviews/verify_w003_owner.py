@@ -13,4 +13,4 @@ for key,original in pm.items():
  assert vm[key]["ModuleName"]==original["ModuleName"]
  assert mm[key]["WorkerChat"]==roles[original["DevOwner"]]
 assert len([x for x in m if x["DevOwner"]=="A7"])==2
-print("W003_STATIC_MAPPING_PASS 21/21 A7=2; routing PR12 still awaits A10")
+print("W003_STATIC_MAPPING_PASS 21/21 A7=2; routing PR12 A10 PASS and merged")
