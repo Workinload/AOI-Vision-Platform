@@ -13,7 +13,7 @@
 
 ## 1. 采用 GitHub，不再用 ZIP 当日常交接
 
-- 唯一源码 `Workinload/AOI-Vision-Platform/main`，一个版本一次 A0 发布裁定；Agent01..05 在独占分支开发，提交 Draft/Ready PR，A10 独立复测，A0 审核合并。每次读当前 Git commit，不依赖旧聊天本地路径。
+- 唯一源码 `Workinload/AOI-Vision-Platform/main`，一个版本一次 A0 发布裁定；Agent01..05 以及经 CR-A0-004 独立路由审核并完成新聊天启动后的 Agent06 在独占分支开发，提交 Draft/Ready PR，A10 独立复测，A0 审核合并。每次读当前 Git commit，不依赖旧聊天本地路径。
 - 原先的 5 个 `CHAT_START`、`AGENTS.md`、`START_HERE` 和 ZIP 接口全部由此次治理 PR 更新。各 Agent 最多需要在**现有对话**接收一句话，自动读取仓库新工作令；无需每次人工贴所有原始文件。
 - WBS 原文件内 `NOT_STARTED` 是历史快照；真实当前状态以 A0 `TASK_LEDGER.json` 为准。不能因此冒充其他 129 项完成。
 - **四类授权**：BranchDev（允许安全 Mock/接口预研）→ MergeReady（WBS 前置 VERIFIED+owner+合同+单测+独立 A10）→ ReleaseReady（签审确定的 source ZIP/CI/门禁）→ FieldAccepted（现场 14 FG+W123..130 签字）。
@@ -46,9 +46,9 @@
 | Agent04 | A8+A9 | QML 2K/1080 UI、设备信号图、权限/报警/审计 |
 | Agent05 | A10 | CI/构建、Windows SDK/ABI/插件闭包、真正五进程 E2E、114 TC、52 场景与安全回归 |
 | A0 | A0 总控 | C01 合同、source lock、Issue/PR/分支监督、任务与 release ledger、统一合并 |
-| A7 单独待安排 | A7 | MOD-13 SolutionManager / MOD-14 DeploymentManager；W083..087，**不可遗漏** |
+| Agent06（获准分配，待聊天启动） | A7 | MOD-13 SolutionManager / MOD-14 DeploymentManager；W083..W087，原 Owner/DependsOn 不变 |
 
-A7 可以新建 Agent06 承接（建议，隔离专业职责）；如用户不想加 Agent，A0 仅在明确 CR 后代理 5 项 A7 任务，须 A10 独立QA。未指派时这 5 项正式为 UNASSIGNED，不得默认并进 Agent04。
+用户已同意新增 Agent06 承接 A7；由 `CR-A0-004` 记录路由授权，独立新聊天实际启动前标为 `PENDING_NEW_CHAT_START`。五项 WBS 仍全部 `NOT_STARTED` 且 DependsOn 未满足，不能因分配角色而改为 VERIFIED；正式合并前需 A10 独立 QA 和 A0 决定，绝不默认分配给 Agent04。
 
 ## 4. C01 合同冻结是技术核心阻断
 

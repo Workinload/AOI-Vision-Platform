@@ -2,7 +2,7 @@
 
 当前唯一 GitHub 主线：`Workinload/AOI-Vision-Platform`（PRIVATE），Git 默认分支 `main`。上一份已正式发行源码：`M00-r003 OFFICIAL_SOURCE`，并非 SIM_READY。不要再从历史 `M00-r001_SOURCE.zip` 启动正式开发，也不要把任何暂存 ZIP 的旧 BaseSHA 当作 Git 最新基线。
 
-## A0 与五个 Agent
+## A0 与六个 Agent（Agent06 已获用户授权，待新聊天启动）
 
 - **A0 总控**：唯一架构、公共合同、任务登记、PR 合并/正式发布裁定；A10 独立审核。
 - **Agent01（A1+A5）**：Core 调度、工件 ID/Epoch 和 PeerLink；读 `CHAT_START_Agent01.md`。
@@ -10,7 +10,8 @@
 - **Agent03（A4+A6）**：算法/ROI/Replay、SQLite/无损资产/统计；读 `CHAT_START_Agent03.md`。
 - **Agent04（A8+A9）**：Qt QML UI、设备地图、权限/报警日志；读 `CHAT_START_Agent04.md`。
 - **Agent05（A10）**：独立 QA、CI、故障注入与部署；读 `CHAT_START_Agent05.md`。
-- **A7 缺口必须明确处理**：方案 `MOD-13`、部署 `MOD-14`，原 PLAN Owner=A7 且有 5 项 WBS。未来可由独立 Agent06 承担；如果 A0 代做，须单独 CR、受限路径、A10 独立复核。不能当做已经完成或偷偷分配给 Agent04。
+- **Agent06（A7）**：已获用户同意由独立新聊天承接方案 `MOD-13`、部署 `MOD-14`；启动时读 `CHAT_START_Agent06.md`，任务 W083～W087。**仅完成路由授权，聊天尚待新建，任务依赖未解锁，不能假称业务已完成。**
+- **A7 设计 Owner 保持原样**。本登记依据 `CR-A0-004`，不改变 130 WBS、任何冻结设计或 FIELD 门禁。当前人员路由 PR 应在 PR #3 审核结束后再评审合并。
 
 ## 工作准入
 

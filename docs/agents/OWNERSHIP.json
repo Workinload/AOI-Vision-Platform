@@ -110,6 +110,9 @@
     ],
     "AOI-Agent05": [
       "A10"
+    ],
+    "AOI-Agent06": [
+      "A7"
     ]
   },
   "immutable": [
@@ -122,12 +125,31 @@
   ],
   "collaboration_mode": "GIT_FIRST_PR",
   "source_of_truth": "main commit SHA for development; exact immutable SOURCE ZIP SHA256 for releases",
-  "unassigned_worker_roles": [
-    "A7"
-  ],
+  "unassigned_worker_roles": [],
   "warnings": [
-    "A7 has no active assigned worker yet; pending chat mapping is NOT an authorization to act",
+    "Agent06 is authorized for A7 routing but the new chat is not yet started; no A7 WBS task is VERIFIED",
     "WBS acceptance remains controlled by exact DependsOn + A10 independent QA",
     "GitHub personal private repo currently lacks proven enforceable rulesets"
-  ]
+  ],
+  "worker_activation": {
+    "AOI-Agent06": {
+      "design_role": "A7",
+      "implementation_modules": [
+        "MOD-13",
+        "MOD-14"
+      ],
+      "task_ids": [
+        "W083",
+        "W084",
+        "W085",
+        "W086",
+        "W087"
+      ],
+      "assignment_decision": "USER_APPROVED_A0_AUTHORIZED",
+      "chat_status": "PENDING_NEW_CHAT_START",
+      "wbs_status": "NOT_STARTED_DEPENDENCIES_BLOCKED",
+      "merge_authority": "A0_AFTER_DEPENDENCIES_AND_INDEPENDENT_A10_QA",
+      "change_request": "CR-A0-004"
+    }
+  }
 }

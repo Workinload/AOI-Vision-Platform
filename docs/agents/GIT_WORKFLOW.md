@@ -17,9 +17,9 @@
 | Agent03 | A4+A6 | `agent/03/Wnnn-topic` | A4+A6 |
 | Agent04 | A8+A9 | `agent/04/Wnnn-topic` | A8+A9 |
 | Agent05 | A10 | `qa/05/Wnnn-topic` | A10 |
-| Agent06（若启动） | A7，方案+部署 | `agent/06/Wnnn-topic` | A7；须 A0 正式登记路由 |
+| Agent06（用户已批准，待新聊天启动） | A7，方案+部署 | `agent/06/Wnnn-topic` | A7（MOD-13/14）；CR-A0-004 登记需独立审查 |
 
-A7 未成立时不得创建 `Agent06` 已上岗的虚假状态。A0 如代理 A7 必须显式书面例外、单独 PR 和 A10 审查。
+用户已同意新增 Agent06，A0 以 CR-A0-004 仅授权 A7 人员路由；在 Agent06 实际新聊天启动前，状态必须仍为 `PENDING_NEW_CHAT_START`。W083～W087 的正式 `DependsOn` 仍全部生效；未 VERIFIED 时可做隔离 BranchDev/Mock/Draft PR，但不可并入 main 或签署 WBS。A0 不再默认代理 A7；若另行代理需独立 CR。
 
 每 PR 尽量只做 1～3 个相关 WBS；任务 Issue 中指明 `Owner`, `Reviewer`, `DependsOn`, `RQ`, `TC`, `ExpectedFiles`, `Evidence`；跨所有权提交必须有 **CR ID + 原 Owner 同意 + A0 批准 + A10 独立回归**。
 
