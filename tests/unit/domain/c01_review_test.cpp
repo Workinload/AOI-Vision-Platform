@@ -22,8 +22,8 @@ int main() {
     ok.channel=ChannelId{"CH11"};
     assert(ok.valid());
     assert(!ChannelId{" CH01"}.valid());
-    assert(!ParentFrameIdentity{HostId{"FOREIGN"}, CaptureGroupId{"CG"}, PhysicalDeviceId{"CAM"}, AttemptNo{1}}.valid());
-    assert(ParentFrameIdentity{HostId{"MASTER"}, CaptureGroupId{"CG"}, PhysicalDeviceId{"CAM"}, AttemptNo{1}}.valid());
+    assert((!ParentFrameIdentity{HostId{"FOREIGN"}, CaptureGroupId{"CG"}, PhysicalDeviceId{"CAM"}, AttemptNo{1}}.valid()));
+    assert((ParentFrameIdentity{HostId{"MASTER"}, CaptureGroupId{"CG"}, PhysicalDeviceId{"CAM"}, AttemptNo{1}}.valid()));
     MessageIdentity envelope{MessageId{"M1"},EventId{"E1"},TraceId{"T1"},HostId{"MASTER"},Epoch{1},SequenceNo{1},"C01-REVIEW-0.2",std::string(64,'a')};
     assert(envelope.shape_valid());
     envelope.payload_sha256[0]='Z';
