@@ -50,6 +50,22 @@ class ReviewOnly(unittest.TestCase):
     def test_default_block(self):
         publish=False;physical_plc_write=False;field_gates_signed=0
         self.assertFalse(publish or physical_plc_write);self.assertEqual(field_gates_signed,0)
+
+# Contract review: fail-safe rule must exist in JSON Schema, not only Python helper.
+class SchemaCrossFieldReview(unittest.TestCase):
+    def test_non_success_never_ok_is_declarative(self):
+        import importlib.util
+        clauses=SCHEMA.get('allOf',[])
+        self.assertTrue(any(x.get('then',{}).get('properties',{}).get('QualityStatus',{}).get('not',{}).get('const')=='OK' and set(x.get('if',{}).get('properties',{}).get('ProcessingStatus',{}).get('enum',[]))=={'PENDING','RUNNING','ERROR','CANCELLED','TIMEOUT'} for x in clauses))
+        if importlib.util.find_spec('jsonschema'):
+            import jsonschema
+            jsonschema.Draft202012Validator.check_schema(SCHEMA)
+            for status in ('PENDING','RUNNING','ERROR','CANCELLED','TIMEOUT'):
+                with self.subTest(status=status):
+                    with self.assertRaises(jsonschema.ValidationError):
+                        jsonschema.validate(dict(P,ProcessingStatus=status,QualityStatus='OK'),SCHEMA)
+            jsonschema.validate(dict(P,ProcessingStatus='SUCCEEDED',QualityStatus='NG'),SCHEMA)
+
 if __name__=='__main__':
     result=unittest.main(verbosity=2,exit=False).result
     print('C01_REVIEW_DRAFT_TESTS',result.testsRun,'FAILURES',len(result.failures),'ERRORS',len(result.errors))

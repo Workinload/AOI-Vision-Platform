@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "urn:aoi:c01:correlation-envelope:review-only",
   "title": "C01 Review-only Workpiece Correlation Envelope",
-  "description": "DRAFT. Not frozen and not a wire interface.",
+  "description": "DRAFT. Not frozen and not a wire interface.; JSON Schema fail-closed on non-success processing + OK quality",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -73,5 +73,37 @@
         "SKIPPED_BY_VERIFIED_CONDITION"
       ]
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ProcessingStatus": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "ERROR",
+              "CANCELLED",
+              "TIMEOUT"
+            ]
+          }
+        },
+        "required": [
+          "ProcessingStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "QualityStatus": {
+            "not": {
+              "const": "OK"
+            }
+          }
+        },
+        "required": [
+          "QualityStatus"
+        ]
+      }
+    }
+  ]
 }
