@@ -1,0 +1,101 @@
+name: A10 exact-SHA upstream audit
+on:
+  pull_request:
+    paths:
+      - 'ci/a10_pinned_upstream_review.py'
+      - '.github/workflows/a10-pinned-upstream-review.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  review:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {pr: 28, sha: '8871f1e0129b0703ecbd3938344109b745e5a237'}
+          - {pr: 29, sha: 'dd3ace7907a913e5df49bd0a8c90f610beebcbc5'}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch exact upstream commit
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "refs/pull/${PR_ID}/head"
+          ACTUAL="$(git rev-parse FETCH_HEAD)"
+          test "$ACTUAL" = "$PINNED_SHA"
+          git worktree add --detach /tmp/a10-upstream "$ACTUAL"
+          test "$(git -C /tmp/a10-upstream rev-parse HEAD)" = "$PINNED_SHA"
+          sha256sum ci/a10_pinned_upstream_review.py ci/a10_w003_pinned_manifest.py ci/a10_v02_event_and_consumer_review.py
+      - name: Install pinned JSON Schema runtime for C01
+        if: matrix.pr == 29
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'jsonschema[format]==4.23.0'
+          python3 -c "import jsonschema,importlib.metadata; print('JSON_SCHEMA_VERSION',importlib.metadata.version('jsonschema'))"
+      - name: Independent round 1
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          python3 ci/a10_pinned_upstream_review.py --repo /tmp/a10-upstream --pr "$PR_ID" --sha "$PINNED_SHA" --round 1 | tee "/tmp/pr${PR_ID}-round1.log"
+      - name: Independent round 2
+        if: always()
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          python3 ci/a10_pinned_upstream_review.py --repo /tmp/a10-upstream --pr "$PR_ID" --sha "$PINNED_SHA" --round 2 | tee "/tmp/pr${PR_ID}-round2.log"
+      - name: Runtime JSON Schema positive/negative and mutation test
+        if: matrix.pr == 29
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user 'jsonschema[format]==4.23.0'
+          python3 ci/a10_c01_runtime_schema.py --schema /tmp/a10-upstream/contracts/C01/CORRELATION_ENVELOPE_DRAFT.schema.json | tee /tmp/pr29-schema-runtime.log
+      - name: Extra A10 W003 manifest and C01 six-event checks ROUND 1
+        if: always()
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PR_ID" = "28" ]; then
+            python3 ci/a10_w003_pinned_manifest.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 1 | tee /tmp/pr28-manifest-round1.log
+          elif [ "$PR_ID" = "29" ]; then
+            python3 -W error ci/a10_v02_event_and_consumer_review.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 1 | tee /tmp/pr29-events-round1.log
+          fi
+      - name: Extra A10 W003 manifest and C01 six-event checks ROUND 2
+        if: always()
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PR_ID" = "28" ]; then
+            python3 ci/a10_w003_pinned_manifest.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 2 | tee /tmp/pr28-manifest-round2.log
+          elif [ "$PR_ID" = "29" ]; then
+            python3 -W error ci/a10_v02_event_and_consumer_review.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 2 | tee /tmp/pr29-events-round2.log
+          fi
+      - name: Upload round evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a10-review-pr-${{ matrix.pr }}-${{ github.run_id }}
+          path: |
+            /tmp/pr*-round*.log
+            /tmp/pr29-schema-runtime.log
+            /tmp/pr28-manifest-round*.log
+            /tmp/pr29-events-round*.log
+          if-no-files-found: warn

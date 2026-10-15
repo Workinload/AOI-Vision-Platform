@@ -1,0 +1,36 @@
+name: A10 W005 exact-SHA static gate
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/a10-w005-pinned-test.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  w005:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Checkout W005 exact PR22 source
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin refs/pull/22/head
+          test "$(git rev-parse FETCH_HEAD)" = "3eec8bdd8882efbb4922dacbde27e459e364e12a"
+          git worktree add --detach /tmp/w005-gate FETCH_HEAD
+      - name: Execute W005 round 1 with real mutation negatives
+        run: |
+          set -euo pipefail
+          python3 /tmp/w005-gate/ci/w005_rq_tc_static_gate.py /tmp/w005-gate/docs/plan/v1.1-original | tee /tmp/w005-round1.log
+      - name: Execute W005 round 2 independently
+        if: always()
+        run: |
+          set -euo pipefail
+          python3 /tmp/w005-gate/ci/w005_rq_tc_static_gate.py /tmp/w005-gate/docs/plan/v1.1-original | tee /tmp/w005-round2.log
+      - name: Upload W005 real evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a10-w005-runs
+          path: /tmp/w005-round*.log
+          if-no-files-found: warn
