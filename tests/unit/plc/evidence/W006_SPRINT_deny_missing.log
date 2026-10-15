@@ -1,0 +1,5 @@
+In file included from libs/plc/src/locked_signal_registry.cpp:1:
+libs/plc/include/aoi/plc/locked_signal_registry.hpp:5:2: error: #error "W006 SignalRegistry may only be compiled with AOI_SIM_ONLY=1"
+    5 | #error "W006 SignalRegistry may only be compiled with AOI_SIM_ONLY=1"
+      |  ^~~~~
+EXIT_CODE=1

@@ -1,0 +1,86 @@
+compiler=g++ round=2
+COMMAND: compile W006 C++20 exact source
+COMPILE_EXIT=0
+PASS original byte-locked PLC/FG reference accepted
+PASS bounded read-only file import accepted
+PASS exact original 45 signal facts
+PASS exact original 14 field gates
+PASS seven BLOCKED + seven OPEN
+PASS snapshot != PLC readback and field grant always absent
+PASS all SignalId unique; none inferred by address
+PASS 45/45 read-only, 45/45 production write FALSE
+PASS 45/45 historical field meaning remains UNKNOWN
+PASS 45/45 evidence and risk notes carried through
+PASS 14/14 distinct gate identities
+PASS 14/14 FG unsigned and never grants writing
+PASS source SignalId lookup succeeds
+PASS unknown SignalId lookup returns no fact
+PASS original FG-01 through FG-14 present
+PASS unknown FG is absent, not auto OPEN
+PASS XYU physical site gate remains BLOCKED
+PASS OPEN never implies production activation
+PASS D1013 dual-use alias retained
+PASS D1000 coordinate/alarm alias retained
+PASS D1030 not equated to D1000; coordinate conflict UNKNOWN
+PASS 20WORD read window retained; 10WORD PLC refresh mismatch UNKNOWN
+PASS D1016 quality and D2099 output distinct, physical disposition UNKNOWN
+PASS legacy source direction preserved without enabling handshake
+PASS static 2WORD BADC preserved, not active encoding proof
+PASS static BA_STRING preserved without guessing barcode endianness
+PASS D1015 is PLC source, never CamDone
+PASS immutable v2 source SHA256 pinned to official BASELINE_LOCK
+PASS bit-flip checksum rejected
+PASS duplicate SignalId rejected
+PASS unknown injected SignalId rejected
+PASS missing/truncated SignalId rejected
+PASS disputed address silently rewritten rejected
+PASS invalid datatype/word order rejected
+PASS production writable mutation rejected
+PASS conflict group clearing rejected
+PASS unverified barcode length change rejected
+PASS BLOCKED->OPEN silent gate escalation rejected
+PASS FG production unlock rejected
+PASS extra/unapproved FG rejected
+PASS truncated source bytes rejected
+PASS broken CSV quoting rejected
+PASS oversized source rejected before hashing/allocation
+PASS missing signal CSV fails closed
+PASS missing file fails closed
+PASS duplicated/missing FG rejected
+PASS unknown FG identifier rejected
+PASS forged field signature rejected
+PASS write capability compile-time disabled
+PASS missing registry can never permit write
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS ADMIN/root/fake approval cannot write even to simulated endpoint
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS physical, ambiguous or DNS target denied by pure policy
+PASS approved-looking loopback still has NO W006 write endpoint
+PASS approved-looking loopback still has NO W006 write endpoint
+PASS approved-looking loopback still has NO W006 write endpoint
+PASS unknown signal write rejected
+PASS D1013 alias write rejected
+PASS XYU ambiguous write rejected
+PASS D1016 physical NG routing UNKNOWN
+PASS D2099 physical downstream UNKNOWN
+PASS no approval rejected
+PASS expired approval rejected
+PASS even boundary-age approval grants no write
+PASS barcode 10-vs-20 word not resolved
+PASS no mutation of registry fact after all write attempts
+SUMMARY pass=81 fail=0 MODE=SIM_ONLY W006_STATIC_ONLY
+RUN_EXIT=0
