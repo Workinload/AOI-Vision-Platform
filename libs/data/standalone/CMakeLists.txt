@@ -23,3 +23,7 @@ target_link_libraries(agent03_native_store_test PRIVATE aoi_agent03_assets aoi_a
 include(CTest)
 add_test(NAME agent03_native_wal_asset COMMAND agent03_native_store_test
          "${AOI_ROOT}/db/migrations/0002_agent03_simonly_draft.sql")
+
+add_executable(agent03_native_123mb_line_stress "${AOI_ROOT}/tests/unit/storage/native_123mb_line_stress.cpp")
+target_link_libraries(agent03_native_123mb_line_stress PRIVATE aoi_agent03_assets)
+# Deliberately not included in default CTest: explicit high-memory performance smoke only.
