@@ -11,8 +11,17 @@
       "status": "VERIFIED"
     },
     "W002": {
-      "evidence": "docs/adr/ADR-0004-legacy-unknowns.md",
-      "status": "DRAFT_PREPARED"
+      "status": "VERIFIED",
+      "scope": "LEGACY_STATIC_FACTS_AND_UNCERTAINTY_REGISTER_ONLY",
+      "reviewer": "A10",
+      "approver": "A0",
+      "decision": "A0_ACCEPTED_W002_STATIC_SOURCE_FACTS_AFTER_INDEPENDENT_A10_TWO_ROUNDS",
+      "reviewed_exact_source_head": "c0a3c66421e269a5ca22583cfa6e2fe1eb9b14b0",
+      "merged_source_main": "0d7abb19d319120ec083a6d909da7612b267f3ce",
+      "verified_date": "2026-10-16",
+      "field_status": "ALL_14_FIELD_PENDING_UNSIGNABLE_BY_W002",
+      "safety": "SIM_ONLY_NO_PHYSICAL_PLC_PRODUCTION_WRITE",
+      "evidence": "docs/reviews/W002_A0_FACT_LOCK_REVIEW.md; docs/reviews/verify_w002.py; docs/reviews/evidence/W002_A0_EXACT_CONTENT_ROUND1.log; docs/reviews/evidence/W002_A0_EXACT_CONTENT_ROUND2.log; https://github.com/Workinload/AOI-Vision-Platform/actions/runs/38772323194; https://github.com/Workinload/AOI-Vision-Platform/pull/27"
     },
     "W003": {
       "evidence": "docs/agents/OWNERSHIP.json;reference/plan_v1.1/MODULE_21_OWNERS.csv",
@@ -38,7 +47,7 @@
   "last_integrated_release": "M00-r003",
   "next_actions": [
     "M00-r003 Linux SIM_ONLY source scaffold is officially promoted after independent A10 candidate PASS and A0 post-transition QA; this is not SIM_READY",
-    "W002/W003 preparation plus C01 interface freeze remain unverified before unlocking other business modules",
+    "W002 VERIFIED only for legacy static facts/uncertainty register after A10 review; W003 remains pending independent QA and C01 remains NOT_FROZEN",
     "W005/W007 are NOT VERIFIED; Windows native remains NOT_VERIFIED and 114 TC + 52 scenario tests are NOT EXECUTED",
     "All 14 field gates remain FIELD_PENDING, production PLC writing remains disabled",
     "GitHub private repository migration must preserve all 108 original candidate files except documented A0 official metadata changes and promotion review note"
