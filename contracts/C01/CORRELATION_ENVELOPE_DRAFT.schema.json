@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:aoi:c01:correlation-envelope:review-only",
+  "title": "C01 Review-only Workpiece Correlation Envelope",
+  "description": "DRAFT. Not frozen and not a wire interface.; JSON Schema fail-closed on non-success processing + OK quality",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "SchemaVersion",
+    "MessageId",
+    "PayloadHash",
+    "WorkpieceId",
+    "Epoch",
+    "ReleaseId",
+    "ChannelId",
+    "CaptureId",
+    "AttemptNo",
+    "ProcessingStatus",
+    "QualityStatus"
+  ],
+  "properties": {
+    "SchemaVersion": {
+      "const": "C01-DRAFT-0"
+    },
+    "MessageId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "PayloadHash": {
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "WorkpieceId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "Epoch": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ReleaseId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ChannelId": {
+      "type": "string",
+      "pattern": "^CH(0[1-9]|1[01])$"
+    },
+    "CaptureId": {
+      "type": "string",
+      "minLength": 1
+    },
+    "AttemptNo": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "ProcessingStatus": {
+      "enum": [
+        "PENDING",
+        "RUNNING",
+        "SUCCEEDED",
+        "ERROR",
+        "CANCELLED",
+        "TIMEOUT"
+      ]
+    },
+    "QualityStatus": {
+      "enum": [
+        "UNDECIDED",
+        "OK",
+        "NG",
+        "MISSING",
+        "SKIPPED_BY_VERIFIED_CONDITION"
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "ProcessingStatus": {
+            "enum": [
+              "PENDING",
+              "RUNNING",
+              "ERROR",
+              "CANCELLED",
+              "TIMEOUT"
+            ]
+          }
+        },
+        "required": [
+          "ProcessingStatus"
+        ]
+      },
+      "then": {
+        "properties": {
+          "QualityStatus": {
+            "not": {
+              "const": "OK"
+            }
+          }
+        },
+        "required": [
+          "QualityStatus"
+        ]
+      }
+    }
+  ]
+}
