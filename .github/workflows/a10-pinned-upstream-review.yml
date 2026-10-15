@@ -14,9 +14,8 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {pr: 27, sha: 'c0a3c66421e269a5ca22583cfa6e2fe1eb9b14b0'}
-          - {pr: 28, sha: 'a88ec22ea05a8d191b96139596e675058c373c45'}
-          - {pr: 29, sha: 'd3e73167d903181ebb7fe010cbd74561ff61b0d0'}
+          - {pr: 28, sha: '8871f1e0129b0703ecbd3938344109b745e5a237'}
+          - {pr: 29, sha: 'dd3ace7907a913e5df49bd0a8c90f610beebcbc5'}
     steps:
       - uses: actions/checkout@v4
       - name: Fetch exact upstream commit
@@ -31,7 +30,14 @@ jobs:
           test "$ACTUAL" = "$PINNED_SHA"
           git worktree add --detach /tmp/a10-upstream "$ACTUAL"
           test "$(git -C /tmp/a10-upstream rev-parse HEAD)" = "$PINNED_SHA"
-          sha256sum ci/a10_pinned_upstream_review.py
+          sha256sum ci/a10_pinned_upstream_review.py ci/a10_w003_pinned_manifest.py ci/a10_v02_event_and_consumer_review.py
+      - name: Install pinned JSON Schema runtime for C01
+        if: matrix.pr == 29
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --user jsonschema==4.23.0
+          python3 -c "import jsonschema,importlib.metadata; print('JSON_SCHEMA_VERSION',importlib.metadata.version('jsonschema'))"
       - name: Independent round 1
         shell: bash
         env:
@@ -56,6 +62,32 @@ jobs:
           set -euo pipefail
           python3 -m pip install --user jsonschema==4.23.0
           python3 ci/a10_c01_runtime_schema.py --schema /tmp/a10-upstream/contracts/C01/CORRELATION_ENVELOPE_DRAFT.schema.json | tee /tmp/pr29-schema-runtime.log
+      - name: Extra A10 W003 manifest and C01 six-event checks ROUND 1
+        if: always()
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PR_ID" = "28" ]; then
+            python3 ci/a10_w003_pinned_manifest.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 1 | tee /tmp/pr28-manifest-round1.log
+          elif [ "$PR_ID" = "29" ]; then
+            python3 -W error ci/a10_v02_event_and_consumer_review.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 1 | tee /tmp/pr29-events-round1.log
+          fi
+      - name: Extra A10 W003 manifest and C01 six-event checks ROUND 2
+        if: always()
+        shell: bash
+        env:
+          PR_ID: ${{ matrix.pr }}
+          PINNED_SHA: ${{ matrix.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$PR_ID" = "28" ]; then
+            python3 ci/a10_w003_pinned_manifest.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 2 | tee /tmp/pr28-manifest-round2.log
+          elif [ "$PR_ID" = "29" ]; then
+            python3 -W error ci/a10_v02_event_and_consumer_review.py --repo /tmp/a10-upstream --sha "$PINNED_SHA" --round 2 | tee /tmp/pr29-events-round2.log
+          fi
       - name: Upload round evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -64,4 +96,6 @@ jobs:
           path: |
             /tmp/pr*-round*.log
             /tmp/pr29-schema-runtime.log
+            /tmp/pr28-manifest-round*.log
+            /tmp/pr29-events-round*.log
           if-no-files-found: warn
