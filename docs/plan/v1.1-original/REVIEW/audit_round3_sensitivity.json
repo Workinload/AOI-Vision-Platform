@@ -1,0 +1,60 @@
+{
+  "kind": "PLAN_AUDIT_MUTATION_TEST_NO_REAL_AOI_PROGRAMS",
+  "mutations": 6,
+  "caught": 6,
+  "missed": 0,
+  "cases": [
+    {
+      "mutation": "remove_e2e_durability_dependency",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "W049 E2E directly requires real source processing, results, parent image, DB and atomic outbox",
+        "DAG waves and per-agent task cards match WBS exactly"
+      ]
+    },
+    {
+      "mutation": "schedule_scenario_before_prereq",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "Scenario due phase not earlier than every referenced task",
+        "SCENARIO_MATRIX.csv byte-identical to current generator output"
+      ]
+    },
+    {
+      "mutation": "incorrectly_allow_live_plc_write",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "All 14 production-write gates remain closed"
+      ]
+    },
+    {
+      "mutation": "premature_prepared_both",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "W086 cannot claim final prepared before PLC readback",
+        "DAG waves and per-agent task cards match WBS exactly"
+      ]
+    },
+    {
+      "mutation": "remove_core_owner",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "Core binary ownership assigned A1",
+        "Agent prompts have same source paths as Owner manifest"
+      ]
+    },
+    {
+      "mutation": "corrupt_sim_test_result",
+      "detected": true,
+      "exit_code": 1,
+      "failed_checks": [
+        "All 114 requirements still not tested"
+      ]
+    }
+  ]
+}

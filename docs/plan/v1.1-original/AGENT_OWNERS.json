@@ -1,0 +1,68 @@
+{
+  "A0": {
+    "paths": "libs/domain/**,contracts/**,docs/adr/**,config/version_lock.*,tests/unit/domain/**",
+    "scope": "基线冻结、领域契约、技术决策、跨Agent merge、版本裁定",
+    "input": "v2.0 README/AGENTS/00_项目基线/01_架构与协议",
+    "done": "接口冻结v1；每个任务的路径与审查责任唯一；主线全量CI通过"
+  },
+  "A1": {
+    "paths": "libs/runtime/**,tests/unit/runtime/**,apps/aoi-core/**",
+    "scope": "物料身份、绑定、Epoch、调度、Station/Final决策；不操作PLC写socket",
+    "input": "MOD05/06/07/11/12，01:12/15/16",
+    "done": "缺图/断线/迟到/重拍均未判定而非自动OK，完整链可回放"
+  },
+  "A2": {
+    "paths": "libs/plc/**,simulators/vplc/**,tests/contract/plc/**,tests/unit/plc/**",
+    "scope": "真实FINS报文到本机vPLC、WORD/BA/BADC、冲突表、写策略与时序",
+    "input": "MOD03、45信号、14FG、02:20/22/23/24",
+    "done": "loopback隔离+模拟正常/错误顺序，真实非白名单写入拒绝"
+  },
+  "A3": {
+    "paths": "libs/device/**,libs/processing/**,libs/calibration/**,simulators/cameras/**,tests/contract/capture/**,tests/unit/device/**,tests/unit/processing/**,tests/unit/calibration/**",
+    "scope": "海康7路/Itek2套SDK mock、FrameRef、真实尺寸线扫拆分/方向/标定",
+    "input": "MOD01/02/08/10，02:21/23、03:34",
+    "done": "9物理设备/11通道；两分路共享父帧；实际123MB压力可测"
+  },
+  "A4": {
+    "paths": "libs/models/**,libs/vision/**,libs/replay/**,tests/contract/vision/**,tests/unit/vision/**,tests/unit/models/**,tests/unit/replay/**",
+    "scope": "算法管线、ROI/modelhash、确定性模拟检测、OpenVINO通用smoke、离线3模式",
+    "input": "MOD09/18，03:32/35/36",
+    "done": "离线/生产隔离，无模型无真值时不冒称电池精度通过"
+  },
+  "A5": {
+    "paths": "libs/peer/**,tests/contract/peer/**,tests/unit/peer/**",
+    "scope": "主从TCP，消息Envelope，Outbox/Inbox调用，ACK、重试、幂等和断链",
+    "input": "MOD04，01:13/15",
+    "done": "两Core独立进程断链60s重连无重复计数、旧代次结果隔离"
+  },
+  "A6": {
+    "paths": "libs/data/**,libs/assets/**,libs/statistics/**,db/migrations/**,tests/contract/data/**,tests/unit/data/**,tests/unit/assets/**,tests/unit/statistics/**",
+    "scope": "SQLite WAL、本地资产、无损hash、备份恢复、统计/图集检索",
+    "input": "MOD15/16/17，03:31/38/39",
+    "done": "两库独立、线扫父原图唯一、重启恢复且统计不重计"
+  },
+  "A7": {
+    "paths": "libs/solutions/**,libs/deployment/**,tests/contract/solution/**,tests/unit/solutions/**,tests/unit/deployment/**,config/product/**",
+    "scope": "MachineProfile/草稿/Release、主从两阶段部署与真实readback模拟",
+    "input": "MOD13/14，03:30/37",
+    "done": "保存仅草稿；双机任一失败进入FAILED_SAFE"
+  },
+  "A8": {
+    "paths": "apps/aoi-ui/**,libs/ui_api/**,resources/qml/**,tests/gui/**,tests/unit/ui_api/**",
+    "scope": "Qt Quick 11图全屏、地图+PLC表格同源、工位编辑/图集/诊断/发布UI",
+    "input": "MOD21，04:40..49",
+    "done": "2K/1080多DPI真程序截图、UI重启Core不断、草稿不触实机"
+  },
+  "A9": {
+    "paths": "libs/auth/**,libs/diagnostics/**,libs/logging/**,tests/security/**,tests/unit/security/**,tests/unit/diagnostics/**,tests/unit/logging/**",
+    "scope": "Core后端RBAC、双审、持久审计、告警及根因、事故包",
+    "input": "MOD19/20，05:50..53",
+    "done": "不授权IPC直接拒绝；ACK与CLEAR不同；全部行动有证据"
+  },
+  "A10": {
+    "paths": "tests/integration/**,tests/chaos/**,tools/simctl/**,tools/qa/**,ci/**,packaging/**,CMakeLists.txt,CMakePresets.json,cmake/**,scenarios/**,config/sim/**,tests/contract/integration/**,tools/**,docs/release/**",
+    "scope": "独立评测/双机启动/故障注入/真实Qt截图/Linux+Windows包",
+    "input": "06:60..66，全部114用例",
+    "done": "SIM全套证据和双轮QA，失败不涂绿，不写入资源库"
+  }
+}

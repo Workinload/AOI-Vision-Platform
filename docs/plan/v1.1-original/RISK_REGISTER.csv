@@ -1,0 +1,19 @@
+﻿RiskId,Severity,Description,Mitigation,Owner,FieldGate,SafetyInvariant
+RISK-01,Critical,D1030/D1000定位地址冲突,现场PLC变量读回、坐标单位与单站签核,A2,FG-01,"SIM只允vPLC,Field拒写"
+RISK-02,Critical,D1013别名与线扫清料冲突,静态冲突注册表+PLC版本核查,A2,FG-02,需现场核未解一律禁写
+RISK-03,High,扫码20/40字节长度不一致,保留原始WORD/比较多组真件,A2,"FG-03,FG-04","模拟覆盖两种长度,不猜"
+RISK-04,Critical,D1016=2真实NG流向未知,只做vPLC末端行为;现场确认机械分流,A1,FG-05,不可将正常响应承诺成NG箱
+RISK-05,Critical,半机换型成功导致错误Ready,Stage/Prepare/Readback/Commit安全状态机,A7,"FG-06,FG-10",任何读回不符则HOLD
+RISK-06,High,海康/Itek硬触发与配置不可信,各SDK MOCK;真驱动/型号现场验证,A3,"FG-07,FG-11,FG-13",Mock的PASS!=实机PASS
+RISK-07,High,双光线扫分路方向误解,像素单测主从方向、现场光路标定,A3,FG-09,展示静态旧方向待验证
+RISK-08,High,无真实电池模型与真值,MockInference+可选通用YOLO smoke分开,A4,FG-14,禁止精度造假
+RISK-09,High,产线节拍与存储容量未知,123MB真尺寸压测与现场容量评估,A6,"FG-08,FG-12",不设虚假硬阈值
+RISK-10,Critical,跨机工件混淆与重计,"ID+Epoch+Attempt+Release,持久Outbox/Inbox","A1,A5",SIM,错误无法判则HOLD
+RISK-11,High,开发Agent公共DTO冲突,A0合同冻结、ADR和Owner路径,A0,SIM,不同Owner不得同写公共头
+RISK-12,High,Windows发布漏OpenVINO前端,依赖闭包+真ONNX加载/Wine运行,A10,SIM,先保存ZIP再Wine测试
+RISK-13,High,DB索引与原图跨资源不一致,PENDING/fsync/rename+恢复索引校验,A6,SIM,备份包含图像与模型
+RISK-14,High,Qt UI模拟显示成硬编码假数据或S05页面骨架假称全功能,"从UIReadAPI查询真实Core,断链可见",A8,SIM,真实Qt截图及事件检查
+RISK-15,Critical,SIM进程意外访问真实PLC,编译时SIM_ONLY+loopback限定+网络负测,"A2,A9",SIM,deny outbound;无法测时NOT_VERIFIED
+RISK-16,High,S05页面先于真正报警/产品草稿/完整周统计后端,UI集成两阶段证据矩阵；S06/S07二次复验,A8,SIM,未接入功能须显示未就绪;不允许冒称完成
+RISK-17,Critical,W049未等结果入库、Outbox事务及线扫父资产即宣布双机闭环,WBS显式DAG依赖+三方资产/DB/网络痕迹,A10,SIM,真实主从消息和图像事务前置完成
+RISK-18,High,Windows Qt Widgets样板不能证明Qt Quick/QML插件完备,W007最小QML编译+W117干净发布双Qt启动,A10,SIM,不能只看QT6Widgets或PE导入闭包

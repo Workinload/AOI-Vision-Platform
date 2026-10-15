@@ -1,36 +1,29 @@
-# AOI Vision Platform — M00-r001 baseline
+# AOI Vision Platform — official M00-r003, GitHub-first development
 
-**Simulation-only starting project.** This ZIP is a real, Linux-buildable scaffold for Qt 6.11.2/C++20 and a ZIP-based multi-chat development workflow. It is **not** an operational AOI, SIM_READY, a FINS implementation, or a Windows release. No physical equipment control.
+当前主线基于 `AOI_Vision_Platform_M00_r003_OFFICIAL_SOURCE.zip`（SHA256 `737a140ff2da49da1428edd8152060da1818e0c3981711c105beecff6239f468`，109 个文件）。这只是 Qt 6.11.2 / C++20 / OpenCV 5.0.0 的 **Linux SIM_ONLY 双 Core + 双 UI + vPLC 健康脚手架**；不是完整 FINS、相机、视觉管线、11 图主屏、SIM_READY 或现场软件验收。后续 Git 提交与此已发布 ZIP 的字节并不自动一致。
 
-## First read
+## 新 Agent 入口
+- `AGENTS.md`：版本/安全/所有权规则；`docs/agents/GIT_WORKFLOW.md`：分支、PR、任务四级门禁、A10 验证。
+- `docs/agents/GIT_FIRST_PLAN_v1.2.md`：130 WBS、12 契约、验收覆盖与 Git 路线修订。
+- `docs/agents/START_HERE.md`：角色启动方式；`docs/agents/CHAT_START_Agent01.md` ～ `Agent05.md`：唯一最新 Git 工作令。
+- `docs/plan/v1.1-original/`：原 PLAN v1.1 全套**逐字节只读镜像**，包括 11 份职责提示词、11 份任务卡和风险/退出门禁；不可直接改旧快照。
+- `docs/agents/TASK_LEDGER.json`：**实际验证状态**。原 PLAN WBS `NOT_STARTED` 不会自动同步历史批准决议。
 
-1. `docs/agents/START_HERE.md`: how to create the five ChatGPT sub-chats and transfer ZIP patches.
-2. `BASELINE_LOCK.json`: SHA256 of immutable source specification v2.0, plan v1.1, SDK reference.
-3. `docs/agents/OWNERSHIP.md` and `contracts/C00_DRAFT.md`: boundaries and contracts.
-4. `docs/evidence/M00_TEST_REPORT.md`: tests that were actually run.
-
-## Developer build — Debian 13 / Linux x64
-
-Qt/OpenCV SDKs are **not included**. Use existing read-only `/工具开发` Pe SDK components 03 Qt base, 04 Qt Quick, 05 Qt dev; extract into the same external directory *preserving symlinks*. OpenCV5 is optional for compiling the base Core, but if its SDK exists M00 also builds and runs a real OpenCV 5.0.0 C++ pixel-operation probe. It is mandatory later in vision work.
+## 独立 Linux Debug 编译（Qt/OpenCV SDK 必须由用户提供的只读分卷还原）
 
 ```bash
-export SDK=/your/cache/vision_sdk
-cmake -S . -B build/linux -G Ninja -DCMAKE_PREFIX_PATH="$SDK/components/qt;$SDK/components/opencv" -DAOI_SIM_ONLY=ON
-cmake --build build/linux -j 4
-ctest --test-dir build/linux --output-on-failure
-# run all five OS processes and inspect real Unix-domain IPC + UDP health
+export SDK=/your/external/vision_sdk
+cmake -S . -B build/linux-sim -G Ninja \
+  -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH="$SDK/components/qt;$SDK/components/opencv" \
+  -DAOI_SIM_ONLY=ON -DAOI_BUILD_GUI=ON -DAOI_PROBE_OPENCV5=ON -DBUILD_TESTING=ON
+cmake --build build/linux-sim --parallel 3
+ctest --test-dir build/linux-sim --output-on-failure
 QT_QPA_PLATFORM=offscreen QSG_RHI_BACKEND=software \
-python3 tests/integration/five_process_smoke.py --bin-dir build/linux
+  python3 tests/integration/five_process_smoke.py --bin-dir build/linux-sim
 ```
 
-Run UI in desktop (with X11/Wayland available) using `aoi-ui --role master --ipc /absolute/path/master/core.sock`, after starting Core. In M00 this shows a SIM-only health screen; the final 11-channel QML UI and process integration is downstream work.
+**现实边界：** OpenCV 缺失时 CMake 可能只是警告并略过探针，不能把此退化构建算成精确 OpenCV5 验收。`main` 当前未有自动化 CI；配置 CI、私有仓库强制分支保护、Windows 原生完整闭包属于后续必须完成的任务。
 
 ## Safety
 
-`AOI_SIM_ONLY=ON` cannot be switched off in M00. No production FINS driver, address, camera SDK, or outbound PLC connection exists in the binaries. `vplc` has UDP loopback *health handshake only*; unknown datagrams, including FINS commands, are ignored. UI↔Core is strictly read-only. Do not claim an official production site firewall policy was validated.
-
-## For ZIP integration
-
-Read `docs/agents/ZIP_PROTOCOL.md`, distribute *this same M00 ZIP* to all subchats, and use `tools/validate_patch.py` / `tools/integrate_patch.py`; official integration only from A0 after A10 checks. Do not share raw source folder contents via chat copy-paste.
-
-The Qt offscreen screenshot test can optionally use environment variable `AOI_M00_TEST_FONT_FILE=/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc` to register an existing Linux CJK font for headless CI. Font binaries are **not** bundled/distributed. The final UI appearance and Windows font fallback remain future QA.
+`AOI_SIM_ONLY=OFF` 在现有 M00 源码中被 CMake 显式禁止；实际设备 PLC/相机适配器尚未交付；生产写入一律禁用。现场 FG-01～FG-14 不因 GitHub 合并而变为通过。任何真实设备连接、生产授权或发布 `SIM_READY` 必须符合 WBS / Gate 和用户现场签字要求。

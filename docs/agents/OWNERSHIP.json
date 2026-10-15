@@ -1,24 +1,133 @@
 {
-  "schema": "aoi-zip-ownership.v1",
+  "schema": "aoi-git-ownership.v2",
   "roles": {
-    "A0": ["libs/domain/", "contracts/", "docs/adr/", "docs/contracts/", "docs/agents/", "docs/reviews/", "BASELINE_LOCK.json", "AGENTS.md", "README.md", "RELEASE.json"],
-    "A1": ["libs/runtime/", "apps/aoi-core/", "tests/unit/production/"],
-    "A2": ["libs/plc/", "simulators/vplc/", "tests/unit/plc/"],
-    "A3": ["libs/device/", "libs/processing/", "libs/calibration/", "tests/unit/acquisition/"],
-    "A4": ["libs/models/", "libs/vision/", "libs/replay/", "tests/unit/vision/"],
-    "A5": ["libs/peer/", "tests/unit/peer/"],
-    "A6": ["libs/data/", "libs/assets/", "libs/statistics/", "db/migrations/", "tests/unit/storage/"],
-    "A7": ["libs/solutions/", "libs/deployment/", "tests/unit/solution/"],
-    "A8": ["apps/aoi-ui/", "libs/ui_api/", "resources/qml/", "tests/unit/ui/"],
-    "A9": ["libs/auth/", "libs/diagnostics/", "libs/logging/", "tests/unit/security/"],
-    "A10": ["CMakeLists.txt", "CMakePresets.json", "tests/integration/", "tests/chaos/", "tools/", "ci/", "packaging/", "scenarios/", "config/sim/", "tests/unit/source_contracts_test.py", "tests/unit/domain_contract_test.cpp"]
+    "A0": [
+      "libs/domain/",
+      "contracts/",
+      "docs/adr/",
+      "docs/contracts/",
+      "docs/agents/",
+      "docs/reviews/",
+      "BASELINE_LOCK.json",
+      "AGENTS.md",
+      "README.md",
+      "RELEASE.json",
+      ".gitignore",
+      "docs/plan/",
+      ".github/CODEOWNERS",
+      ".github/PULL_REQUEST_TEMPLATE.md",
+      "tests/unit/domain/",
+      "config/version_lock."
+    ],
+    "A1": [
+      "libs/runtime/",
+      "apps/aoi-core/",
+      "tests/unit/production/"
+    ],
+    "A2": [
+      "libs/plc/",
+      "simulators/vplc/",
+      "tests/unit/plc/"
+    ],
+    "A3": [
+      "libs/device/",
+      "libs/processing/",
+      "libs/calibration/",
+      "tests/unit/acquisition/"
+    ],
+    "A4": [
+      "libs/models/",
+      "libs/vision/",
+      "libs/replay/",
+      "tests/unit/vision/"
+    ],
+    "A5": [
+      "libs/peer/",
+      "tests/unit/peer/"
+    ],
+    "A6": [
+      "libs/data/",
+      "libs/assets/",
+      "libs/statistics/",
+      "db/migrations/",
+      "tests/unit/storage/"
+    ],
+    "A7": [
+      "libs/solutions/",
+      "libs/deployment/",
+      "tests/unit/solution/",
+      "tests/unit/solutions/",
+      "tests/unit/deployment/",
+      "tests/contract/solution/",
+      "config/product/"
+    ],
+    "A8": [
+      "apps/aoi-ui/",
+      "libs/ui_api/",
+      "resources/qml/",
+      "tests/unit/ui/"
+    ],
+    "A9": [
+      "libs/auth/",
+      "libs/diagnostics/",
+      "libs/logging/",
+      "tests/unit/security/"
+    ],
+    "A10": [
+      "CMakeLists.txt",
+      "CMakePresets.json",
+      "tests/integration/",
+      "tests/chaos/",
+      "tools/",
+      "ci/",
+      "packaging/",
+      "scenarios/",
+      "config/sim/",
+      "tests/unit/source_contracts_test.py",
+      "tests/unit/domain_contract_test.cpp",
+      "tests/patch/",
+      "tests/unit/opencv5_link_probe.cpp",
+      ".github/workflows/",
+      ".github/actions/"
+    ]
   },
   "chats": {
-    "AOI-Agent01": ["A1", "A5"],
-    "AOI-Agent02": ["A2", "A3"],
-    "AOI-Agent03": ["A4", "A6"],
-    "AOI-Agent04": ["A8", "A9"],
-    "AOI-Agent05": ["A10"]
+    "AOI-Agent01": [
+      "A1",
+      "A5"
+    ],
+    "AOI-Agent02": [
+      "A2",
+      "A3"
+    ],
+    "AOI-Agent03": [
+      "A4",
+      "A6"
+    ],
+    "AOI-Agent04": [
+      "A8",
+      "A9"
+    ],
+    "AOI-Agent05": [
+      "A10"
+    ]
   },
-  "immutable": ["reference/", "docs/evidence/", "FILE_HASHES.json", "SHA256SUMS.txt", "INTEGRATION_HISTORY.json"]
+  "immutable": [
+    "reference/",
+    "docs/evidence/",
+    "FILE_HASHES.json",
+    "SHA256SUMS.txt",
+    "INTEGRATION_HISTORY.json",
+    "docs/plan/v1.1-original/"
+  ],
+  "collaboration_mode": "GIT_FIRST_PR",
+  "source_of_truth": "main commit SHA for development; exact immutable SOURCE ZIP SHA256 for releases",
+  "unassigned_worker_roles": [
+    "A7"
+  ],
+  "warnings": [
+    "A7 has no active assigned worker yet; pending chat mapping is NOT an authorization to act",
+    "WBS acceptance remains controlled by exact DependsOn + A10 independent QA",
+    "GitHub personal private repo currently lacks proven enforceable rulesets"
+  ]
 }

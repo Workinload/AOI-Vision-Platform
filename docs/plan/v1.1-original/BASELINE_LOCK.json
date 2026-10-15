@@ -1,0 +1,42 @@
+{
+  "lock_version": "2026-10-15-v1",
+  "scope": "PLAN_SOURCE_PROVENANCE_ONLY",
+  "design_status": "STATIC_DESIGN_NO_REAL_PLC_OR_CAMERA_EXECUTION",
+  "source_files": {
+    "aoi_spec_v2_zip": {
+      "filename": "AOI_完整开发设计全书_v2.0_20261015.zip",
+      "sha256": "de0f36f5c270e07abedc0e317d8517c8f5e0d86a5a42897120d42b3a1f5dec47",
+      "size_bytes": 31170678,
+      "cloud_library_folder": "/AOI开发项目",
+      "is_read_only": true
+    },
+    "qt_template_zip": {
+      "filename": "VisionForge_Qt6_YOLO11_ONNX_已修复源码与QA.zip",
+      "sha256": "c2ba0f27012750756641a2ab626d5696444b6b51ecd8c66336a019dc07cb06ac",
+      "size_bytes": 4164749,
+      "cloud_library_folder": "/工具开发",
+      "is_read_only": true
+    },
+    "sdk_components_manifest": {
+      "filename": "SDK_PARTS_MANIFEST.json",
+      "sha256": "adcbf986f508913d4cf9be60ec480c7da7ac966c0285b34bf9e6365aaf4427cf",
+      "size_bytes": 5136,
+      "cloud_library_folder": "/工具开发",
+      "is_read_only": true
+    }
+  },
+  "v2_design_pack_audit_report": "23/23 pass, 0 fail (static design only)",
+  "requirements_count": 114,
+  "tests_count": 114,
+  "modules_count": 21,
+  "field_gates_count": 14,
+  "physical_cameras_area_count": 7,
+  "physical_linescans_count": 2,
+  "result_image_slots": 11,
+  "notes": [
+    "原项目资料库与工具SDK资源只读。",
+    "上述哈希已根据本轮实际取得的ZIP和清单文件计算，不代表SDK各分卷已在此沙盒真实恢复。",
+    "Qt模板是Widgets/C++17参考，不是QtQuick/C++20 AOI正式UI；只能复用构建/算法/发布经验。",
+    "本 PLAN 只读/模拟且不授权真实设备运动。"
+  ]
+}

@@ -1,0 +1,12 @@
+﻿Gate,Phase,TaskRange,ExitConditions,Approver,IndependentVerifier,EvidenceNeeded,Status
+G00,S00,W001-W010,基线/114/21/14/合同冻结与SIM写隔离,A0,A10,baseline_lock.json;contracts.v1;rq_mapped,NOT_RUN
+G01,S01,W011-W022,Linux Qt+2 Core+2 UI实际启动;双库与IPC,A0,A10,processlist;ctest;db_paths,NOT_RUN
+G02,S02,W023-W034,虚拟PLC FINS报文+9物理设备模拟+simctl五进程,A2,A10,pcap;camera readbacks;health json,NOT_RUN
+G03,S03,W035-W047,完整身份/Station/Final State Machine与PeerLink合同,A1,A10,idempotency;epoch;missing result traces,NOT_RUN
+G04,S04,W048-W067,W049以W058/W060/W061/W062/W063等真实产物为先决；11路带Overlay结果与独库/Outbox双机E2E,A6,A10,raw pixel hash;master/slave DB;vPLC txn,NOT_RUN
+G05,S05,W068-W082,真Qt两分辨率11同屏+地图表联动；报警/统计/工位保存只作为分阶段UI骨架，后端G06/G07再签,A8,A10,real Qt screenshot;gui automation evidence,NOT_RUN
+G06,S06,W083-W095,双机设备+vPLC读回后方可PREPARED_BOTH，Qt工位参数保存真实接入RBAC/Draft，报警Lifecycle全接线,A7,A10,deployment failure matrix;auth audit,NOT_RUN
+G07,S07,W096-W104,离线Lab+追溯+W100完整周日报表及Qt图表复验+114 test runner,A4,A10,lab/production isolation;query/analytics oracle,NOT_RUN
+G08,S08,W105-W114,混沌压力安全负测;114需求SIM执行状态有证据,A10,A0,114 indexed TC+run logs+failure list,NOT_RUN
+G09,S09,W115-W122,Linux/Windows PE+QtQuick/QML插件闭包+完整ZIP，保存于Wine前；成品代码两轮复核,A0,A10,sourceZIP;WindowsZIP;hash;Wine actual EXE log,NOT_RUN
+FIELD,HARDWARE,W123-W130,14现场FG+真实SDK/PLC/机器人/工艺签核,现场有权负责人,A0+A10,真实字段只读证据与试生产签署,FIELD_PENDING
