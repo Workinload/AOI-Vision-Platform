@@ -47,6 +47,31 @@ jobs:
         run: python qa/chaos_e2e.py --evidence-root .artifacts/qa-barcode-flip
       - name: Full 11-channel independent asset and PeerLink audit with corrupted end barcode
         run: python qa/chaos_e2e.py --all-channels --evidence-root .artifacts/qa-11channels-barcode-flip
+      - name: Publish Windows x64 framework-dependent SIM_ONLY preview
+        if: matrix.os == 'windows-2025'
+        shell: bash
+        run: |
+          set -e
+          unset PLATFORM
+          dotnet restore AOI.slnx -r win-x64 --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+          dotnet publish src/AOI.Host/AOI.Host.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/Host
+          dotnet publish src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/UI
+          dotnet publish src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/Diagnostics
+          cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
+          cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
+          test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
+          test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
+          test -f .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.exe
+          dotnet .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.dll verify .artifacts/qa-11channels/diagnostics/evidence.zip
+          echo 'AOI_WIN_SIM11_PACKAGE_PASS host=1 ui=1 diagnostics=1 redacted_bundle_verified=1'
+      - name: Upload Windows x64 SIM_ONLY preview package
+        if: matrix.os == 'windows-2025'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOI_SIM11_Windows_Preview-${{ github.run_id }}
+          path: csharp/.artifacts/dist/AOI_SIM11_Windows/
+          retention-days: 14
+          if-no-files-found: error
       - name: Save logs on failure and success
         if: always()
         uses: actions/upload-artifact@v4

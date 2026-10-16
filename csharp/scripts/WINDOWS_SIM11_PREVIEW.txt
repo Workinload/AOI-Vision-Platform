@@ -1,0 +1,36 @@
+AOI Vision Platform - Windows x64 SIM_ONLY Preview
+===============================================
+
+This is a runnable, framework-dependent Windows PREVIEW, NOT production AOI.
+Prerequisites: Windows 10/11 x64, .NET 10 Desktop Runtime x64, compatible
+OpenCV native runtime/dependencies. The app includes C# + Avalonia + OpenCvSharp5.
+
+QUICK START
+1. Extract the entire artifact to a writable folder, for example Downloads\AOI_SIM11.
+2. Ensure no other AOI SIM Core/vPLC is using localhost ports 19600,19610,19621,19622.
+3. Double-click Launch-SIM11.cmd. Three Core/vPLC consoles and two UI windows start.
+4. Observe 9 VIRTUAL physical image devices mapped to 11 logical OpenCV5 channels.
+5. The simulated Master Core persists 11 results, six from Slave PeerLink.
+6. Close all five SIM process windows before restarting. Delete sim-data only when
+   you intentionally want a fresh simulated workpiece; retain it for audit otherwise.
+
+After running, capture diagnostic evidence (read-only):
+  Diagnostics\AOI.Diagnostics.Cli.exe capture sim-data sim-data\flight.jsonl
+  Diagnostics\AOI.Diagnostics.Cli.exe replay sim-data\flight.jsonl
+  Diagnostics\AOI.Diagnostics.Cli.exe bundle sim-data\flight.jsonl sim-data\evidence.zip
+  Diagnostics\AOI.Diagnostics.Cli.exe verify sim-data\evidence.zip
+
+REAL SAFETY BOUNDARIES
+- No OEM camera SDK or PLC production transport. FINS/UDP is hardwired to 127.0.0.1.
+- No REAL hardware writes, interlocks, machine motion or factory ejection enabled.
+- Only tiny synthetic pixels; NOT 8200x15000 full line-scan performance proof.
+- AOI quality result is SIM_ONLY, not trained OCR/defect inference or field acceptance.
+- The exit barcode is a test fixture echo, not an independent industrial scanner.
+- Windows interactive GUI rendering was not field-tested; CI tested compilation
+  and separate headless IPC but not an operator's monitor/device drivers.
+- Changeover module exists as an isolated offline library; this launcher does NOT
+  activate certified product changes or bypass industrial safety gates.
+- DO NOT connect this preview to any real PLC, camera or production wiring.
+
+Build details and exact dependency pins are in the repository C# migration branch.
+GitHub: https://github.com/Workinload/AOI-Vision-Platform
