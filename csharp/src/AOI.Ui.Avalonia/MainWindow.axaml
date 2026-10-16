@@ -1,0 +1,54 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AOI.Ui.Avalonia.MainWindow"
+        Title="AOI Vision Platform | SIM_LIGHT" Width="1440" Height="900"
+        MinWidth="1100" MinHeight="700" Background="#F3F6FA">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="24" RowSpacing="16">
+    <Border Grid.Row="0" CornerRadius="15" Background="White" Padding="24,18">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="5">
+          <TextBlock Text="AOI Vision Platform" FontSize="28" FontWeight="Bold" Foreground="#1F3048" />
+          <TextBlock Text="双机实时采集监控 · 11 通道 · SIM_LIGHT（仅本机仿真）" FontSize="14" Foreground="#6A798B"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Spacing="5" HorizontalAlignment="Right">
+          <TextBlock Text="{Binding NodeLabel}" FontSize="18" FontWeight="SemiBold" Foreground="#1F4566" HorizontalAlignment="Right"/>
+          <TextBlock Text="{Binding ConnectionState}" FontSize="13" Foreground="#59718B" HorizontalAlignment="Right"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Border Grid.Row="1" CornerRadius="12" Background="#DFEAF7" Padding="16,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="3">
+          <TextBlock Text="{Binding ProductionState}" FontSize="17" Foreground="#244365" FontWeight="SemiBold"/>
+          <TextBlock Text="{Binding LatestIdentity}" FontSize="13" Foreground="#516B89"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1" VerticalAlignment="Center" Foreground="#43658B"
+                   Text="真实 PLC 写入禁用 · 当前仅演示两路合成检测"/>
+      </Grid>
+    </Border>
+    <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+      <ItemsControl ItemsSource="{Binding Channels}">
+        <ItemsControl.ItemsPanel>
+          <ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate>
+        </ItemsControl.ItemsPanel>
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <Border Background="White" BorderBrush="#E3EAF1" BorderThickness="1" Margin="5"
+                    CornerRadius="13" Padding="20" MinHeight="170">
+              <StackPanel Spacing="12">
+                <Grid ColumnDefinitions="*,Auto">
+                  <TextBlock Text="{Binding ChannelId}" FontSize="23" FontWeight="Bold" Foreground="#21486C"/>
+                  <TextBlock Grid.Column="1" Text="{Binding State}" FontSize="12" Foreground="#487B9C"/>
+                </Grid>
+                <Border Background="#F1F5FA" CornerRadius="8" Height="50" Padding="10">
+                  <TextBlock Text="{Binding FrameLabel}" FontSize="13" Foreground="#8292A3" VerticalAlignment="Center" HorizontalAlignment="Center"/>
+                </Border>
+                <TextBlock Text="{Binding StationDetails}" FontSize="13" Foreground="#647489"/>
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </Grid>
+</Window>

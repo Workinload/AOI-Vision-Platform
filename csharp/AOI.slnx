@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AOI.Contracts/AOI.Contracts.csproj" />
+    <Project Path="src/AOI.Domain/AOI.Domain.csproj" />
+    <Project Path="src/AOI.Host/AOI.Host.csproj" />
+    <Project Path="src/AOI.Runtime/AOI.Runtime.csproj" />
+    <Project Path="src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj" />
+    <Project Path="src/AOI.Ui.Client/AOI.Ui.Client.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AOI.Tests/AOI.Tests.csproj" />
+  </Folder>
+</Solution>
