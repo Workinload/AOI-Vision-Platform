@@ -30,7 +30,7 @@ public static class ReadOnlyCapture
             cmd.CommandText = "SELECT identity_json, final_json FROM workpieces ORDER BY workpiece_id";
             using var r = cmd.ExecuteReader();
             while (r.Read())
-                workpieces.Add(new WorkpieceEvidence(WireFormat.Parse<WorkpieceIdentity>(r.GetString(0)),
+                workpieces.Add(new WorkpieceEvidence(WireFormat.Parse<WorkpieceIdentity>(r.GetString(0)) with { Barcode = "[REDACTED]" },
                     r.IsDBNull(1) ? null : WireFormat.Parse<FinalDecision>(r.GetString(1))));
         }
         var results = new List<ChannelResult>();
