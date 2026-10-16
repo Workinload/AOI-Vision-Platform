@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 
 namespace AOI.Diagnostics;
 
@@ -13,7 +14,12 @@ public static class FlightRecorder
         foreach (string line in File.ReadLines(path, Encoding.UTF8))
         {
             if (string.IsNullOrWhiteSpace(line)) throw new InvalidDataException("Blank journal record.");
-            var entry = DiagnosticsFormat.Parse<FlightRecord>(line);
+            FlightRecord entry;
+            try { entry = DiagnosticsFormat.Parse<FlightRecord>(line); }
+            catch (JsonException ex)
+            {
+                throw new InvalidDataException($"Malformed flight journal JSON at record {entries.Count + 1}.", ex);
+            }
             if (entry.FormatVersion != DiagnosticsFormat.JournalVersion ||
                 entry.Sequence != entries.Count + 1 ||
                 entry.PreviousSha256 != previous ||

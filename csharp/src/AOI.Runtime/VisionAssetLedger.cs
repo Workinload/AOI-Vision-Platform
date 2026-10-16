@@ -442,7 +442,7 @@ public sealed class VisionAssetLedger
                     using var image = LoadVerified(id);
                     verified++;
                 }
-                catch (Exception ex) when (ex is IOException or ArgumentException or OpenCVException)
+                catch (Exception ex) when (ex is IOException or ArgumentException or OpenCVException or InvalidDataException or System.Text.Json.JsonException)
                 {
                     problems.Add($"FRAME {id:N}: {ex.Message}");
                 }

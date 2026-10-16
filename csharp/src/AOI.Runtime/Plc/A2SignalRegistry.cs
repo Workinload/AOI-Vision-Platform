@@ -86,9 +86,12 @@ public static class A2SignalRegistry
         new ReadOnlyCollection<A2FieldGate>(ReadCsv(RawGates).Select(row =>
             new A2FieldGate(new ReadOnlyDictionary<string, string>(row))).ToArray());
 
-    private static bool TryParseDm(string text, out ushort address) =>
-        text.StartsWith('D') &&
-        ushort.TryParse(text.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out address);
+    private static bool TryParseDm(string text, out ushort address)
+    {
+        address = 0;
+        return text.StartsWith('D') &&
+            ushort.TryParse(text.AsSpan(1), NumberStyles.None, CultureInfo.InvariantCulture, out address);
+    }
 
     /// <summary>CSV parser retaining quoted comma/escaped quote and the complete original columns.</summary>
     private static List<Dictionary<string, string>> ReadCsv(string source)

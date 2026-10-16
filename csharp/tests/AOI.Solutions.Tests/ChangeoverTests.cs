@@ -18,6 +18,7 @@ public sealed class ChangeoverTests
     [TearDown]
     public void Cleanup()
     {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (Directory.Exists(_folder)) Directory.Delete(_folder, true);
     }
 

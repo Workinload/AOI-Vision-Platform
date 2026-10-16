@@ -17,7 +17,13 @@ public sealed class BootstrapTests
         Directory.CreateDirectory(_root);
     }
     [TearDown]
-    public void CleanUp() { if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true); }
+    public void CleanUp()
+    {
+        // Microsoft.Data.Sqlite pools native handles across Dispose() on Windows.
+        // Release them before deleting per-test isolated WAL database directories.
+        SqliteConnection.ClearAllPools();
+        if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
+    }
 
     [Test]
     public void Topology_UsesRealNinePhysicalDevicesAndElevenLogicalChannels()

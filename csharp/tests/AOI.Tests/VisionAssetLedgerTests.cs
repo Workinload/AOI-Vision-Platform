@@ -37,16 +37,16 @@ public sealed class VisionAssetLedgerTests
         Assert.That(results, Has.Count.EqualTo(11));
         Assert.That(results.Select(x => x.ChannelId), Is.EquivalentTo(ChannelCatalog.All.Select(x => x.ChannelId)));
         Assert.That(results.All(x => x.IsSimulated && x.Outcome == ChannelOutcome.Ok), Is.True);
-        Assert.That(results.Select(x => x.PhysicalDeviceId).Distinct(), Has.Count.EqualTo(9));
-        Assert.That(results.Where(x => x.ParentFrameId is not null), Has.Count.EqualTo(4));
+        Assert.That(results.Select(x => x.PhysicalDeviceId).Distinct().Count(), Is.EqualTo(9));
+        Assert.That(results.Count(x => x.ParentFrameId is not null), Is.EqualTo(4));
         foreach (var pair in new[] { new[] { "CH08", "CH09" }, new[] { "CH10", "CH11" } })
         {
             var children = results.Where(x => pair.Contains(x.ChannelId)).ToArray();
             Assert.Multiple(() =>
             {
-                Assert.That(children.Select(x => x.ParentFrameId).Distinct(), Has.Count.EqualTo(1));
-                Assert.That(children.Select(x => x.CaptureId).Distinct(), Has.Count.EqualTo(1));
-                Assert.That(children.Select(x => x.SourceFrameSha256).Distinct(), Has.Count.EqualTo(1));
+                Assert.That(children.Select(x => x.ParentFrameId).Distinct().Count(), Is.EqualTo(1));
+                Assert.That(children.Select(x => x.CaptureId).Distinct().Count(), Is.EqualTo(1));
+                Assert.That(children.Select(x => x.SourceFrameSha256).Distinct().Count(), Is.EqualTo(1));
             });
             foreach (var child in children)
             {
