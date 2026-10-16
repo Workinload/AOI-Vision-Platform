@@ -1,6 +1,8 @@
 using AOI.Contracts;
 using AOI.Domain;
 using Microsoft.Data.Sqlite;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace AOI.Runtime;
 
@@ -51,7 +53,8 @@ public sealed class ProductionStore
               UNIQUE(workpiece_id, channel_id, epoch, release_id, attempt_no));
             CREATE TABLE IF NOT EXISTS inbox (
               sender_node_id TEXT NOT NULL, message_id TEXT NOT NULL, payload_hash TEXT NOT NULL,
-              received_utc TEXT NOT NULL, PRIMARY KEY(sender_node_id,message_id));
+              envelope_hash TEXT, received_utc TEXT NOT NULL,
+              PRIMARY KEY(sender_node_id,message_id));
             CREATE TABLE IF NOT EXISTS outbox (
               message_id TEXT PRIMARY KEY, payload_hash TEXT NOT NULL, envelope_json TEXT NOT NULL,
               created_utc TEXT NOT NULL, acknowledged_utc TEXT);
@@ -60,6 +63,24 @@ public sealed class ProductionStore
               workpiece_id TEXT, message_id TEXT, details TEXT NOT NULL);
             """;
         init.ExecuteNonQuery();
+
+        // Older SIM_LIGHT databases have no envelope_hash column. Preserve the WAL
+        // without authorizing legacy duplicate ACKs we cannot cryptographically verify.
+        using var columns = db.CreateCommand();
+        columns.CommandText = "PRAGMA table_info(inbox)";
+        bool hasEnvelopeHash = false;
+        using (var reader = columns.ExecuteReader())
+        {
+            while (reader.Read())
+                if (string.Equals(reader.GetString(1), "envelope_hash", StringComparison.Ordinal))
+                    hasEnvelopeHash = true;
+        }
+        if (!hasEnvelopeHash)
+        {
+            using var upgrade = db.CreateCommand();
+            upgrade.CommandText = "ALTER TABLE inbox ADD COLUMN envelope_hash TEXT";
+            upgrade.ExecuteNonQuery();
+        }
     }
 
     private static SqliteCommand Cmd(SqliteConnection db, SqliteTransaction transaction, string sql,
@@ -183,48 +204,73 @@ public sealed class ProductionStore
         tx.Commit();
     }
 
-    /// <summary>Returns true if duplicate with identical hash, false when newly durable. Throws on collision.</summary>
+    /// <summary>Post-commit ACK is permitted only for exact persisted wire identity.</summary>
     public bool AcceptIncoming(PeerEnvelope inbound, string expectedReceiver)
     {
         inbound.Validate();
         if (inbound.ReceiverNodeId != expectedReceiver)
             throw new InvalidDataException("Misrouted packet cannot become a persisted result.");
-        using var db = Open();
-        using var tx = db.BeginTransaction();
-        using var find = Cmd(db, tx, "SELECT payload_hash FROM inbox WHERE sender_node_id=$sender AND message_id=$id",
-            ("$sender", inbound.SenderNodeId), ("$id", inbound.MessageId.ToString("D")));
-        var existing = find.ExecuteScalar() as string;
-        if (existing is not null)
-        {
-            if (!string.Equals(existing, inbound.PayloadHash, StringComparison.Ordinal))
-                throw new InvalidDataException("Duplicate MessageId with different payload SHA256.");
-            return true;
-        }
+
+        // Protocol v1 has one source-of-truth direction for each message type:
+        // Master sends workpiece registration, Slave returns its own inspection frames.
+        WorkpieceIdentity? registration = null;
+        ChannelResult? inspection = null;
         if (inbound.PayloadType == "workpiece_registered")
         {
-            var identity = WireFormat.Parse<WorkpieceIdentity>(inbound.PayloadJson);
-            if (identity.WorkpieceId != inbound.WorkpieceId || identity.Epoch != inbound.Epoch ||
-                identity.ReleaseId != inbound.SolutionReleaseId || identity.TraceId != inbound.TraceId)
+            if (inbound.SenderNodeId != "master" || expectedReceiver != "slave" ||
+                inbound.ChannelId is not null || inbound.StationId is not null)
+                throw new InvalidDataException("Forbidden registration sender or channel identity.");
+            registration = WireFormat.Parse<WorkpieceIdentity>(inbound.PayloadJson);
+            if (registration.WorkpieceId != inbound.WorkpieceId || registration.Epoch != inbound.Epoch ||
+                registration.ReleaseId != inbound.SolutionReleaseId || registration.TraceId != inbound.TraceId)
                 throw new InvalidDataException("Envelope/payload workpiece identity mismatch.");
-            InsertWorkpiece(db, tx, identity);
         }
         else if (inbound.PayloadType == "channel_result")
         {
-            var result = WireFormat.Parse<ChannelResult>(inbound.PayloadJson);
-            if (result.WorkpieceId != inbound.WorkpieceId || result.Epoch != inbound.Epoch ||
-                result.ReleaseId != inbound.SolutionReleaseId || result.TraceId != inbound.TraceId ||
-                result.ChannelId != inbound.ChannelId)
+            if (inbound.SenderNodeId != "slave" || expectedReceiver != "master" ||
+                string.IsNullOrWhiteSpace(inbound.ChannelId))
+                throw new InvalidDataException("Forbidden inspection message sender or channel identity.");
+            var channel = ChannelCatalog.Require(inbound.ChannelId);
+            if (channel.OwnerRole != MachineRole.Slave || channel.StationId != inbound.StationId)
+                throw new InvalidDataException("Slave cannot report a Master-owned camera or foreign station.");
+            inspection = WireFormat.Parse<ChannelResult>(inbound.PayloadJson);
+            if (inspection.WorkpieceId != inbound.WorkpieceId || inspection.Epoch != inbound.Epoch ||
+                inspection.ReleaseId != inbound.SolutionReleaseId || inspection.TraceId != inbound.TraceId ||
+                inspection.ChannelId != inbound.ChannelId ||
+                inspection.StationId != inbound.StationId)
                 throw new InvalidDataException("Envelope/payload result lineage mismatch.");
-            InsertResult(db, tx, result);
         }
         else throw new InvalidDataException($"Unrecognized packet type {inbound.PayloadType}");
 
+        // A payload digest alone cannot prove workpiece, station, epoch, sender,
+        // receiver, sequence or time. The entire immutable envelope is hashed.
+        var envelopeHash = Convert.ToHexString(
+            SHA256.HashData(Encoding.UTF8.GetBytes(WireFormat.Serialize(inbound))))
+            .ToLowerInvariant();
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        using var find = Cmd(db, tx,
+            "SELECT envelope_hash FROM inbox WHERE sender_node_id=$sender AND message_id=$id",
+            ("$sender", inbound.SenderNodeId), ("$id", inbound.MessageId.ToString("D")));
+        var existing = find.ExecuteScalar();
+        if (existing is not null)
+        {
+            if (existing is not string prior ||
+                !string.Equals(prior, envelopeHash, StringComparison.Ordinal))
+                throw new InvalidDataException("Duplicate with changed metadata or unverified legacy Inbox; no ACK.");
+            return true;
+        }
+
+        if (registration is not null) InsertWorkpiece(db, tx, registration);
+        else if (inspection is not null) InsertResult(db, tx, inspection);
+
         using var commitInbox = Cmd(db, tx, """
-            INSERT INTO inbox(sender_node_id,message_id,payload_hash,received_utc)
-            VALUES ($sender,$id,$hash,$utc)
+            INSERT INTO inbox(sender_node_id,message_id,payload_hash,envelope_hash,received_utc)
+            VALUES ($sender,$id,$payload,$envelope,$utc)
             """,
             ("$sender", inbound.SenderNodeId), ("$id", inbound.MessageId.ToString("D")),
-            ("$hash", inbound.PayloadHash), ("$utc", DateTimeOffset.UtcNow.ToString("O")));
+            ("$payload", inbound.PayloadHash), ("$envelope", envelopeHash),
+            ("$utc", DateTimeOffset.UtcNow.ToString("O")));
         commitInbox.ExecuteNonQuery();
         Event(db, tx, "INBOX_PERSISTED", inbound.WorkpieceId, inbound.MessageId,
             $"{inbound.PayloadType}:sha256={inbound.PayloadHash}");
