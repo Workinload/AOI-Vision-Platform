@@ -387,6 +387,56 @@ public sealed class ProductionStore
         tx.Commit();
     }
 
+    /// <summary>Read-only bounded live overview for UI; never joins products by barcode.</summary>
+    public ProductionOverview ReadProductionOverview(int historyLimit = 12)
+    {
+        if (historyLimit is < 1 or > 20)
+            throw new ArgumentOutOfRangeException(nameof(historyLimit));
+        using var db = Open();
+        long total, good, reject, unfinished;
+        using (var counters = db.CreateCommand())
+        {
+            counters.CommandText = """
+                SELECT COUNT(*),
+                       COALESCE(SUM(CASE WHEN json_extract(final_json,'$.disposition')='good' THEN 1 ELSE 0 END),0),
+                       COALESCE(SUM(CASE WHEN json_extract(final_json,'$.disposition')='reject' THEN 1 ELSE 0 END),0),
+                       COALESCE(SUM(CASE WHEN final_json IS NULL THEN 1 ELSE 0 END),0)
+                FROM workpieces
+                """;
+            using var reader = counters.ExecuteReader();
+            if (!reader.Read()) throw new InvalidDataException("No production counter row.");
+            total = reader.GetInt64(0);
+            good = reader.GetInt64(1);
+            reject = reader.GetInt64(2);
+            unfinished = reader.GetInt64(3);
+        }
+        var recent = new List<WorkpieceProductionRow>();
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT w.identity_json, w.final_json,
+                       (SELECT COUNT(*) FROM channel_results r
+                        WHERE r.workpiece_id=w.workpiece_id) AS channel_count
+                FROM workpieces w
+                ORDER BY w.created_utc DESC,w.workpiece_id DESC LIMIT $limit
+                """;
+            cmd.Parameters.AddWithValue("$limit", historyLimit);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var wp = WireFormat.Parse<WorkpieceIdentity>(reader.GetString(0));
+                var final = reader.IsDBNull(1)
+                    ? null : WireFormat.Parse<FinalDecision>(reader.GetString(1));
+                recent.Add(new WorkpieceProductionRow(
+                    wp.WorkpieceId, wp.Barcode, wp.Epoch, wp.ReleaseId,
+                    checked((int)reader.GetInt64(2)), final?.Disposition, wp.CreatedAtUtc));
+            }
+        }
+        var result = new ProductionOverview(total, good, reject, unfinished, recent);
+        result.Validate();
+        return result;
+    }
+
     public MachineSnapshot Snapshot(string nodeId, MachineRole role)
     {
         var latest = LatestWorkpiece();
@@ -404,6 +454,9 @@ public sealed class ProductionStore
         }).ToArray();
         var final = latest is null ? null : LatestFinal(latest.WorkpieceId);
         return new(nodeId, role, latest is null ? "SIM_READY" : final is null ? "SIM_PROCESSING" : "SIM_FINAL",
-            latest, final, channels, DateTimeOffset.UtcNow, false, "SIM_LIGHT");
+            latest, final, channels, DateTimeOffset.UtcNow, false, "SIM_LIGHT")
+        {
+            Production = ReadProductionOverview()
+        };
     }
 }

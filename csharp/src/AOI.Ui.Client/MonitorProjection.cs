@@ -13,6 +13,8 @@ public sealed record MonitorProjection(
     bool IsOnline, string SafetyNotice, WorkpieceIdentity? Workpiece, FinalDecision? Final,
     DateTimeOffset UpdatedUtc, IReadOnlyList<ChannelMonitor> Channels)
 {
+    public ProductionOverview? Production { get; init; }
+
     public static MonitorProjection Offline(MachineRole role) => new(
         role == MachineRole.Master ? "master" : "slave", role, "IPC_OFFLINE", "SIM_ONLY",
         false, "IPC disconnected · real hardware writes prohibited", null, null,
@@ -37,6 +39,7 @@ public sealed record MonitorProjection(
             snapshot.LatestWorkpiece.Validate();
         if (snapshot.Channels is null)
             throw new InvalidDataException("Missing channel list.");
+        snapshot.Production?.Validate();
         var byId = new Dictionary<string, ChannelSnapshot>(StringComparer.Ordinal);
         foreach (var c in snapshot.Channels)
         {
@@ -61,7 +64,10 @@ public sealed record MonitorProjection(
                 return new ChannelMonitor(def, info.Status,
                     current ? "Current workpiece" : local ? "No current captured frame" : "Remote channel",
                     info.LastUpdatedUtc, info.IsSimulated, current);
-            }).ToArray());
+            }).ToArray())
+        {
+            Production = snapshot.Production
+        };
     }
 }
 

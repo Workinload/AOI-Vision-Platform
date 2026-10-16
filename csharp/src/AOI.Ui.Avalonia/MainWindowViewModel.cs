@@ -48,6 +48,10 @@ public partial class ChannelTile : ObservableObject
     }
 }
 
+/// <summary>Human-readable read-only row generated solely from Core IPC.</summary>
+public sealed record WorkpieceHistoryTile(
+    string ShortId, string Barcode, string Epoch, string Channels, string Decision, string LocalTime);
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly CancellationTokenSource _shutdown = new();
@@ -57,6 +61,9 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<ChannelTile> Channels { get; } =
         new(ChannelCatalog.All.Select(x => new ChannelTile(x)));
+    public ObservableCollection<WorkpieceHistoryTile> RecentWorkpieces { get; } = new();
+    [ObservableProperty] private string productionCounters = "生产统计：等待 Core IPC";
+    [ObservableProperty] private string historyNote = "暂无可核验的生产历史";
 
     public string NodeLabel => _role == "slave" ? "SLAVE · 从机" : "MASTER · 主机";
     public string ChannelCount => "11 逻辑通道 / 9 物理相机 / +1 整机";
@@ -153,6 +160,26 @@ public partial class MainWindowViewModel : ObservableObject
                             $"WorkpieceId：{projection.Workpiece.WorkpieceId} · Barcode：{projection.Workpiece.Barcode}";
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
+                        if (projection.Production is { } history)
+                        {
+                            ProductionCounters =
+                                $"总数 {history.Total}  /  GOOD {history.Good}  /  NG {history.Reject}  /  待完成 {history.Unfinished}";
+                            HistoryNote = $"最近 {history.Recent.Count} 件 · 只读 WAL · WorkpieceId 不等于 Barcode";
+                            RecentWorkpieces.Clear();
+                            foreach (var item in history.Recent)
+                            {
+                                var state = item.Final switch
+                                {
+                                    FinalDisposition.Good => "GOOD",
+                                    FinalDisposition.Reject => "NG",
+                                    _ => "WAIT / HOLD"
+                                };
+                                RecentWorkpieces.Add(new WorkpieceHistoryTile(
+                                    item.WorkpieceId.ToString("N")[..8], item.Barcode,
+                                    $"Epoch {item.Epoch}", $"{item.CapturedChannels}/11",
+                                    state, item.CreatedUtc.ToLocalTime().ToString("HH:mm:ss")));
+                            }
+                        }
                         if (_once)
                         {
                             Console.WriteLine($"UI_HEADLESS_SNAPSHOT_OK role={_role} channels={projection.Channels.Count} state={projection.MachineState}");
@@ -196,6 +223,9 @@ public partial class MainWindowViewModel : ObservableObject
         SafetyStatus = "禁止真实硬件写入 · 请核查 Core";
         LatestIdentity = "实时工件数据不可用";
         foreach (var channel in Channels) channel.Reset();
+        ProductionCounters = "生产统计：IPC 离线，数据已失效";
+        HistoryNote = "仅可查看在线 Core 的真实持久化数据";
+        RecentWorkpieces.Clear();
         _lastAcceptedUtc = DateTimeOffset.MinValue;
     }
 
