@@ -13,18 +13,38 @@ public partial class ChannelTile : ObservableObject
 {
     public string ChannelId { get; }
     public string StationDetails { get; }
+    public string PlcAddress { get; }
+    public string Owner { get; }
+    public string Device { get; }
+    public string Group { get; }
+    [ObservableProperty] private string state = "NO_DATA";
+    [ObservableProperty] private string frameLabel = "无图像数据";
+    [ObservableProperty] private string details = "等待 Core IPC";
+    [ObservableProperty] private bool isSelected;
 
-    [ObservableProperty] private string state = "等待数据";
-    [ObservableProperty] private string frameLabel = "未连接至真实帧采集";
-    public ChannelTile(ChannelDefinition channel)
+    public ChannelTile(ChannelDefinition definition)
     {
-        ChannelId = channel.ChannelId;
-        StationDetails = $"{channel.StationId} · {channel.PhysicalDeviceId}";
+        ChannelId = definition.ChannelId;
+        Device = definition.PhysicalDeviceId;
+        PlcAddress = definition.PlcSignalAddress;
+        Owner = definition.OwnerRole.ToString().ToUpperInvariant();
+        Group = definition.SharedFrameGroup ?? "AREA";
+        StationDetails = definition.StationId + " / " + definition.PhysicalDeviceId;
     }
-    public void Update(ChannelSnapshot channel)
+
+    public void Update(ChannelMonitor channel)
     {
         State = channel.Status;
-        FrameLabel = channel.IsSimulated ? "OpenCV 合成像素 · 仿真" : "未接入真实图像";
+        FrameLabel = channel.IsCurrentWorkpiece && channel.IsSimulated
+            ? "OpenCV 仿真采集（无真实帧预览）" : "无可用真实帧";
+        Details = channel.Detail;
+    }
+
+    public void Reset()
+    {
+        State = "IPC_OFFLINE";
+        FrameLabel = "实时数据不可用";
+        Details = "IPC 中断，状态已失效";
     }
 }
 
@@ -39,14 +59,66 @@ public partial class MainWindowViewModel : ObservableObject
         new(ChannelCatalog.All.Select(x => new ChannelTile(x)));
 
     public string NodeLabel => _role == "slave" ? "SLAVE · 从机" : "MASTER · 主机";
+    public string ChannelCount => "11 逻辑通道 / 9 物理相机 / +1 整机";
     [ObservableProperty] private string connectionState = "等待 Core IPC 连接...";
-    [ObservableProperty] private string productionState = "SIM_LIGHT · 尚未连接";
+    [ObservableProperty] private string productionState = "SIM_ONLY · 尚未连接";
     [ObservableProperty] private string latestIdentity = "WorkpieceId：等待上料事件";
+    [ObservableProperty] private string safetyStatus = "SIM_ONLY · 真实硬件写入禁止";
+    [ObservableProperty] private string selectedDescription = "点击设备卡或 PLC 表行选择通道";
+    [ObservableProperty] private ChannelTile? selectedChannel;
+    [ObservableProperty] private string roiX = "0.1";
+    [ObservableProperty] private string roiY = "0.1";
+    [ObservableProperty] private string roiWidth = "0.8";
+    [ObservableProperty] private string roiHeight = "0.8";
+    [ObservableProperty] private string roiFeedback = "ROI 仅会话草稿，不会保存或下发";
+    public string SelectedChannelName => SelectedChannel?.ChannelId ?? "未选择通道";
 
     public MainWindowViewModel(string role, bool once)
     {
         _role = role;
         _once = once;
+        SelectChannelCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<ChannelTile?>(SelectChannel);
+        ValidateRoiCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ValidateRoi);
+        SelectedChannel = Channels[0];
+    }
+
+    public CommunityToolkit.Mvvm.Input.IRelayCommand<ChannelTile?> SelectChannelCommand { get; }
+    public CommunityToolkit.Mvvm.Input.IRelayCommand ValidateRoiCommand { get; }
+
+    partial void OnSelectedChannelChanged(ChannelTile? value)
+    {
+        foreach (var channel in Channels) channel.IsSelected = ReferenceEquals(channel, value);
+        SelectedDescription = value is null ? "未选择通道" :
+            $"{value.ChannelId} · {value.StationDetails} · {value.Owner} · PLC {value.PlcAddress} · {value.Group}";
+        OnPropertyChanged(nameof(SelectedChannelName));
+        RoiFeedback = "ROI 仅会话草稿，不会保存或下发";
+    }
+
+    private void SelectChannel(ChannelTile? value) => SelectedChannel = value;
+
+    private void ValidateRoi()
+    {
+        if (SelectedChannel is null) { RoiFeedback = "请先选择通道"; return; }
+        if (!double.TryParse(RoiX, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var x) ||
+            !double.TryParse(RoiY, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var y) ||
+            !double.TryParse(RoiWidth, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var width) ||
+            !double.TryParse(RoiHeight, System.Globalization.NumberStyles.Float,
+                System.Globalization.CultureInfo.InvariantCulture, out var height))
+        {
+            RoiFeedback = "ROI 坐标必须是小数（英文小数点）"; return;
+        }
+        try
+        {
+            new RoiDraft(SelectedChannel.ChannelId, x, y, width, height).Validate();
+            RoiFeedback = $"本地草稿验证通过 · {SelectedChannel.ChannelId} · 未下发";
+        }
+        catch (ArgumentOutOfRangeException)
+        {
+            RoiFeedback = "无效 ROI：坐标应在 0~1 内且宽高大于 0"; 
+        }
     }
 
     public void Start()
@@ -54,26 +126,36 @@ public partial class MainWindowViewModel : ObservableObject
         if (_subscribeTask is not null) return;
         _subscribeTask = Task.Run(async () =>
         {
-            var client = new SnapshotClient(_role == "slave" ? 19622 : 19621);
+            var role = _role == "slave" ? MachineRole.Slave : MachineRole.Master;
+            var client = new SnapshotClient(role == MachineRole.Slave ? 19622 : 19621);
             try
             {
                 await foreach (var snapshot in client.SubscribeAsync(_shutdown.Token))
                 {
+                    MonitorProjection projection;
+                    try
+                    {
+                        projection = MonitorProjection.FromSnapshot(snapshot, role, DateTimeOffset.UtcNow);
+                    }
+                    catch (Exception ex) when (ex is InvalidDataException or ArgumentException)
+                    {
+                        Dispatcher.UIThread.Post(() => MarkOffline("IPC 数据拒绝：" + ex.Message));
+                        continue;
+                    }
                     Dispatcher.UIThread.Post(() =>
                     {
-                        ConnectionState = $"Core IPC 已连接 · {snapshot.UpdatedUtc:HH:mm:ss} UTC";
-                        ProductionState = snapshot.MachineState + (snapshot.LatestFinal is null
-                            ? " · 等待结果" : $" · {snapshot.LatestFinal.Disposition} ({snapshot.LatestFinal.Proof})");
-                        LatestIdentity = snapshot.LatestWorkpiece is null
-                            ? "尚无上料工件" : $"WorkpieceId：{snapshot.LatestWorkpiece.WorkpieceId} · Barcode：{snapshot.LatestWorkpiece.Barcode}";
-                        foreach (var info in snapshot.Channels)
-                        {
-                            var tile = Channels.FirstOrDefault(x => x.ChannelId == info.ChannelId);
-                            tile?.Update(info);
-                        }
+                        _lastAcceptedUtc = DateTimeOffset.UtcNow;
+                        ConnectionState = $"Core IPC 已连接 · {projection.UpdatedUtc:HH:mm:ss} UTC";
+                        SafetyStatus = projection.SafetyNotice;
+                        ProductionState = projection.MachineState + (projection.Final is null
+                            ? " · 等待结果" : $" · {projection.Final.Disposition} ({projection.Final.Proof})");
+                        LatestIdentity = projection.Workpiece is null ? "尚无上料工件" :
+                            $"WorkpieceId：{projection.Workpiece.WorkpieceId} · Barcode：{projection.Workpiece.Barcode}";
+                        foreach (var info in projection.Channels)
+                            Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
                         if (_once)
                         {
-                            Console.WriteLine($"UI_HEADLESS_SNAPSHOT_OK role={_role} channels={snapshot.Channels.Count} state={snapshot.MachineState}");
+                            Console.WriteLine($"UI_HEADLESS_SNAPSHOT_OK role={_role} channels={projection.Channels.Count} state={projection.MachineState}");
                             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                                 desktop.Shutdown();
                         }
@@ -82,7 +164,39 @@ public partial class MainWindowViewModel : ObservableObject
                 }
             }
             catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
+            catch (Exception ex) when (ex is IOException or System.Net.Sockets.SocketException or InvalidDataException)
+            {
+                Dispatcher.UIThread.Post(() => MarkOffline("IPC 故障：" + ex.Message));
+            }
         }, _shutdown.Token);
+        if (!_once) _ = WatchFreshnessAsync();
+    }
+
+    private async Task WatchFreshnessAsync()
+    {
+        while (!_shutdown.IsCancellationRequested)
+        {
+            try { await Task.Delay(1200, _shutdown.Token); }
+            catch (OperationCanceledException) { break; }
+            Dispatcher.UIThread.Post(() =>
+            {
+                // The client may be reconnecting; never leave a stale successful snapshot on-screen.
+                if (_lastAcceptedUtc != DateTimeOffset.MinValue &&
+                    DateTimeOffset.UtcNow - _lastAcceptedUtc > TimeSpan.FromSeconds(5))
+                    MarkOffline("IPC 快照超时（>5s）");
+            });
+        }
+    }
+
+    private DateTimeOffset _lastAcceptedUtc = DateTimeOffset.MinValue;
+    private void MarkOffline(string reason)
+    {
+        ConnectionState = reason;
+        ProductionState = "IPC_OFFLINE · 未知生产状态";
+        SafetyStatus = "禁止真实硬件写入 · 请核查 Core";
+        LatestIdentity = "实时工件数据不可用";
+        foreach (var channel in Channels) channel.Reset();
+        _lastAcceptedUtc = DateTimeOffset.MinValue;
     }
 
     public void Stop() => _shutdown.Cancel();
