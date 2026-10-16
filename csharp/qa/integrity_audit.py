@@ -170,6 +170,11 @@ def verify_eleven_channels(root, hold=False):
             assets_by_role[role] = assets
 
             for result in core_results[role].values():
+                # Master legitimately stores Slave result metadata, but the Slave
+                # retains the original pixels on its own machine. Never pretend
+                # that cross-node image assets reside in the receiver's image WAL.
+                if CHANNEL_MAP[result['channelId']][0] != role:
+                    continue
                 m = assets.get(result['frameId'])
                 check(m is not None and
                       m['channelId'] == result['channelId'] and
