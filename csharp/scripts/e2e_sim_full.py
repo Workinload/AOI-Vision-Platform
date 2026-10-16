@@ -182,7 +182,7 @@ def main():
         # Different OS scheduling can finish item #1 before slot #3 fills.
         # Demand evidence of genuine overlap, with a hard upper bound of three.
         observed = [int(v) for v in re.findall(
-            r'SIM_FULL_VPLC_LOAD token=\\d+ active=(\\d+)', virtual_log)]
+            r'SIM_FULL_VPLC_LOAD token=\d+ active=(\d+)', virtual_log)]
         assert observed and 2 <= max(observed) <= 3, (
             'Conveyor must show real overlap without exceeding three slots', observed)
         assert master_log.count('SIM_FULL_LOADED') == args.count
