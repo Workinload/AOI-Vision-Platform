@@ -1,0 +1,118 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="AOI.Ui.Avalonia.MainWindow"
+        Title="AOI Vision Platform | SIM_ONLY" Width="1580" Height="940"
+        MinWidth="1150" MinHeight="730" Background="#F2F5FA">
+  <Grid RowDefinitions="Auto,Auto,*" Margin="20" RowSpacing="12">
+    <Border Grid.Row="0" CornerRadius="14" Background="#152F4B" Padding="22,16">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="4">
+          <TextBlock Text="AOI VISION  /  CONTROL DESK" FontSize="23" FontWeight="Bold" Foreground="White"/>
+          <TextBlock Text="{Binding ChannelCount}" FontSize="13" Foreground="#B6CBDD"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Spacing="4" HorizontalAlignment="Right">
+          <TextBlock Text="{Binding NodeLabel}" FontSize="19" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Right"/>
+          <TextBlock Text="{Binding ConnectionState}" FontSize="12" Foreground="#C8E1F6" HorizontalAlignment="Right"/>
+        </StackPanel>
+      </Grid>
+    </Border>
+    <Border Grid.Row="1" Background="#E2EAF4" CornerRadius="10" Padding="16,12">
+      <Grid ColumnDefinitions="*,Auto">
+        <StackPanel Spacing="5">
+          <TextBlock Text="{Binding ProductionState}" FontWeight="Bold" Foreground="#24436A" FontSize="15"/>
+          <TextBlock Text="{Binding LatestIdentity}" Foreground="#506683" FontSize="12"/>
+        </StackPanel>
+        <TextBlock Grid.Column="1" Text="{Binding SafetyStatus}" Foreground="#9C392D"
+                   FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="2" ColumnDefinitions="1.35*,1*" ColumnSpacing="12">
+      <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="10">
+        <Border Background="White" CornerRadius="10" Padding="14">
+          <StackPanel Spacing="4">
+            <TextBlock Text="整机设备地图  /  11 通道实时监视" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
+            <TextBlock Text="设备卡与右侧 PLC 映射表同步选中 · 蓝图坐标/机械动画待数字孪生 IPC 合同"
+                       Foreground="#6F8092" FontSize="11" TextWrapping="Wrap"/>
+          </StackPanel>
+        </Border>
+        <Border Grid.Row="1" Background="#EAF0F7" CornerRadius="11" Padding="8">
+          <ScrollViewer VerticalScrollBarVisibility="Auto">
+            <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                     Background="Transparent" BorderThickness="0">
+              <ListBox.ItemsPanel>
+                <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
+              </ListBox.ItemsPanel>
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border BorderBrush="#C6D5E6" BorderThickness="1" CornerRadius="9"
+                          Background="White" Margin="4" Padding="12" MinHeight="133">
+                    <StackPanel Spacing="5">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{Binding ChannelId}" FontSize="21" Foreground="#21496C" FontWeight="Bold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Owner}" FontSize="10" Foreground="#8393A8"/>
+                      </Grid>
+                      <TextBlock Text="{Binding StationDetails}" FontSize="11" TextWrapping="Wrap" Foreground="#526C86"/>
+                      <TextBlock Text="{Binding State}" FontSize="12" Foreground="#1C7290" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding FrameLabel}" FontSize="10" TextWrapping="Wrap" Foreground="#8190A4"/>
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </ScrollViewer>
+        </Border>
+        <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="12">
+          <StackPanel Spacing="3">
+            <TextBlock Text="整机状态  /  +1 监控" FontWeight="SemiBold" Foreground="#23486B"/>
+            <TextBlock Text="{Binding ProductionState}" FontSize="12" Foreground="#55708B"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+      <Grid Grid.Column="1" RowDefinitions="1.35*,Auto" RowSpacing="10">
+        <Border Background="White" CornerRadius="10" Padding="14">
+          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+            <TextBlock Text="PLC / 通道映射 · 只读" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
+            <Grid Grid.Row="1" ColumnDefinitions="64,80,95,*,88" Margin="9,0">
+              <TextBlock Text="通道" FontSize="11" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="1" Text="站点/设备" FontSize="11" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="2" Text="PLC 地址" FontSize="11" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="3" Text="监控状态" FontSize="11" FontWeight="SemiBold"/>
+              <TextBlock Grid.Column="4" Text="机台" FontSize="11" FontWeight="SemiBold"/>
+            </Grid>
+            <ListBox Grid.Row="2" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                     BorderThickness="0" Background="#F5F8FB">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Grid ColumnDefinitions="64,80,95,*,88" Margin="5,8">
+                    <TextBlock Text="{Binding ChannelId}" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBlock Grid.Column="1" Text="{Binding Device}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="2" Text="{Binding PlcAddress}" FontSize="12"/>
+                    <TextBlock Grid.Column="3" Text="{Binding State}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Grid.Column="4" Text="{Binding Owner}" FontSize="10"/>
+                  </Grid>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+          </Grid>
+        </Border>
+        <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
+          <StackPanel Spacing="9">
+            <TextBlock Text="设备详情 / ROI 归一化草稿" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
+            <TextBlock Text="{Binding SelectedDescription}" FontSize="12" TextWrapping="Wrap" Foreground="#526C86"/>
+            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
+              <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+              <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+              <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+              <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+            </Grid>
+            <Button Content="验证本地 ROI 草稿（不保存、不下发）" Command="{Binding ValidateRoiCommand}"
+                    HorizontalAlignment="Stretch"/>
+            <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#7D5C2C" TextWrapping="Wrap"/>
+            <TextBlock Text="方案 / 历史 / 统计 / 报警写入入口尚无 Core IPC 合同；目前不展示虚构数据或可操作硬件按钮。"
+                       TextWrapping="Wrap" FontSize="11" Foreground="#738497"/>
+          </StackPanel>
+        </Border>
+      </Grid>
+    </Grid>
+  </Grid>
+</Window>

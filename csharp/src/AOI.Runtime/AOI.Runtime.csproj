@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../AOI.Contracts/AOI.Contracts.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" />
+    <PackageReference Include="OpenCvSharp5" />
+    <PackageReference Include="OpenCvSharp5.runtime.win" />
+    <PackageReference Include="OpenCvSharp5.official.runtime.linux-x64.headless" />
+  </ItemGroup>
+</Project>

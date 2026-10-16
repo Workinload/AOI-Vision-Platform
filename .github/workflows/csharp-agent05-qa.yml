@@ -1,0 +1,53 @@
+name: Agent05 CSharp SIM_ONLY Quality Gate
+on:
+  pull_request:
+    paths: ['csharp/**', '.github/workflows/csharp-agent05-qa.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sim-e2e:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: csharp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Independent virtual FINS fault-fixture Python unit tests
+        run: python -m unittest discover -s qa -p 'test_*.py' -v
+      - name: Restore pinned dependencies
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet restore AOI.slnx --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+      - name: Build and NUnit negative path tests
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet build AOI.slnx --no-restore -c Debug
+          dotnet test AOI.slnx --no-build -c Debug --logger 'console;verbosity=normal'
+      - name: Real five-process normal scenario
+        run: python scripts/e2e_sim_light.py --evidence-root .artifacts/qa-normal
+      - name: Verify SQLite WAL identities source images and PERSISTED_ACK
+        run: python qa/integrity_audit.py --evidence-root .artifacts/qa-normal
+      - name: Real five-process controlled barcode flip fail closed
+        run: python qa/chaos_e2e.py --evidence-root .artifacts/qa-barcode-flip
+      - name: Save logs on failure and success
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: agent05-qa-${{ matrix.os }}-${{ github.run_id }}
+          path: csharp/.artifacts/
+          retention-days: 14
+          if-no-files-found: warn

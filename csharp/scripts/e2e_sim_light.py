@@ -1,0 +1,116 @@
+#!/usr/bin/env python3
+"""Run REAL five Linux OS processes (3 hosts + 2 Avalonia headless UIs) using local FINS/TCP/IPC.
+
+No network to PLC outside loopback. No production hardware support. Requires a prebuilt solution.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import socket
+import sqlite3
+import subprocess
+import tempfile
+import time
+
+
+def fins_read(word):
+    sequence = 41
+    cmd = bytes([0x80, 0, 2, 0, 1, 0, 0, 99, 0, sequence,
+                 1, 1, 0x82, (word >> 8) & 255, word & 255, 0, 0, 1])
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as udp:
+        udp.settimeout(2)
+        udp.sendto(cmd, ('127.0.0.1', 19600))
+        packet, sender = udp.recvfrom(4096)
+        assert sender[0] == '127.0.0.1' and len(packet) == 16
+        assert packet[:1] == b'\xc0' and packet[9] == sequence and packet[12:14] == b'\x00\x00'
+        return (packet[14] << 8) | packet[15]
+
+
+def sql_one(path, stmt):
+    if not path.exists():
+        return None
+    with sqlite3.connect(path, timeout=1) as db:
+        return db.execute(stmt).fetchone()
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('--dotnet', default='dotnet')
+    ap.add_argument('--evidence-root', default=None)
+    args = ap.parse_args()
+    root = Path(__file__).resolve().parent.parent
+    runroot = Path(args.evidence_root).resolve() if args.evidence_root else Path(tempfile.mkdtemp(prefix='aoi-e2e-'))
+    runroot.mkdir(parents=True, exist_ok=True)
+    host = root / 'src/AOI.Host/bin/Debug/net10.0/AOI.Host.dll'
+    ui = root / 'src/AOI.Ui.Avalonia/bin/Debug/net10.0/AOI.Ui.Avalonia.dll'
+    assert host.is_file() and ui.is_file(), 'Build csharp/AOI.slnx first'
+    procs = []
+    logs = []
+    def launch(label, dll, *flags):
+        file = open(runroot / (label + '.log'), 'w', encoding='utf-8')
+        logs.append(file)
+        p = subprocess.Popen([args.dotnet, str(dll), *flags], cwd=root, stdout=file, stderr=subprocess.STDOUT,
+                             env={**os.environ, 'DOTNET_CLI_TELEMETRY_OPTOUT': '1'})
+        procs.append((label, p))
+        print(f'STARTED {label} pid={p.pid}', flush=True)
+        return p
+    try:
+        launch('virtual-plc', host, 'vplc', '--data', str(runroot))
+        launch('slave-core', host, 'slave', '--data', str(runroot))
+        launch('master-core', host, 'master', '--data', str(runroot))
+        # Both Avalonia UIs are separate OS processes and connect to their own Core IPC endpoints.
+        launch('master-ui', ui, '--master', '--headless', '--once')
+        launch('slave-ui', ui, '--slave', '--headless', '--once')
+        print('FIVE_OS_PROCESSES_LAUNCHED', flush=True)
+        db_m = runroot / 'master/production.db'
+        db_s = runroot / 'slave/production.db'
+        deadline = time.monotonic() + 28
+        decision = None
+        while time.monotonic() < deadline:
+            for label, p in procs[:3]:
+                if p.poll() is not None:
+                    raise RuntimeError(f'{label} stopped unexpectedly: exit={p.returncode}')
+            row = sql_one(db_m, 'SELECT final_json FROM workpieces WHERE final_json IS NOT NULL LIMIT 1')
+            if row:
+                decision = json.loads(row[0]); break
+            time.sleep(0.25)
+        if decision is None:
+            raise TimeoutError('Core failed to persist final result')
+        assert decision['disposition'] == 'good' and decision['isSimulation'] is True, decision
+        assert 'SIM_ONLY' in decision['proof'], decision
+        master_count = sql_one(db_m, 'SELECT COUNT(*) FROM channel_results')[0]
+        slave_count = sql_one(db_s, 'SELECT COUNT(*) FROM channel_results')[0]
+        assert master_count == 2 and slave_count == 1, (master_count, slave_count)
+        master_acks = sql_one(db_m, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+        slave_acks = sql_one(db_s, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+        assert master_acks == 1 and slave_acks == 1, (master_acks, slave_acks)
+        assert fins_read(1016) == 1, 'sim PLC D1016 not marked synthetic GOOD'
+        assert fins_read(2099) == 2, 'sim PLC D2099 branch not marked DONE'
+        for label, p in procs[3:]:
+            if p.wait(timeout=20) != 0:
+                raise RuntimeError(f'{label} failed: exit={p.returncode}')
+            content = (runroot / (label + '.log')).read_text(encoding='utf-8')
+            assert 'UI_HEADLESS_SNAPSHOT_OK' in content, (label, content[-1500:])
+        print('SIM_E2E_PASS master_results=2 slave_results=1 persisted_acks=2 decision=SIM_GOOD FINS_D1016=1 FINS_D2099=2 UI=2',flush=True)
+        print('EVIDENCE=' + str(runroot),flush=True)
+        return 0
+    except Exception as e:
+        print('SIM_E2E_FAIL: ' + repr(e),flush=True)
+        for label, p in procs:
+            file = runroot / (label + '.log')
+            if file.exists():
+                print(f'==== {label} pid={p.pid} exit={p.poll()} ====')
+                print(file.read_text(encoding='utf-8')[-3300:])
+        return 1
+    finally:
+        for _, p in reversed(procs):
+            if p.poll() is None: p.terminate()
+        for _, p in procs:
+            try: p.wait(timeout=3)
+            except subprocess.TimeoutExpired: p.kill(); p.wait()
+        for f in logs: f.close()
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())
