@@ -59,6 +59,7 @@ static async Task RunSlaveAsync(string root, bool allEleven, CancellationToken c
     var folder = Path.Combine(root, self);
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
     _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct);
+    _ = FramePreviewIpc.ServeAsync(store, MachineRole.Slave, folder, 19632, ct);
     if (allEleven)
     {
         // Crash recovery of incomplete 11-channel captures requires the A1/A3 asset/outbox
@@ -136,6 +137,7 @@ static async Task RunMasterAsync(string root, bool allEleven, CancellationToken 
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
     using var finalGate = new SemaphoreSlim(1, 1);
     _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct);
+    _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
     var fins = new FinsSimClient();
     while (!ct.IsCancellationRequested)
     {

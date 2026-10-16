@@ -136,8 +136,16 @@
         </Border>
         <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
           <StackPanel Spacing="9">
-            <TextBlock Text="设备详情 / ROI 归一化草稿" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
+            <TextBlock Text="通道图像预览 / ROI 归一化草稿" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
             <TextBlock Text="{Binding SelectedDescription}" FontSize="12" TextWrapping="Wrap" Foreground="#526C86"/>
+            <Border Background="#EAF0F7" BorderThickness="1" BorderBrush="#CFDBE8"
+                    CornerRadius="7" Padding="8">
+              <StackPanel Spacing="4">
+                <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="125"/>
+                <TextBlock Text="{Binding PreviewNotice}" FontSize="10" Foreground="#58728F"
+                           TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
             <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
               <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
               <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
@@ -147,7 +155,7 @@
             <Button Content="验证本地 ROI 草稿（不保存、不下发）" Command="{Binding ValidateRoiCommand}"
                     HorizontalAlignment="Stretch"/>
             <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#7D5C2C" TextWrapping="Wrap"/>
-            <TextBlock Text="方案 / 历史 / 统计 / 报警写入入口尚无 Core IPC 合同；目前不展示虚构数据或可操作硬件按钮。"
+            <TextBlock Text="历史与统计来自 Core WAL；方案发布、报警操作和现场硬件编辑仍未授权。"
                        TextWrapping="Wrap" FontSize="11" Foreground="#738497"/>
           </StackPanel>
         </Border>

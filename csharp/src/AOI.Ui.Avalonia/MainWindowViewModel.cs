@@ -4,6 +4,8 @@ using AOI.Ui.Client;
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Threading;
+using Avalonia.Media.Imaging;
+using System.Net.Sockets;
 using CommunityToolkit.Mvvm.ComponentModel;
 using System.Collections.ObjectModel;
 
@@ -77,7 +79,12 @@ public partial class MainWindowViewModel : ObservableObject
     [ObservableProperty] private string roiY = "0.1";
     [ObservableProperty] private string roiWidth = "0.8";
     [ObservableProperty] private string roiHeight = "0.8";
-    [ObservableProperty] private string roiFeedback = "ROI 仅会话草稿，不会保存或下发";
+    [ObservableProperty] private string roiFeedback = "ROI 仅会话草稿，不会保存、不下发";
+    [ObservableProperty] private Bitmap? selectedPreview;
+    [ObservableProperty] private string previewNotice = "请选择本机已采集通道查看无损 PNG";
+    private MonitorProjection? _lastProjection;
+    private string? _lastPreviewKey;
+    private int _previewGeneration;
     public string SelectedChannelName => SelectedChannel?.ChannelId ?? "未选择通道";
 
     public MainWindowViewModel(string role, bool once)
@@ -99,6 +106,7 @@ public partial class MainWindowViewModel : ObservableObject
             $"{value.ChannelId} · {value.StationDetails} · {value.Owner} · PLC {value.PlcAddress} · {value.Group}";
         OnPropertyChanged(nameof(SelectedChannelName));
         RoiFeedback = "ROI 仅会话草稿，不会保存或下发";
+        if (_lastProjection is not null) RequestPreview(_lastProjection);
     }
 
     private void SelectChannel(ChannelTile? value) => SelectedChannel = value;
@@ -160,6 +168,7 @@ public partial class MainWindowViewModel : ObservableObject
                             $"WorkpieceId：{projection.Workpiece.WorkpieceId} · Barcode：{projection.Workpiece.Barcode}";
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
+                        RequestPreview(projection);
                         if (projection.Production is { } history)
                         {
                             ProductionCounters =
@@ -199,6 +208,86 @@ public partial class MainWindowViewModel : ObservableObject
         if (!_once) _ = WatchFreshnessAsync();
     }
 
+    private void ClearPreview(string reason)
+    {
+        _previewGeneration++;
+        _lastPreviewKey = null;
+        SelectedPreview?.Dispose();
+        SelectedPreview = null;
+        PreviewNotice = reason;
+    }
+
+    private void RequestPreview(MonitorProjection projection)
+    {
+        _lastProjection = projection;
+        var selected = SelectedChannel;
+        if (selected is null || projection.Workpiece is null)
+        {
+            ClearPreview("暂无工件或未选择通道");
+            return;
+        }
+        var item = projection.Channels.First(c => c.Definition.ChannelId == selected.ChannelId);
+        if (item.Definition.OwnerRole != projection.Role)
+        {
+            ClearPreview("图像属于对端 Core，请在另一台设备的窗口查看");
+            return;
+        }
+        if (!item.IsCurrentWorkpiece || !item.IsSimulated)
+        {
+            ClearPreview("本工件尚未采集此通道的 OpenCV 图像");
+            return;
+        }
+        string key = $"{projection.Workpiece.WorkpieceId:D}|{selected.ChannelId}|{item.UpdatedUtc:O}";
+        if (key == _lastPreviewKey) return;
+        _lastPreviewKey = key;
+        int generation = ++_previewGeneration;
+        SelectedPreview?.Dispose();
+        SelectedPreview = null;
+        PreviewNotice = "正在经本机 Core 校验图像 SHA256...";
+        _ = FetchPreviewAsync(projection.Workpiece.WorkpieceId, selected.ChannelId,
+            projection.Role, generation);
+    }
+
+    private async Task FetchPreviewAsync(Guid workpieceId, string channelId,
+        MachineRole role, int generation)
+    {
+        Bitmap? bitmap = null;
+        string notice;
+        try
+        {
+            byte[]? png = await new FramePreviewClient(role == MachineRole.Master ? 19631 : 19632)
+                .FetchAsync(workpieceId, channelId, _shutdown.Token);
+            if (png is null)
+                notice = "图像不可用／尚未入库或完整性校验失败（不显示旧图）";
+            else
+            {
+                using var stream = new MemoryStream(png, writable: false);
+                bitmap = new Bitmap(stream);
+                notice = $"已验证无损 PNG · {channelId} · {png.Length} bytes · SIM_ONLY";
+            }
+        }
+        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested)
+        {
+            return;
+        }
+        catch (Exception ex) when (ex is IOException or SocketException or InvalidDataException
+            or OperationCanceledException or ArgumentException)
+        {
+            notice = "本机只读图像 IPC 不可用：" + ex.Message;
+        }
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (generation != _previewGeneration || _shutdown.IsCancellationRequested)
+            {
+                bitmap?.Dispose();
+                return;
+            }
+            SelectedPreview?.Dispose();
+            SelectedPreview = bitmap;
+            PreviewNotice = notice;
+        });
+    }
+
     private async Task WatchFreshnessAsync()
     {
         while (!_shutdown.IsCancellationRequested)
@@ -226,8 +315,14 @@ public partial class MainWindowViewModel : ObservableObject
         ProductionCounters = "生产统计：IPC 离线，数据已失效";
         HistoryNote = "仅可查看在线 Core 的真实持久化数据";
         RecentWorkpieces.Clear();
+        _lastProjection = null;
+        ClearPreview("IPC 中断，图像已失效");
         _lastAcceptedUtc = DateTimeOffset.MinValue;
     }
 
-    public void Stop() => _shutdown.Cancel();
+    public void Stop()
+    {
+        _shutdown.Cancel();
+        ClearPreview("窗口已关闭");
+    }
 }
