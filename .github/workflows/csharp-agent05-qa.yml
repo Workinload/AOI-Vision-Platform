@@ -41,6 +41,8 @@ jobs:
         run: python scripts/e2e_sim_light.py --evidence-root .artifacts/qa-normal
       - name: Verify SQLite WAL identities source images and PERSISTED_ACK
         run: python qa/integrity_audit.py --evidence-root .artifacts/qa-normal
+      - name: Real five-process 9-device 11-channel SIM_LIGHT integration
+        run: python scripts/e2e_sim_light.py --all-channels --evidence-root .artifacts/qa-11channels
       - name: Real five-process controlled barcode flip fail closed
         run: python qa/chaos_e2e.py --evidence-root .artifacts/qa-barcode-flip
       - name: Save logs on failure and success

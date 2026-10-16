@@ -30,14 +30,22 @@ def fins_read(word):
 def sql_one(path, stmt):
     if not path.exists():
         return None
-    with sqlite3.connect(path, timeout=1) as db:
-        return db.execute(stmt).fetchone()
+    # The DB file may appear before Core has committed its initial schema.
+    # A missing table during startup means not ready yet, not a failed Core.
+    try:
+        with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=1) as db:
+            return db.execute(stmt).fetchone()
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e) or "unable to open database" in str(e):
+            return None
+        raise
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--dotnet', default='dotnet')
     ap.add_argument('--evidence-root', default=None)
+    ap.add_argument('--all-channels', action='store_true', help='Opt-in real five-process 9-device/11-channel SIM_LIGHT')
     args = ap.parse_args()
     root = Path(__file__).resolve().parent.parent
     runroot = Path(args.evidence_root).resolve() if args.evidence_root else Path(tempfile.mkdtemp(prefix='aoi-e2e-'))
@@ -50,8 +58,13 @@ def main():
     def launch(label, dll, *flags):
         file = open(runroot / (label + '.log'), 'w', encoding='utf-8')
         logs.append(file)
+        child_env = {**os.environ, 'DOTNET_CLI_TELEMETRY_OPTOUT': '1'}
+        if args.all_channels:
+            child_env['AOI_SIM_CHANNEL_SET'] = 'ALL_11'
+        else:
+            child_env.pop('AOI_SIM_CHANNEL_SET', None)
         p = subprocess.Popen([args.dotnet, str(dll), *flags], cwd=root, stdout=file, stderr=subprocess.STDOUT,
-                             env={**os.environ, 'DOTNET_CLI_TELEMETRY_OPTOUT': '1'})
+                             env=child_env)
         procs.append((label, p))
         print(f'STARTED {label} pid={p.pid}', flush=True)
         return p
@@ -81,18 +94,58 @@ def main():
         assert 'SIM_ONLY' in decision['proof'], decision
         master_count = sql_one(db_m, 'SELECT COUNT(*) FROM channel_results')[0]
         slave_count = sql_one(db_s, 'SELECT COUNT(*) FROM channel_results')[0]
-        assert master_count == 2 and slave_count == 1, (master_count, slave_count)
-        master_acks = sql_one(db_m, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
-        slave_acks = sql_one(db_s, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
-        assert master_acks == 1 and slave_acks == 1, (master_acks, slave_acks)
-        assert fins_read(1016) == 1, 'sim PLC D1016 not marked synthetic GOOD'
-        assert fins_read(2099) == 2, 'sim PLC D2099 branch not marked DONE'
+        expected_master = 11 if args.all_channels else 2
+        expected_slave = 6 if args.all_channels else 1
+        assert master_count == expected_master and slave_count == expected_slave, (master_count, slave_count)
+        expected_slave_acks = 6 if args.all_channels else 1
+        # Master final persistence can precede Slave receipt of the last ACK.
+        # The protocol guarantees eventual durable delivery, not same-tick ACK arrival.
+        ack_deadline = time.monotonic() + 8
+        while True:
+            master_acks = sql_one(db_m, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+            slave_acks = sql_one(db_s, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+            if master_acks == 1 and slave_acks == expected_slave_acks:
+                break
+            if time.monotonic() >= ack_deadline:
+                raise AssertionError(('durable_ack_timeout', master_acks, slave_acks, expected_slave_acks))
+            time.sleep(0.1)
+        # Output writes follow Final WAL commit; permit only bounded propagation time.
+        plc_deadline = time.monotonic() + 4
+        while (fins_read(1016), fins_read(2099)) != (1, 2):
+            if time.monotonic() >= plc_deadline:
+                raise AssertionError('virtual PLC never reached synthetic GOOD/DONE')
+            time.sleep(0.1)
         for label, p in procs[3:]:
             if p.wait(timeout=20) != 0:
                 raise RuntimeError(f'{label} failed: exit={p.returncode}')
             content = (runroot / (label + '.log')).read_text(encoding='utf-8')
             assert 'UI_HEADLESS_SNAPSHOT_OK' in content, (label, content[-1500:])
-        print('SIM_E2E_PASS master_results=2 slave_results=1 persisted_acks=2 decision=SIM_GOOD FINS_D1016=1 FINS_D2099=2 UI=2',flush=True)
+        if args.all_channels:
+            # Both nodes retain independent image WALs: Master 5 channels + 1 shared
+            # line parent; Slave 6 channels + 1 shared line parent.
+            for node, channel_count, assets in [('master', 5, 6), ('slave', 6, 7)]:
+                ledger = runroot / node / 'vision/vision-assets.sqlite'
+                assert sql_one(ledger, 'SELECT COUNT(*) FROM vision_results')[0] == channel_count, node
+                assert sql_one(ledger, 'SELECT COUNT(*) FROM vision_assets')[0] == assets, node
+                assert sql_one(ledger, "SELECT COUNT(*) FROM vision_assets WHERE kind='parent'")[0] == 1, node
+                assert sql_one(ledger, "SELECT COUNT(*) FROM vision_assets WHERE kind='child'")[0] == 2, node
+
+            channels = [row[0] for row in sqlite3.connect(db_m).execute('SELECT channel_id FROM channel_results')]
+            assert set(channels) == {f'CH{i:02d}' for i in range(1, 12)}, channels
+            slave_channels = [row[0] for row in sqlite3.connect(db_s).execute('SELECT channel_id FROM channel_results')]
+            assert set(slave_channels) == {'CH02','CH03','CH04','CH05','CH08','CH09'}, slave_channels
+            # Unlike startup headless snapshots, fetch fresh Core->UI IPC after finalization.
+            with socket.create_connection(('127.0.0.1', 19621), timeout=3) as ipc:
+                ipc.settimeout(3)
+                with ipc.makefile('r', encoding='utf-8') as reader:
+                    snapshot = json.loads(reader.readline())
+            assert snapshot['latestFinal']['disposition'] == 'good', snapshot.get('latestFinal')
+            assert len(snapshot['channels']) == 11, len(snapshot['channels'])
+            assert all(c['status'] == 'SIM_OK' for c in snapshot['channels']), snapshot['channels']
+            print('SIM_11CH_E2E_PASS master_results=11 slave_results=6 assets=13 persisted_acks=7 '
+                  'decision=SIM_GOOD FINS_D1016=1 FINS_D2099=2 UI_IPC_CHANNELS=11', flush=True)
+        else:
+            print('SIM_E2E_PASS master_results=2 slave_results=1 persisted_acks=2 decision=SIM_GOOD FINS_D1016=1 FINS_D2099=2 UI=2',flush=True)
         print('EVIDENCE=' + str(runroot),flush=True)
         return 0
     except Exception as e:
