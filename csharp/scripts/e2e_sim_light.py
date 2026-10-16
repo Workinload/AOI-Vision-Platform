@@ -30,8 +30,15 @@ def fins_read(word):
 def sql_one(path, stmt):
     if not path.exists():
         return None
-    with sqlite3.connect(path, timeout=1) as db:
-        return db.execute(stmt).fetchone()
+    # The DB file may appear before Core has committed its initial schema.
+    # A missing table during startup means not ready yet, not a failed Core.
+    try:
+        with sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1) as db:
+            return db.execute(stmt).fetchone()
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e) or "unable to open database" in str(e):
+            return None
+        raise
 
 
 def main():
