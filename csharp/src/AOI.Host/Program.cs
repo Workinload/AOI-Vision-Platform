@@ -169,6 +169,13 @@ static async Task TryFinalizeAsync(WorkpieceIdentity workpiece, ProductionStore 
     FinsSimClient fins, CancellationToken ct)
 {
     if (store.LatestFinal(workpiece.WorkpieceId) is not null) return;
+    // Existing A0 fixture has ONE global virtual exit/eject actuator. Never write it
+    // for a delayed older item: full queued physical effects require A2 integration.
+    if (store.LatestWorkpiece()?.WorkpieceId != workpiece.WorkpieceId)
+    {
+        Console.WriteLine($"MASTER_HOLD workpiece={workpiece.WorkpieceId} why=SIM_FIXTURE_EXIT_ACTUATOR_NOT_OWNED");
+        return;
+    }
     var observations = store.ResultsFor(workpiece.WorkpieceId);
     // This is a fixture echo from the SAME simulated barcode DM range, not an independent end scanner.
     // Consequently the final disposition is marked SIM_ONLY and cannot certify physical exit inspection.
