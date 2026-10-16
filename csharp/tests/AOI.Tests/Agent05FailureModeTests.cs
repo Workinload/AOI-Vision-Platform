@@ -18,6 +18,7 @@ public sealed class Agent05FailureModeTests
     [TearDown]
     public void Cleanup()
     {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
     }
 

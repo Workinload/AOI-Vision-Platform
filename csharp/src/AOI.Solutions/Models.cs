@@ -74,7 +74,7 @@ public sealed record StationRecipe(
 
     internal StationRecipe Canonical() => new(
         StationId, ChannelIds.Order(StringComparer.Ordinal).ToArray(),
-        new SortedDictionary<string, double>(Tunables, StringComparer.Ordinal));
+        new SortedDictionary<string, double>(Tunables.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal), StringComparer.Ordinal));
 }
 
 public sealed record StationDraft(

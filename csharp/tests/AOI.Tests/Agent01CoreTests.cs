@@ -21,6 +21,7 @@ public sealed class Agent01CoreTests
     [TearDown]
     public void TearDown()
     {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
         if (Directory.Exists(_root)) Directory.Delete(_root, recursive: true);
     }
 

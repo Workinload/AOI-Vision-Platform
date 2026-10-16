@@ -13,7 +13,11 @@ public sealed class FlightRecorderTests
         _root = Path.Combine(Path.GetTempPath(), "a7-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(_root);
     }
-    [TearDown] public void TearDown() { if (Directory.Exists(_root)) Directory.Delete(_root, true); }
+    [TearDown] public void TearDown()
+    {
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
+        if (Directory.Exists(_root)) Directory.Delete(_root, true);
+    }
 
     private static DiagnosticSnapshot Snapshot(NodeEvidence[] nodes, DateTimeOffset? now = null) =>
         new(1, DiagnosticsFormat.SimMode, now ?? DateTimeOffset.UtcNow, nodes);

@@ -6,8 +6,14 @@
     <Project Path="src/AOI.Runtime/AOI.Runtime.csproj" />
     <Project Path="src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj" />
     <Project Path="src/AOI.Ui.Client/AOI.Ui.Client.csproj" />
+    <Project Path="src/AOI.Solutions/AOI.Solutions.csproj" />
+    <Project Path="src/AOI.Diagnostics/AOI.Diagnostics.csproj" />
+    <Project Path="src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AOI.Tests/AOI.Tests.csproj" />
+    <Project Path="tests/AOI.Ui.Client.Tests/AOI.Ui.Client.Tests.csproj" />
+    <Project Path="tests/AOI.Solutions.Tests/AOI.Solutions.Tests.csproj" />
+    <Project Path="tests/AOI.Diagnostics.Tests/AOI.Diagnostics.Tests.csproj" />
   </Folder>
 </Solution>

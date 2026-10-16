@@ -36,7 +36,7 @@ jobs:
         run: |
           unset PLATFORM
           dotnet build AOI.slnx --no-restore -c Debug
-          dotnet test tests/AOI.Tests/AOI.Tests.csproj --no-build -c Debug --logger 'console;verbosity=normal'
+          dotnet test AOI.slnx --no-build -c Debug --logger 'console;verbosity=normal'
       - name: Real five-process normal scenario
         run: python scripts/e2e_sim_light.py --evidence-root .artifacts/qa-normal
       - name: Verify SQLite WAL identities source images and PERSISTED_ACK
