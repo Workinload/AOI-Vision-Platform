@@ -60,6 +60,7 @@ public static class SimFullHost
         var folder = NodeFolder(root, self);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL");
+        _ = FramePreviewIpc.ServeAsync(store, MachineRole.Slave, folder, 19632, ct);
         var listener = new TcpListener(IPAddress.Loopback, 19610);
         listener.Start();
         Console.WriteLine("SIM_FULL_SLAVE_PEER_LISTEN 127.0.0.1:19610");
@@ -133,6 +134,7 @@ public static class SimFullHost
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL");
+        _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
         while (!ct.IsCancellationRequested)
         {
             using var tcp = new TcpClient();

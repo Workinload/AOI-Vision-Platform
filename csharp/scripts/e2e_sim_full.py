@@ -5,6 +5,7 @@ All sockets are 127.0.0.1. Test-only D4000+ are NOT physical PLC addresses.
 Run separately from the single-piece SIM_LIGHT smoke (fixed ports).
 """
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -27,6 +28,24 @@ def fins_read(address):
         assert peer[0] == '127.0.0.1' and len(response) == 16
         assert response[0] == 192 and response[9] == 42 and response[12:14] == b'\x00\x00'
         return response[14] * 256 + response[15]
+
+
+def png_preview(port, workpiece_id, channel):
+    """Actual binary PNG frame from the isolated node IPC; never a filesystem shortcut."""
+    with socket.create_connection(('127.0.0.1', port), timeout=3) as sock:
+        sock.settimeout(3)
+        sock.sendall((workpiece_id + '|' + channel + '\n').encode('ascii'))
+        def receive(count):
+            buffer = bytearray()
+            while len(buffer) < count:
+                data = sock.recv(count - len(buffer))
+                if not data:
+                    raise EOFError('truncated preview IPC payload')
+                buffer.extend(data)
+            return bytes(buffer)
+        length = int.from_bytes(receive(4), 'big', signed=True)
+        assert 0 <= length <= 2 * 1024 * 1024, 'unsafe frame preview length'
+        return receive(length) if length else None
 
 
 def query(path, statement):
@@ -206,6 +225,24 @@ def main():
         assert all(row['capturedChannels'] == 11 for row in overview['recent']), overview
         assert sum(row['final'] == 'good' for row in overview['recent']) == target
         assert snapshot['latestWorkpiece'] is not None
+        # A4 operator preview is real pixel data delivered by the owning Core,
+        # NOT a UI-side path to a local SQLite file.
+        first = query(evidence / 'master/production.db',
+                      'SELECT workpiece_id FROM workpieces ORDER BY created_utc LIMIT 1')[0][0]
+        master_frame = json.loads(query(evidence / 'master/production.db',
+            "SELECT result_json FROM channel_results WHERE workpiece_id='" + first +
+            "' AND channel_id='CH06'")[0][0])
+        slave_frame = json.loads(query(evidence / 'slave/production.db',
+            "SELECT result_json FROM channel_results WHERE workpiece_id='" + first +
+            "' AND channel_id='CH02'")[0][0])
+        local_png = png_preview(19631, first, 'CH06')
+        slave_png = png_preview(19632, first, 'CH02')
+        assert local_png and slave_png and local_png.startswith(b'\x89PNG')
+        assert hashlib.sha256(local_png).hexdigest() == master_frame['sourceFrameSha256']
+        assert hashlib.sha256(slave_png).hexdigest() == slave_frame['sourceFrameSha256']
+        assert png_preview(19631, first, 'CH02') is None, 'Master must not serve Slave-owned source frame'
+        assert png_preview(19632, first, 'CH06') is None, 'Slave must not serve Master-owned source frame'
+        print('SIM_FULL_PREVIEW_IPC_PASS local_2=1 sha256=2 remote_leak=0', flush=True)
         if args.repeat_barcode:
             barcodes = query(evidence / 'master/production.db', 'SELECT barcode FROM workpieces')
             assert len({x[0] for x in barcodes}) == 1, 'Duplicate barcode test was not exercised'
