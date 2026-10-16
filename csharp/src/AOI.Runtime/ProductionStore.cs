@@ -270,6 +270,39 @@ public sealed class ProductionStore
         return json is null ? null : WireFormat.Parse<WorkpieceIdentity>(json);
     }
 
+    /// <summary>Query by immutable primary key, never by the latest barcode.</summary>
+    public WorkpieceIdentity? FindWorkpiece(Guid workpieceId)
+    {
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT identity_json FROM workpieces WHERE workpiece_id=$id";
+        cmd.Parameters.AddWithValue("$id", workpieceId.ToString("D"));
+        var json = cmd.ExecuteScalar() as string;
+        return json is null ? null : WireFormat.Parse<WorkpieceIdentity>(json);
+    }
+
+    /// <summary>Restart reconciliation of already-durable Inbox registrations.</summary>
+    public IReadOnlyList<WorkpieceIdentity> WorkpiecesMissingChannel(string channelId, int limit = 256)
+    {
+        _ = ChannelCatalog.Require(channelId);
+        if (limit is < 1 or > 4096) throw new ArgumentOutOfRangeException(nameof(limit));
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = """
+            SELECT w.identity_json FROM workpieces w
+            WHERE NOT EXISTS (
+                SELECT 1 FROM channel_results r
+                WHERE r.workpiece_id=w.workpiece_id AND r.channel_id=$channel)
+            ORDER BY w.created_utc, w.workpiece_id LIMIT $limit
+            """;
+        cmd.Parameters.AddWithValue("$channel", channelId);
+        cmd.Parameters.AddWithValue("$limit", limit);
+        using var reader = cmd.ExecuteReader();
+        var items = new List<WorkpieceIdentity>();
+        while (reader.Read()) items.Add(WireFormat.Parse<WorkpieceIdentity>(reader.GetString(0)));
+        return items;
+    }
+
     public IReadOnlyList<ChannelResult> ResultsFor(Guid workpieceId)
     {
         using var db = Open();

@@ -1,4 +1,5 @@
 using AOI.Contracts;
+using AOI.Runtime.Agent01;
 using System.Net.Sockets;
 using System.Text;
 
@@ -30,11 +31,12 @@ public sealed class PeerSession : IDisposable
 
     public async Task PumpOutboxAsync(ProductionStore store, CancellationToken ct)
     {
+        var retry = new OutboxRetryPlanner();
         while (!ct.IsCancellationRequested)
         {
-            foreach (var pending in store.PendingOutbox())
+            foreach (var pending in retry.SelectDue(store.PendingOutbox(), DateTimeOffset.UtcNow))
                 await SendAsync(new PeerPacket("message", pending, null), ct);
-            await Task.Delay(500, ct);
+            await Task.Delay(100, ct);
         }
     }
 

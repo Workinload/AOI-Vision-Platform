@@ -1,6 +1,7 @@
 using AOI.Contracts;
 using AOI.Domain;
 using AOI.Runtime;
+using AOI.Runtime.Agent01;
 using System.Net;
 using System.Net.Sockets;
 
@@ -45,6 +46,9 @@ static async Task RunSlaveAsync(string root, CancellationToken ct)
     var folder = Path.Combine(root, self);
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
     _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct);
+    int recovered = SimOnlySlaveRecovery.RecoverMissingResults(store,
+        item => SyntheticVision.Generate(item, "CH02", Path.Combine(folder, "assets")));
+    Console.WriteLine($"SLAVE_RECOVERED_SIM_ONLY {recovered}");
     var listener = new TcpListener(IPAddress.Loopback, 19610);
     listener.Start();
     Console.WriteLine("SLAVE_PEER_LISTEN 127.0.0.1:19610");
@@ -60,12 +64,11 @@ static async Task RunSlaveAsync(string root, CancellationToken ct)
             {
                 await session.ReadAsync(self, "master", store, async (message, duplicate, token) =>
                 {
-                    if (duplicate || message.PayloadType != "workpiece_registered") return;
+                    if (message.PayloadType != "workpiece_registered") return;
                     var item = WireFormat.Parse<WorkpieceIdentity>(message.PayloadJson);
-                    var result = SyntheticVision.Generate(item, "CH02", Path.Combine(folder, "assets"));
-                    var outbound = PeerEnvelope.Create(self, "master", 1, item, "channel_result", result, "CH02");
-                    store.SaveLocalResult(result, outbound);
-                    Console.WriteLine($"SLAVE_CV_RESULT workpiece={item.WorkpieceId} channel=CH02 opencv={SyntheticVision.NativeVersion}");
+                    bool generated = SimOnlySlaveRecovery.ProcessRegisteredWorkpiece(store, item,
+                        identity => SyntheticVision.Generate(identity, "CH02", Path.Combine(folder, "assets")));
+                    Console.WriteLine($"SLAVE_CV_RESULT workpiece={item.WorkpieceId} generated={generated} duplicate={duplicate} channel=CH02");
                     await Task.CompletedTask;
                 }, sessionCancel.Token);
             }
@@ -111,9 +114,9 @@ static async Task RunMasterAsync(string root, CancellationToken ct)
             await session.ReadAsync(self, "slave", store, async (message, _, token) =>
             {
                 if (message.PayloadType != "channel_result") return;
-                var workpiece = store.LatestWorkpiece();
-                if (workpiece is null || workpiece.WorkpieceId != message.WorkpieceId)
-                    return; // persisted but not (mis)attached to latest; event remains in flight ledger.
+                var workpiece = store.FindWorkpiece(message.WorkpieceId);
+                if (workpiece is null)
+                    throw new InvalidDataException("Persisted result has no matching WorkpieceId.");
                 await TryFinalizeAsync(workpiece, store, fins, token);
             }, sessionCancel.Token);
         }
@@ -166,17 +169,26 @@ static async Task TryFinalizeAsync(WorkpieceIdentity workpiece, ProductionStore 
     FinsSimClient fins, CancellationToken ct)
 {
     if (store.LatestFinal(workpiece.WorkpieceId) is not null) return;
+    // Existing A0 fixture has ONE global virtual exit/eject actuator. Never write it
+    // for a delayed older item: full queued physical effects require A2 integration.
+    if (store.LatestWorkpiece()?.WorkpieceId != workpiece.WorkpieceId)
+    {
+        Console.WriteLine($"MASTER_HOLD workpiece={workpiece.WorkpieceId} why=SIM_FIXTURE_EXIT_ACTUATOR_NOT_OWNED");
+        return;
+    }
     var observations = store.ResultsFor(workpiece.WorkpieceId);
     // This is a fixture echo from the SAME simulated barcode DM range, not an independent end scanner.
     // Consequently the final disposition is marked SIM_ONLY and cannot certify physical exit inspection.
     var endCode = FinsDm.SimBarcode(await fins.ReadAsync(2000, 10, ct));
-    var decision = QualityRules.Evaluate(workpiece, ["CH02", "CH06"], observations,
-        endBarcodeMatches: endCode == workpiece.Barcode && !string.IsNullOrWhiteSpace(endCode));
-    if (decision.Disposition == FinalDisposition.Hold)
+    var assessment = WorkpieceFlow.Assess(workpiece, ["CH02", "CH06"], observations,
+        EndScanEvidence.SimulatedFixtureEcho(workpiece, endCode),
+        store.LatestFinal(workpiece.WorkpieceId), simulationOnly: true);
+    if (assessment.Phase != WorkpiecePhase.ReadyToCommit || assessment.Decision is null)
     {
-        Console.WriteLine($"MASTER_HOLD workpiece={workpiece.WorkpieceId} why={decision.Proof}");
+        Console.WriteLine($"MASTER_HOLD workpiece={workpiece.WorkpieceId} phase={assessment.Phase} why={assessment.Reason}");
         return;
     }
+    var decision = assessment.Decision;
     store.StoreFinal(workpiece, decision);
     // All writes here target 127.0.0.1:19600 vPLC; production PLC routing is IMPOSSIBLE in this host.
     await fins.WriteAsync(1016, decision.Disposition == FinalDisposition.Good ? (ushort)1 : (ushort)2);
