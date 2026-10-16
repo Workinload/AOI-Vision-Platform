@@ -21,6 +21,17 @@ Console.CancelKeyPress += (_, ev) => { ev.Cancel = true; cancelled.Cancel(); };
 Console.WriteLine($"AOI_HOST role={role} mode=SIM_LIGHT channels={(allEleven ? 11 : 2)} real_plc_writes=DISABLED");
 try
 {
+    var requestedMode = Environment.GetEnvironmentVariable("AOI_SIM_MODE");
+    if (requestedMode == "SIM_FULL")
+    {
+        if (!allEleven)
+            throw new InvalidOperationException("SIM_FULL requires AOI_SIM_CHANNEL_SET=ALL_11.");
+        Console.WriteLine("SIM_FULL_ENABLED continuous_multi_workpiece=YES real_plc_writes=DISABLED");
+        await SimFullHost.RunAsync(role, dataRoot, cancelled.Token);
+        return 0;
+    }
+    if (!string.IsNullOrEmpty(requestedMode) && requestedMode != "SIM_LIGHT")
+        throw new InvalidOperationException("Unknown AOI_SIM_MODE; REAL is intentionally unavailable.");
     switch (role)
     {
         case "vplc":

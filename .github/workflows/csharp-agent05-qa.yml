@@ -47,6 +47,10 @@ jobs:
         run: python qa/chaos_e2e.py --evidence-root .artifacts/qa-barcode-flip
       - name: Full 11-channel independent asset and PeerLink audit with corrupted end barcode
         run: python qa/chaos_e2e.py --all-channels --evidence-root .artifacts/qa-11channels-barcode-flip
+      - name: SIM_FULL five-process FIFO multi-workpiece with repeated barcodes
+        run: python scripts/e2e_sim_full.py --count 5 --repeat-barcode --evidence-root .artifacts/simfull-normal
+      - name: SIM_FULL five-process end-barcode corruption must block physical exit
+        run: python scripts/e2e_sim_full.py --count 5 --flip-token 3 --evidence-root .artifacts/simfull-flipped
       - name: Publish Windows x64 framework-dependent SIM_ONLY preview
         if: matrix.os == 'windows-2025'
         shell: bash
@@ -58,6 +62,7 @@ jobs:
           dotnet publish src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/UI
           dotnet publish src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/Diagnostics
           cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
+          cp scripts/Launch-SIMFULL.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.cmd
           cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
           test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
