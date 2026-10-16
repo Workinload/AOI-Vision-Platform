@@ -26,7 +26,8 @@ public sealed record MonitorProjection(
         if (snapshot.RealHardwareWritesEnabled || snapshot.Role != expectedRole ||
             !string.Equals(snapshot.NodeId, expectedRole == MachineRole.Master ? "master" : "slave",
                 StringComparison.OrdinalIgnoreCase) ||
-            !snapshot.SimulationMode.StartsWith("SIM_", StringComparison.Ordinal) ||
+            (string.IsNullOrWhiteSpace(snapshot.SimulationMode) ||
+             !snapshot.SimulationMode.StartsWith("SIM_", StringComparison.Ordinal)) ||
             snapshot.UpdatedUtc > now.AddSeconds(5) ||
             now - snapshot.UpdatedUtc > (freshness ?? TimeSpan.FromSeconds(5)))
             throw new InvalidDataException("Unsafe, stale, inconsistent or non-simulation Core snapshot.");
@@ -39,7 +40,7 @@ public sealed record MonitorProjection(
         var byId = new Dictionary<string, ChannelSnapshot>(StringComparer.Ordinal);
         foreach (var c in snapshot.Channels)
         {
-            if (c is null || !byId.TryAdd(c.ChannelId, c))
+            if (c is null || string.IsNullOrWhiteSpace(c.ChannelId) || !byId.TryAdd(c.ChannelId, c))
                 throw new InvalidDataException("Duplicate or invalid channel snapshot.");
             var def = ChannelCatalog.Require(c.ChannelId);
             if (def.StationId != c.StationId || def.PhysicalDeviceId != c.PhysicalDeviceId ||
