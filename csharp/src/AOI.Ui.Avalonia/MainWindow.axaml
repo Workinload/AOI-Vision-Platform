@@ -3,7 +3,7 @@
         x:Class="AOI.Ui.Avalonia.MainWindow"
         Title="AOI Vision Platform | SIM_ONLY" Width="1580" Height="940"
         MinWidth="1150" MinHeight="730" Background="#F2F5FA">
-  <Grid RowDefinitions="Auto,Auto,*" Margin="20" RowSpacing="12">
+  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20" RowSpacing="12">
     <Border Grid.Row="0" CornerRadius="14" Background="#152F4B" Padding="22,16">
       <Grid ColumnDefinitions="*,Auto">
         <StackPanel Spacing="4">
@@ -26,7 +26,46 @@
                    FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
       </Grid>
     </Border>
-    <Grid Grid.Row="2" ColumnDefinitions="1.35*,1*" ColumnSpacing="12">
+    <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="12">
+      <Grid ColumnDefinitions="245,*" ColumnSpacing="16">
+        <StackPanel Spacing="5">
+          <TextBlock Text="生产统计 / 历史" FontSize="15" FontWeight="SemiBold" Foreground="#1E3F61"/>
+          <TextBlock Text="{Binding ProductionCounters}" FontSize="12" Foreground="#1D6895"
+                     FontWeight="SemiBold" TextWrapping="Wrap"/>
+          <TextBlock Text="{Binding HistoryNote}" FontSize="10" Foreground="#75879B" TextWrapping="Wrap"/>
+        </StackPanel>
+        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled" MaxHeight="105">
+          <ItemsControl ItemsSource="{Binding RecentWorkpieces}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8"/></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border CornerRadius="7" BorderThickness="1" BorderBrush="#D8E2EE"
+                        Background="#F3F7FC" MinWidth="170" Padding="10">
+                  <StackPanel Spacing="3">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding ShortId}" FontSize="13" Foreground="#24466B"
+                                 FontWeight="Bold"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Decision}" Foreground="#2B7390"
+                                 FontWeight="SemiBold" FontSize="11"/>
+                    </Grid>
+                    <TextBlock Text="{Binding Barcode}" Foreground="#576B80" FontSize="11"/>
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{Binding Epoch}" Foreground="#8897AA" FontSize="10"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Channels}" Foreground="#526C86" FontSize="10"/>
+                    </Grid>
+                    <TextBlock Text="{Binding LocalTime}" Foreground="#8897AA" FontSize="10"/>
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </ScrollViewer>
+      </Grid>
+    </Border>
+    <Grid Grid.Row="3" ColumnDefinitions="1.35*,1*" ColumnSpacing="12">
       <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="10">
         <Border Background="White" CornerRadius="10" Padding="14">
           <StackPanel Spacing="4">

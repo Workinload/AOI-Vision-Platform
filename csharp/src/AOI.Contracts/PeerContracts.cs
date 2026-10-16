@@ -57,7 +57,33 @@ public sealed record PeerPacket(string Kind, PeerEnvelope? Envelope, PersistedAc
 
 public sealed record ChannelSnapshot(string ChannelId, string StationId, string PhysicalDeviceId,
     string Status, Guid? WorkpieceId, bool IsSimulated, DateTimeOffset? LastUpdatedUtc);
+/// <summary>Bounded production history in the read-only Core IPC; never a PLC command.</summary>
+public sealed record WorkpieceProductionRow(
+    Guid WorkpieceId, string Barcode, long Epoch, string ReleaseId,
+    int CapturedChannels, FinalDisposition? Final, DateTimeOffset CreatedUtc);
+
+public sealed record ProductionOverview(
+    long Total, long Good, long Reject, long Unfinished,
+    IReadOnlyList<WorkpieceProductionRow> Recent)
+{
+    public void Validate()
+    {
+        if (Total < 0 || Good < 0 || Reject < 0 || Unfinished < 0 ||
+            Good + Reject + Unfinished != Total ||
+            Recent is null || Recent.Count > 20 ||
+            Recent.Select(r => r.WorkpieceId).Distinct().Count() != Recent.Count ||
+            Recent.Any(r => r.WorkpieceId == Guid.Empty || r.Epoch < 0 ||
+                r.CapturedChannels is < 0 or > 11 ||
+                r.Final is FinalDisposition.Hold ||
+                (r.Final is not null && r.CapturedChannels == 0)))
+            throw new InvalidDataException("Unsafe or inconsistent production history snapshot.");
+    }
+}
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
-    bool RealHardwareWritesEnabled, string SimulationMode);
+    bool RealHardwareWritesEnabled, string SimulationMode)
+{
+    public ProductionOverview? Production { get; init; }
+}

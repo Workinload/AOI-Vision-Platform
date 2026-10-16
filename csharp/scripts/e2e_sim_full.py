@@ -197,6 +197,14 @@ def main():
                 snapshot = json.loads(view.readline())
         assert snapshot['simulationMode'] == 'SIM_FULL', snapshot['simulationMode']
         assert snapshot['realHardwareWritesEnabled'] is False
+        overview = snapshot.get('production')
+        assert overview and overview['total'] == args.count, overview
+        assert overview['good'] == target and overview['reject'] == 0, overview
+        assert overview['unfinished'] == args.count - target, overview
+        assert len(overview['recent']) == args.count, overview
+        assert len({row['workpieceId'] for row in overview['recent']}) == args.count
+        assert all(row['capturedChannels'] == 11 for row in overview['recent']), overview
+        assert sum(row['final'] == 'good' for row in overview['recent']) == target
         assert snapshot['latestWorkpiece'] is not None
         if args.repeat_barcode:
             barcodes = query(evidence / 'master/production.db', 'SELECT barcode FROM workpieces')
