@@ -10,6 +10,7 @@ from pathlib import Path
 import socket
 import sqlite3
 import subprocess
+import sys
 import tempfile
 import time
 
@@ -142,6 +143,41 @@ def main():
             assert snapshot['latestFinal']['disposition'] == 'good', snapshot.get('latestFinal')
             assert len(snapshot['channels']) == 11, len(snapshot['channels'])
             assert all(c['status'] == 'SIM_OK' for c in snapshot['channels']), snapshot['channels']
+            # Independent QA reads the WAL/PNG bytes, not just the runtime's counters.
+            audit = subprocess.run(
+                [sys.executable, str(root / 'qa/integrity_audit.py'),
+                 '--evidence-root', str(runroot), '--scenario', '11channels'],
+                cwd=root, capture_output=True, text=True, timeout=15)
+            assert audit.returncode == 0 and 'A5_INTEGRITY_PASS' in audit.stdout, (
+                audit.stdout, audit.stderr)
+            print('SIM_11CH_INDEPENDENT_AUDIT_PASS', flush=True)
+
+            # Exercise the A7 component against the SAME live two-Core databases,
+            # then validate a redacted, hash-chained, portable diagnostic bundle.
+            cli = root / 'src/AOI.Diagnostics.Cli/bin/Debug/net10.0/AOI.Diagnostics.Cli.dll'
+            assert cli.is_file(), 'Diagnostics CLI must be built by AOI.slnx'
+            journal = runroot / 'diagnostics' / 'flight.jsonl'
+            bundle = runroot / 'diagnostics' / 'evidence.zip'
+            def diagnostic(*commands):
+                proc = subprocess.run([args.dotnet, str(cli), *map(str, commands)],
+                                      cwd=root, capture_output=True, text=True, timeout=15)
+                assert proc.returncode == 0, (commands, proc.stdout, proc.stderr)
+                return proc.stdout
+            diagnostic('capture', runroot, journal)
+            replay = json.loads(diagnostic('replay', journal))
+            assert len(replay) == 1 and replay[0]['resultCount'] == 17, replay
+            assert not any(f['severity'] in ('ERROR', 'CRITICAL')
+                           for assessment in replay for f in assessment['findings']), replay
+            diagnostic('bundle', journal, bundle)
+            assert 'SIM_ONLY_BUNDLE_VERIFIED' in diagnostic('verify', bundle)
+            with open(journal, encoding='utf-8') as flight:
+                record = json.loads(flight.readline())
+            assert all(w['identity']['barcode'] == '[REDACTED]'
+                       for node in record['snapshot']['nodes']
+                       for w in node['workpieces']), 'Flight recorder leaked barcode'
+            print('SIM_11CH_DIAGNOSTICS_PASS nodes=2 results=17 redacted=1 chain=1 bundle=1',
+                  flush=True)
+
             print('SIM_11CH_E2E_PASS master_results=11 slave_results=6 assets=13 persisted_acks=7 '
                   'decision=SIM_GOOD FINS_D1016=1 FINS_D2099=2 UI_IPC_CHANNELS=11', flush=True)
         else:
