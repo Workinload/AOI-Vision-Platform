@@ -34,3 +34,13 @@ REAL SAFETY BOUNDARIES
 
 Build details and exact dependency pins are in the repository C# migration branch.
 GitHub: https://github.com/Workinload/AOI-Vision-Platform
+
+CONTINUOUS SIM_FULL MODE
+
+Launch-SIMFULL.cmd starts 5 SIM_ONLY virtual workpieces with 11 channels each,
+up to 3 simultaneously on the virtual conveyor. Uses sim-full-data rather than
+the SIM_LIGHT folder. Run only in a fresh writable folder.
+A previous Core WAL or changed vPLC boot proof causes HOLD, never auto-release.
+D4000-D4009 are reserved solely for loopback virtual machine tests.
+There is no actual conveyor, industrial sensor, camera SDK or production model.
+
