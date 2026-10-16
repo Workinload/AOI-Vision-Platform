@@ -33,7 +33,7 @@ def sql_one(path, stmt):
     # The DB file may appear before Core has committed its initial schema.
     # A missing table during startup means not ready yet, not a failed Core.
     try:
-        with sqlite3.connect(f"file:{path}?mode=ro", uri=True, timeout=1) as db:
+        with sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True, timeout=1) as db:
             return db.execute(stmt).fetchone()
     except sqlite3.OperationalError as e:
         if "no such table" in str(e) or "unable to open database" in str(e):
@@ -97,11 +97,24 @@ def main():
         expected_master = 11 if args.all_channels else 2
         expected_slave = 6 if args.all_channels else 1
         assert master_count == expected_master and slave_count == expected_slave, (master_count, slave_count)
-        master_acks = sql_one(db_m, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
-        slave_acks = sql_one(db_s, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
-        assert master_acks == 1 and slave_acks == (6 if args.all_channels else 1), (master_acks, slave_acks)
-        assert fins_read(1016) == 1, 'sim PLC D1016 not marked synthetic GOOD'
-        assert fins_read(2099) == 2, 'sim PLC D2099 branch not marked DONE'
+        expected_slave_acks = 6 if args.all_channels else 1
+        # Master final persistence can precede Slave receipt of the last ACK.
+        # The protocol guarantees eventual durable delivery, not same-tick ACK arrival.
+        ack_deadline = time.monotonic() + 8
+        while True:
+            master_acks = sql_one(db_m, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+            slave_acks = sql_one(db_s, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')[0]
+            if master_acks == 1 and slave_acks == expected_slave_acks:
+                break
+            if time.monotonic() >= ack_deadline:
+                raise AssertionError(('durable_ack_timeout', master_acks, slave_acks, expected_slave_acks))
+            time.sleep(0.1)
+        # Output writes follow Final WAL commit; permit only bounded propagation time.
+        plc_deadline = time.monotonic() + 4
+        while (fins_read(1016), fins_read(2099)) != (1, 2):
+            if time.monotonic() >= plc_deadline:
+                raise AssertionError('virtual PLC never reached synthetic GOOD/DONE')
+            time.sleep(0.1)
         for label, p in procs[3:]:
             if p.wait(timeout=20) != 0:
                 raise RuntimeError(f'{label} failed: exit={p.returncode}')
