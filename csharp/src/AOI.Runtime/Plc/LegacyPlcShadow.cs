@@ -316,6 +316,8 @@ public sealed class LegacyPlcShadow
             return camera.Offer.Token;
         if (op.Address is >= 2000 and <= 2009 or LoadRequestAddress)
             return _load?.Token ?? (ushort)0;
+        if (op.Address is >= 2020 and <= 2029)
+            return _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress);
         if (op.Address is >= 2100 and <= 2109 or FinalQualityAddress or EndRequestAddress)
             return _end?.Token ?? (ushort)0;
         return 0;
