@@ -52,7 +52,7 @@ public partial class ChannelTile : ObservableObject
 
 /// <summary>Human-readable read-only row generated solely from Core IPC.</summary>
 public sealed record WorkpieceHistoryTile(
-    string ShortId, string Barcode, string Epoch, string Channels, string Decision, string LocalTime);
+    Guid WorkpieceId, string ShortId, string Barcode, string Epoch, string Channels, string Decision, string LocalTime);
 
 /// <summary>Engineering mapping only; no claim of live PLC signal reads.</summary>
 public sealed record PlcSignalTile(
@@ -116,7 +116,7 @@ public partial class MainWindowViewModel : ObservableObject
         _once = once;
         SelectChannelCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<ChannelTile?>(SelectChannel);
         ValidateRoiCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ValidateRoi);
-        SelectedChannel = Channels[0];
+        InitializeOperatorWorkspace();
     }
 
     public CommunityToolkit.Mvvm.Input.IRelayCommand<ChannelTile?> SelectChannelCommand { get; }
@@ -129,17 +129,30 @@ public partial class MainWindowViewModel : ObservableObject
             $"{value.ChannelId} · {value.StationDetails} · {value.Owner} · PLC {value.PlcAddress} · {value.Group}";
         OnPropertyChanged(nameof(SelectedChannelName));
         LoadRoiForSelection();
+        SyncStationFromChannel(value);
+        if (!_synchronizingPlcSelection) SyncPlcSignalFromChannel(value);
         if (_lastProjection is not null) RequestPreview(_lastProjection);
     }
 
     partial void OnSelectedPlcSignalChanged(PlcSignalTile? value)
     {
-        if (value is null) return;
-        // Exact DM mapping, never fuzzy match by barcode, name or station.
-        var channel = Channels.FirstOrDefault(c =>
-            string.Equals(c.PlcAddress, value.DmAddress, StringComparison.Ordinal));
-        if (channel is not null && !ReferenceEquals(SelectedChannel, channel))
-            SelectedChannel = channel;
+        if (value is null || _synchronizingPlcSelection) return;
+        // The signal -> map direction never maps unrelated machine-level signals to a camera.
+        _synchronizingPlcSelection = true;
+        try
+        {
+            var channel = Channels.FirstOrDefault(c =>
+                string.Equals(c.PlcAddress, value.DmAddress, StringComparison.Ordinal));
+            if (channel is not null) SelectedChannel = channel;
+            string? stationId = OperatorWorkspaceTopology.ResolveSignalStation(
+                value.DmAddress, value.Station);
+            if (stationId is not null)
+            {
+                FocusStationCommand.Execute(stationId);
+                SelectedWorkspaceIndex = 1;
+            }
+        }
+        finally { _synchronizingPlcSelection = false; }
         SelectedDescription = $"{value.Id}: {value.Purpose} | {value.DmAddress} | " +
             $"工位 {value.Station} | {value.Validation} | {value.Conflict} | 工程声明，非现场实时值";
     }
@@ -332,6 +345,7 @@ public partial class MainWindowViewModel : ObservableObject
                                 foreach (var gate in engineering.Gates)
                                     PlcGates.Add(new FieldGateTile(
                                         gate.GateId, gate.Topic, gate.Status, gate.RequiredEvidence));
+                                SyncPlcSignalFromChannel(SelectedChannel);
                             }
                         }
                         else
@@ -345,21 +359,9 @@ public partial class MainWindowViewModel : ObservableObject
                             ProductionCounters =
                                 $"总数 {history.Total}  /  GOOD {history.Good}  /  NG {history.Reject}  /  待完成 {history.Unfinished}";
                             HistoryNote = $"最近 {history.Recent.Count} 件 · 只读 WAL · WorkpieceId 不等于 Barcode";
-                            RecentWorkpieces.Clear();
-                            foreach (var item in history.Recent)
-                            {
-                                var state = item.Final switch
-                                {
-                                    FinalDisposition.Good => "GOOD",
-                                    FinalDisposition.Reject => "NG",
-                                    _ => "WAIT / HOLD"
-                                };
-                                RecentWorkpieces.Add(new WorkpieceHistoryTile(
-                                    item.WorkpieceId.ToString("N")[..8], item.Barcode,
-                                    $"Epoch {item.Epoch}", $"{item.CapturedChannels}/11",
-                                    state, item.CreatedUtc.ToLocalTime().ToString("HH:mm:ss")));
-                            }
+                            UpdateHistorySelection(history);
                         }
+                        UpdateOperatorWorkspace(projection);
                         if (_once)
                         {
                             if (projection.PlcEngineering is { } catalog)
@@ -396,31 +398,35 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _lastProjection = projection;
         var selected = SelectedChannel;
-        if (selected is null || projection.Workpiece is null)
+        var workpieceId = ViewedWorkpieceId;
+        if (selected is null || workpieceId is null)
         {
-            ClearPreview("暂无工件或未选择通道");
+            ClearPreview("暂无可用工件或未选择通道");
             return;
         }
-        var item = projection.Channels.First(c => c.Definition.ChannelId == selected.ChannelId);
-        if (item.Definition.OwnerRole != projection.Role)
+        bool pinnedHistory = _pinnedWorkpieceId is not null;
+        if (pinnedHistory && projection.Production?.Recent.Any(
+                x => x.WorkpieceId == workpieceId.Value) != true)
         {
-            ClearPreview("图像属于对端 Core，请在另一台设备的窗口查看");
+            ClearPreview("历史工件不在当前 Core WAL 快照窗口内");
             return;
         }
-        if (!item.IsCurrentWorkpiece || !item.IsSimulated)
+        var channel = projection.Channels.First(c => c.Definition.ChannelId == selected.ChannelId);
+        if (!pinnedHistory && (!channel.IsCurrentWorkpiece || !channel.IsSimulated))
         {
-            ClearPreview("本工件尚未采集此通道的 OpenCV 图像");
+            ClearPreview("本工件尚未采集此通道图像");
             return;
         }
-        string key = $"{projection.Workpiece.WorkpieceId:D}|{selected.ChannelId}|{item.UpdatedUtc:O}";
+        string key = $"{workpieceId:D}|{selected.ChannelId}|" +
+            (pinnedHistory ? "HISTORY" : channel.UpdatedUtc?.ToString("O"));
         if (key == _lastPreviewKey) return;
         _lastPreviewKey = key;
         int generation = ++_previewGeneration;
         SelectedPreview?.Dispose();
         SelectedPreview = null;
-        PreviewNotice = "正在经本机 Core 校验图像 SHA256...";
-        _ = FetchPreviewAsync(projection.Workpiece.WorkpieceId, selected.ChannelId,
-            projection.Role, generation);
+        PreviewNotice = "正在向对应 Core 请求并校验无损 PNG...";
+        _ = FetchPreviewAsync(workpieceId.Value, selected.ChannelId,
+            ChannelCatalog.Require(selected.ChannelId).OwnerRole, generation);
     }
 
     private async Task FetchPreviewAsync(Guid workpieceId, string channelId,
@@ -501,6 +507,7 @@ public partial class MainWindowViewModel : ObservableObject
         HoldNotice = "HOLD 状态离线 · 不允许基于旧数据放行";
         EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
+        ClearOperatorWorkspace();
         _roiSnapshotLoaded = false;
         _savedRoiDrafts.Clear();
         _roiRevision = 0;
@@ -512,6 +519,7 @@ public partial class MainWindowViewModel : ObservableObject
     public void Stop()
     {
         _shutdown.Cancel();
+        StopOperatorWorkspace();
         ClearPreview("窗口已关闭");
     }
 }

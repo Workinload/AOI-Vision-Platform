@@ -120,6 +120,7 @@ public sealed class SolutionRepository
         var manifest = new ReleaseManifest(solutionId, profile.ProfileId, profile.Version,
             profile.CatalogSha256, stations).Canonical();
         manifest.Validate();
+        foreach (var station in manifest.Stations) RoiReleaseWorkflow.ValidateStationRois(station);
         var digest = SolutionSafety.Sha256(WireFormat.Serialize(manifest));
         var release = new PublishedRelease("SIMREL-" + digest[..32], digest,
             manifest, DateTimeOffset.UtcNow, actor);
@@ -152,6 +153,7 @@ public sealed class SolutionRepository
             ("$id", releaseId)) as string ?? throw new KeyNotFoundException(releaseId);
         var release = WireFormat.Parse<PublishedRelease>(json);
         release.Verify();
+        foreach (var station in release.Manifest.Stations) RoiReleaseWorkflow.ValidateStationRois(station);
         return release;
     }
 }

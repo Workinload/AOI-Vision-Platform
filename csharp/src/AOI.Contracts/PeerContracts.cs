@@ -198,6 +198,38 @@ public sealed record RoiDraftState(
 public sealed record RoiDraftSaveRequest(RoiDraftEdit Edit, string AccessToken);
 public sealed record RoiDraftSaveReply(bool Accepted, string Error, RoiDraftState? Saved);
 
+/// <summary>Read-only SIM_FULL station motion + per-item A1 progress, not physical PLC state.</summary>
+public sealed record SimConveyorItem(
+    Guid WorkpieceId, ushort Token, string Barcode, string StationId,
+    bool SensorTriggered, int CapturedChannels, int CompletedStations,
+    string Phase, bool ReadyForExit);
+
+public sealed record SimConveyorOverview(
+    long Tick, int LoadedCount, int ExitedCount,
+    IReadOnlyList<SimConveyorItem> Active,
+    IReadOnlyList<string> StuckSensors)
+{
+    public void Validate()
+    {
+        if (Tick < 0 || LoadedCount < 0 || ExitedCount < 0 || ExitedCount > LoadedCount ||
+            Active is null || StuckSensors is null || Active.Count > 8 ||
+            LoadedCount - ExitedCount < Active.Count ||
+            Active.Select(x => x.Token).Distinct().Count() != Active.Count ||
+            Active.Select(x => x.WorkpieceId).Distinct().Count() != Active.Count ||
+            Active.Any(x => x.WorkpieceId == Guid.Empty || x.Token == 0 ||
+                string.IsNullOrWhiteSpace(x.Barcode) ||
+                string.IsNullOrWhiteSpace(x.Phase) ||
+                x.CapturedChannels is < 0 or > 11 ||
+                x.CompletedStations is < 0 or > 7 ||
+                !new[] { "LOADING", "ST03", "ST04", "ST05", "ST06", "ST09", "ST10", "ST11" }
+                    .Contains(x.StationId, StringComparer.Ordinal)) ||
+            StuckSensors.Distinct(StringComparer.Ordinal).Count() != StuckSensors.Count ||
+            StuckSensors.Any(x => !new[] { "LOADING", "ST03", "ST04", "ST05",
+                 "ST06", "ST09", "ST10", "ST11" }.Contains(x, StringComparer.Ordinal)))
+            throw new InvalidDataException("Invalid SIM_ONLY mechanical/progress IPC.");
+    }
+}
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
@@ -208,4 +240,5 @@ public sealed record MachineSnapshot(string NodeId, MachineRole Role, string Mac
     public WorkpieceHoldOverview? Holds { get; init; }
     public SimActiveProductSnapshot? ActiveProduct { get; init; }
     public IReadOnlyList<RoiDraftState>? RoiDrafts { get; init; }
+    public SimConveyorOverview? Conveyor { get; init; }
 }

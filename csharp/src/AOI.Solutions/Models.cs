@@ -125,6 +125,7 @@ public sealed record PublishedRelease(
     public void Verify()
     {
         Manifest.Validate();
+        foreach (var station in Manifest.Stations) RoiReleaseWorkflow.ValidateStationRois(station);
         var digest = SolutionSafety.Sha256(WireFormat.Serialize(Manifest.Canonical()));
         if (!string.Equals(ContentSha256, digest, StringComparison.Ordinal) ||
             !string.Equals(ReleaseId, "SIMREL-" + digest[..32], StringComparison.Ordinal))

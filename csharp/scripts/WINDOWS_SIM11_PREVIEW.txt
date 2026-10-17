@@ -85,3 +85,37 @@ Keep the sim-config.sqlite evidence if archiving a simulated run.
 Configuration endpoints 127.0.0.1:19641 and :19642 use a short-lived session
 token, are not an industrial authentication mechanism and must not be exposed
 over a network.
+
+
+REAL OPERATOR PNG INPUT (SIM_ONLY / native OpenCvSharp)
+Set AOI_SIM_IMAGE_ROOT to a folder of actual 8-bit PNG images BEFORE invoking
+Launch-SIMFULL.cmd. Use AOI_SIM_IMAGE_LAYOUT=FLAT for a single operator sample
+set: CH01.png, CH02.png, CH03.png, CH04.png, CH05.png, CH06.png, CH07.png,
+LINE-S-8.png and LINE-M-2.png. Without FLAT, each separate workpiece requires
+a folder named after its newly assigned WorkpieceId in N format; this is mainly
+for API-driven offline replay, not normal conveyor sessions.
+Master/Slave load and inspect real PNG bytes, contour defects produce real NG,
+missing input fails closed rather than silently switching to synthetic GOOD.
+The two line-camera parent PNGs split by exact even/odd row parity. All input
+and annotations remain offline, no camera SDK or PLC writes.
+VisionLab/AOI.Vision.Cli.exe runs standalone image inspection and creates
+annotated PNG + report.html. Run with --help for exact options.
+Only published A6 ROI data is applied during the NEXT SIM_FULL run; GUI ROI
+drafts by themselves never modify currently running inspections.
+
+
+ONE-CLICK SIM_ONLY INSPECTION OF YOUR OWN PNGs
+
+Extract the entire Windows ZIP. Put these NINE actual 8-bit PNG images in one
+folder: CH01.png ... CH07.png, LINE-S-8.png, LINE-M-2.png.
+Drag that FOLDER onto Launch-SIMFULL-Images.cmd, or double-click it and enter
+the folder path when prompted. The script confirms file names and launches
+the existing five-process virtual conveyor with AOI_SIM_IMAGE_ROOT+FLAT.
+Use NEW empty sim-full-data for each independent run (archive old evidence).
+The UI map/gallery shows real Core-verified frames; CH06 NG will cause simulated
+REJECT, not false GOOD, for a real contour defect meeting current threshold.
+Line scan uses parent image even/odd row splitting. This is offline inspection
+and does not connect physical cameras or PLC outputs.
+For inspecting arbitrary images one at a time without launching a conveyor,
+run VisionLab/AOI.Vision.Cli.exe --help.
+

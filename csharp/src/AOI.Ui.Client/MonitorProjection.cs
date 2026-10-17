@@ -18,6 +18,7 @@ public sealed record MonitorProjection(
     public WorkpieceHoldOverview? Holds { get; init; }
     public SimActiveProductSnapshot? ActiveProduct { get; init; }
     public IReadOnlyList<RoiDraftState>? RoiDrafts { get; init; }
+    public SimConveyorOverview? Conveyor { get; init; }
 
     public static MonitorProjection Offline(MachineRole role) => new(
         role == MachineRole.Master ? "master" : "slave", role, "IPC_OFFLINE", "SIM_ONLY",
@@ -47,6 +48,9 @@ public sealed record MonitorProjection(
         snapshot.PlcEngineering?.Validate();
         snapshot.Holds?.Validate();
         snapshot.ActiveProduct?.Validate();
+        snapshot.Conveyor?.Validate();
+        if (expectedRole == MachineRole.Slave && snapshot.Conveyor is not null)
+            throw new InvalidDataException("Remote Slave cannot claim Master mechanical movement.");
         if (snapshot.RoiDrafts is { } drafts)
         {
             if (drafts.Count > 11 ||
@@ -89,7 +93,8 @@ public sealed record MonitorProjection(
             PlcEngineering = snapshot.PlcEngineering,
             Holds = snapshot.Holds,
             ActiveProduct = snapshot.ActiveProduct,
-            RoiDrafts = snapshot.RoiDrafts
+            RoiDrafts = snapshot.RoiDrafts,
+            Conveyor = snapshot.Conveyor
         };
     }
 }
