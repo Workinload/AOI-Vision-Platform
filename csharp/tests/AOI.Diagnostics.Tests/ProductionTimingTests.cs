@@ -256,9 +256,10 @@ public sealed class ProductionTimingTests
         var destination = new IPEndPoint(IPAddress.Loopback, port);
         var plc = new VirtualPlc();
         using var deadline = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-        async Task<byte[]> Exchange(byte[] packet)
+        async Task<byte[]> Exchange(byte[] packet, Action? afterSend = null)
         {
             await client.SendAsync(packet, destination, deadline.Token);
+            afterSend?.Invoke();
             var received = await server.ReceiveAsync(deadline.Token);
             var response = plc.Handle(received.Buffer);
             Assert.That(response, Is.Not.Empty);
@@ -272,10 +273,10 @@ public sealed class ProductionTimingTests
 
         Guid cap = Guid.NewGuid(), op = Guid.NewGuid();
         byte[] readRequest = FinsDm.Request(false, 1011, new ushort[] { 0 }, 31);
-        journal.Append(new TimingObservation(item, TimingStage.FinsReadSent,
-            cap, Device, Channel, 1, OperationId: op,
-            PlcDmAddress: Address, FinsSid: 31));
-        byte[] readResponse = await Exchange(readRequest);
+        byte[] readResponse = await Exchange(readRequest, afterSend: () =>
+            journal.Append(new TimingObservation(item, TimingStage.FinsReadSent,
+                cap, Device, Channel, 1, OperationId: op,
+                PlcDmAddress: Address, FinsSid: 31)));
         var words = FinsDm.DecodeResponse(readRequest, readResponse);
         Assert.That(words, Is.EqualTo(new ushort[] { 1 }));
         journal.Append(new TimingObservation(item, TimingStage.FinsReadCompleted,
