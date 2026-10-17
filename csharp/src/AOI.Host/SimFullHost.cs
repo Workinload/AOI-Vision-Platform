@@ -3,6 +3,7 @@ using AOI.Domain;
 using AOI.Runtime;
 using AOI.Runtime.Plc;
 using AOI.Runtime.Plc.Mechanics;
+using AOI.Runtime.Agent01;
 using System.Net;
 using System.Net.Sockets;
 
@@ -217,6 +218,10 @@ public static class SimFullHost
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
         var interlock = new HostPeerInterlock(folder);
+        using var outputJournal = legacyFins is null ? null :
+            new FinalPlcOutputJournal(Path.Combine(folder, "final-plc-output.db"));
+        var journaledOutput = outputJournal is null ? null :
+            new LegacyJournaledFinalOutput(legacyFins!, outputJournal, interlock);
         _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
@@ -245,7 +250,8 @@ public static class SimFullHost
             // NEVER create another production loop or replay unknown PLC writes.
             Task? production = readonlySession ? null :
                 PollAsync(store, ledger, fins, legacyFins, physicalCapture,
-                    folder, bootNonce, product, bridge, linked.Token);
+                    journaledOutput, interlock, folder, bootNonce, product,
+                    bridge, linked.Token);
             Console.WriteLine(readonlySession
                 ? "SIM_FULL_MASTER_PEER_READONLY_RECONNECTED no_plc_writes=1 no_capture_retry=1"
                 : "SIM_FULL_MASTER_PEER_CONNECTED");
@@ -291,6 +297,7 @@ public static class SimFullHost
                 ex is IOException or SocketException)
             {
                 linked.Cancel(); // freeze PLC and station capture immediately
+                outputJournal?.MarkDisconnected("PEER_LINK_LOST");
                 interlock.Latch("PEER_LINK_LOST", ex.ToString());
                 Console.Error.WriteLine(
                     "SIM_FULL_MASTER_PEER_INTERLOCK_HOLD no_plc_writes=1 " +
@@ -314,7 +321,9 @@ public static class SimFullHost
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
         FinsSimClient fins, LegacyFinsLoopbackClient? legacyFins,
-        LegacyPhysicalCapture? physicalCapture, string folder,
+        LegacyPhysicalCapture? physicalCapture,
+        LegacyJournaledFinalOutput? journaledOutput,
+        HostPeerInterlock interlock, string folder,
         uint bootNonce, SimProductRuntime product, SimProductionBridge bridge,
         CancellationToken ct)
     {
@@ -322,6 +331,17 @@ public static class SimFullHost
         var exited = new HashSet<ushort>();
         while (!ct.IsCancellationRequested)
         {
+            if (interlock.IsLatched())
+            {
+                // PLC effect is no longer provably known. Keep PeerLink metadata
+                // and both IPC windows alive, but NO further loading, exposure,
+                // final output or ejection until authorized reconciliation.
+                Console.Error.WriteLine(
+                    "SIM_FULL_MASTER_OUTPUT_INTERLOCK_HOLD no_plc_writes=1 " +
+                    "manual_reconciliation=1");
+                await Task.Delay(Timeout.InfiniteTimeSpan, ct);
+                return;
+            }
             // Detect restart of the in-memory mechanical queue, even with an
             // unchanged token sequence. A new boot must not borrow old WorkpieceIds.
             var nonce = await fins.ReadAsync(4007, 2, ct);
