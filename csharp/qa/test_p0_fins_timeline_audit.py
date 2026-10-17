@@ -33,7 +33,10 @@ def sample_packet(write, address, words, sid, reply_words=(), end_code=0):
     return bytes(request), bytes(response)
 
 
-def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1):
+def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False):
+    address = 1013 if line else 1011
+    device = "LINE-S-8" if line else "HIK-M-2"
+    channels = ["CH08", "CH09"] if line else ["CH06"]
     wire, sequence = [], 0
     def tx(address, write=False, words=(), reply=(), end=0):
         nonlocal sequence
@@ -46,10 +49,10 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1):
                     outcome="OK" if not end else "REJECTED_TEST")
         wire.append(item)
         return item
-    tx(4300, True, (token, 1011))
-    tx(1011, reply=(1,))
-    ack = tx(1011, True, (3 if result == "MISSING" else 2,))
-    tx(1011, reply=(3 if result == "MISSING" else 2,))
+    tx(4300, True, (token, address))
+    tx(address, reply=(1,))
+    ack = tx(address, True, (3 if result == "MISSING" else 2,))
+    tx(address, reply=(3 if result == "MISSING" else 2,))
     if scenario is not None:
         mode = {"NORMAL_GOOD": 0, "NORMAL_NG": 0,
                 "SCAN_FAILED": 1, "BARCODE_MISMATCH": 2}[scenario]
@@ -68,31 +71,38 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1):
     frame = str(uuid.uuid4())
     process = str(uuid.uuid4())
     spec = dict(token=token, workpieceId=workpiece, captureId=capture,
-                physicalDeviceId="HIK-M-2", channelId="CH06",
-                cameraAddress=1011, ordering=order, result=result)
+                physicalDeviceId=device, channelId=channels[0],
+                cameraAddress=address, ordering=order, result=result)
+    if line:
+        spec["channelIds"] = channels
     if scenario:
         spec["scenario"] = scenario
     events = []
     def event(stage, tick, **extra):
         payload = dict(workpieceId=workpiece, captureId=capture,
-                       physicalDeviceId="HIK-M-2", attemptNo=1,
+                       physicalDeviceId=device, attemptNo=1,
                        processRunId=process, monotonicTick=tick,
                        stage=stage, **extra)
         events.append(payload)
     if order == "FRAME_FIRST" and result != "MISSING":
         event("FrameArrived", 10, frameId=frame)
-        event("PlcCaptureRequestObserved", 20, plcDmAddress="D1011", plcValue=1)
+        event("PlcCaptureRequestObserved", 20, plcDmAddress=f"D{address}", plcValue=1)
     else:
-        event("PlcCaptureRequestObserved", 10, plcDmAddress="D1011", plcValue=1)
+        event("PlcCaptureRequestObserved", 10, plcDmAddress=f"D{address}", plcValue=1)
         if result != "MISSING":
             event("FrameArrived", 20, frameId=frame)
     if result == "MISSING":
         event("CaptureTimedOut", 30)
-        event("CamDoneAcknowledged", 40, plcDmAddress="D1011", plcValue=3, finsSid=ack["sid"])
+        event("CamDoneAcknowledged", 40, plcDmAddress=f"D{address}", plcValue=3, finsSid=ack["sid"])
     else:
         event("FrameReady", 30, frameId=frame)
-        event("CamDoneAcknowledged", 40, plcDmAddress="D1011", plcValue=2, finsSid=ack["sid"])
-        event("InspectionCompleted", 50, frameId=frame, channelId="CH06", status=result)
+        event("CamDoneAcknowledged", 40, plcDmAddress=f"D{address}", plcValue=2, finsSid=ack["sid"])
+        if line:
+            for index, name in enumerate(channels):
+                event("InspectionCompleted", 50 + index, frameId=str(uuid.uuid4()),
+                      channelId=name, status=result, details=f"result=unit; parentFrame={frame}")
+        else:
+            event("InspectionCompleted", 50, frameId=frame, channelId=channels[0], status=result)
     return wire, events, [spec]
 
 
@@ -115,6 +125,30 @@ class FinsCausalAuditTests(unittest.TestCase):
             with self.subTest(scenario=scenario):
                 wire, events, cases = fixture(scenario=scenario)
                 self.assertEqual(verify_evidence(wire, events, cases)["end_sequences"], 1)
+
+    def test_one_line_scan_parent_produces_two_distinct_children_one_ack(self):
+        wire, events, cases = fixture(line=True)
+        report = verify_evidence(wire, events, cases)
+        self.assertEqual(report["physical_capture_ack"], 1)
+        self.assertEqual(sum(x["stage"] == "InspectionCompleted" for x in events), 2)
+
+    def test_line_scan_missing_second_channel_is_not_silent_success(self):
+        wire, events, cases = fixture(line=True)
+        events.pop()
+        self.check_failure(wire, events, cases, "CHANNEL_FANOUT_MISMATCH")
+
+    def test_line_scan_wrong_parent_frame_is_not_allowed(self):
+        wire, events, cases = fixture(line=True)
+        child = next(x for x in events if x["stage"] == "InspectionCompleted")
+        child["details"] = "parentFrame=" + str(uuid.uuid4())
+        self.check_failure(wire, events, cases, "LINE_PARENT_FRAME_MISMATCH")
+
+    def test_same_frame_id_on_another_workpiece_is_rejected(self):
+        wire, events, cases = fixture()
+        source = next(x for x in events if x["stage"] == "FrameArrived")
+        events.append(dict(source, workpieceId=str(uuid.uuid4()),
+                           captureId=str(uuid.uuid4())))
+        self.check_failure(wire, events, cases, "CROSS_WORKPIECE_FRAME_REUSE")
 
     def test_missing_image_cannot_appear_as_camdone_two(self):
         wire, events, cases = fixture(result="MISSING")
