@@ -289,70 +289,60 @@ function Click-Workspace([IntPtr]$Window,[int]$Index) {
     return $method
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
-    # FindFirst narrows native UIAutomation traversal: FindAll(Text) across 11
-    # tiles + PLC table occasionally returns provider COM E_FAIL on Windows.
-    # A real Windows mouse event still selects the target; the subsequent
-    # node-owned Core ROI revision check proves the correct channel was chosen.
+    # Target right-side ROI editor of the CURRENT six-page workbench.
     $filter=[Windows.Automation.AndCondition]::new(@(
         [Windows.Automation.PropertyCondition]::new(
-            [Windows.Automation.AutomationElement]::ControlTypeProperty,
-            [Windows.Automation.ControlType]::Text),
+            [Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Text),
         [Windows.Automation.PropertyCondition]::new(
             [Windows.Automation.AutomationElement]::NameProperty,$Id)
     ))
     for($attempt=1;$attempt -le 5;$attempt++) {
         try {
             $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-            $nameElement=$root.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
-            if($null -eq $nameElement) { throw ("No actual Text peer for "+$Id) }
-            $win=New-Object AoiRect
-            if(-not [AoiWin]::GetWindowRect($Window,[ref]$win)) {
-                throw 'Target GUI window disappeared'
+            $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品方案与 ROI'
+            $label=$tab.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
+            if($null -eq $label){
+                $label=$root.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
             }
-            $labelX=$nameElement.Current.BoundingRectangle.Left
-            if($labelX -gt $win.Left+($win.Right-$win.Left)*0.65) {
-                throw ("CHxx match appears in PLC table rather than left equipment map: "+$Id)
-            }
-            Click-Element $Window $nameElement
+            if($null -eq $label){throw ("ROI channel text unavailable: "+$Id)}
+            Click-Element $Window $label
+            Start-Sleep -Milliseconds 260
             return
         } catch {
-            if($attempt -eq 5) { throw }
-            Start-Sleep -Milliseconds (190*$attempt)
+            if($attempt -eq 5){throw}
+            Start-Sleep -Milliseconds (200*$attempt)
         }
     }
 }
 function Click-RoiSave([IntPtr]$Window) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-    $edits=Elements $root ([Windows.Automation.ControlType]::Edit)
-    $visible=@()
-    foreach($e in $edits) {
-        if($e.Current.BoundingRectangle.Width -gt 25) { $visible+= $e }
+    $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品方案与 ROI'
+    $edits=Elements $tab ([Windows.Automation.ControlType]::Edit)
+    if($edits.Count -lt 4) {
+        # Avalonia's selected ContentPresenter may be a sibling of TabItem.
+        $edits=Elements $root ([Windows.Automation.ControlType]::Edit)
     }
-    if($visible.Count -lt 4) { throw 'Four ROI edit controls are not exposed to Windows UI Automation' }
-    $fields=@($visible | Sort-Object { $_.Current.BoundingRectangle.Top }, { $_.Current.BoundingRectangle.Left } | Select-Object -Last 4)
+    $usable=@()
+    foreach($el in $edits){
+        if($el.Current.BoundingRectangle.Width -gt 26){$usable+=$el}
+    }
+    if($usable.Count -lt 4){throw 'Four real ROI text editors not present on product/ROI page'}
+    $fields=@($usable | Sort-Object { $_.Current.BoundingRectangle.Top }, { $_.Current.BoundingRectangle.Left } | Select-Object -Last 4)
     $fields=@($fields | Sort-Object { $_.Current.BoundingRectangle.Left })
     $values=@('0.15','0.15','0.70','0.70')
     for($i=0;$i -lt 4;$i++) {
-        $el=$fields[$i]
-        Click-Element $Window $el
+        Click-Element $Window $fields[$i]
         try {
-            $pattern=$el.GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
-            $pattern.SetValue($values[$i])
+            $value=$fields[$i].GetCurrentPattern([Windows.Automation.ValuePattern]::Pattern)
+            $value.SetValue($values[$i])
         } catch {
             [Windows.Forms.SendKeys]::SendWait('^a')
             [Windows.Forms.SendKeys]::SendWait($values[$i])
         }
     }
-    $buttons=Elements $root ([Windows.Automation.ControlType]::Button)
-    foreach($button in $buttons) {
-        if($button.Current.Name -like '*校验并保存本机 ROI 草稿*') {
-            Click-Element $Window $button
-            return
-        }
-    }
-    throw 'ROI save button not clickable'
+    $button=Find-UIA $root ([Windows.Automation.ControlType]::Button) '校验并持久保存 SIM_ONLY ROI 草稿'
+    Click-Element $Window $button
 }
-
 try {
     if($env:OS -ne 'Windows_NT') { throw 'Windows x64 native desktop required (not headless/Linux)' }
     if(Test-Path -LiteralPath $script:evidence) {
