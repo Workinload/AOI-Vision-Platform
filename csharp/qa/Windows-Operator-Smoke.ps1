@@ -399,6 +399,34 @@ public static class AoiWin {
         $report.processIds[$k]=$script:processes[$k].Id
     }
     ($report | ConvertTo-Json -Depth 12) | Set-Content -LiteralPath (Join-Path $script:evidence 'operator-smoke-report.json') -Encoding UTF8
+
+    $failedActions=@($script:checks | Where-Object { $_.status -eq 'FAIL' })
+    if($failedActions.Count -gt 0) {
+        $issue=@(
+            '# [Agent05][Windows Native Desktop] Operator action did not pass',
+            '',
+            'Environment: Windows x64 interactive SIM_ONLY; source package SHA256: '+$script:sourceHash,
+            'EvidenceRoot: '+$script:evidence,
+            '',
+            '## Repro',
+            'Extract current Windows ZIP, double-click Run-Windows-Operator-Smoke.cmd.',
+            'The script starts five native EXEs, checks 5x11 simulation and clicks actual UI controls.',
+            '',
+            '## Failed steps'
+        )
+        foreach($row in $failedActions) {
+            $issue += ('- '+$row.step+' : '+$row.detail)
+        }
+        $issue += @(
+            '',
+            '## Attach after privacy review',
+            'operator-smoke-report.json, master/slave screenshots, console stdout/stderr logs and sqlite-evidence.zip.',
+            'Do not misreport Headless IPC as a real desktop click PASS.',
+            'Route visual element naming problems to Agent04; Host/IPC to A0; native Windows packaging to A0/A5.'
+        )
+        $issue | Set-Content -LiteralPath (Join-Path $script:evidence 'operator-failure-issue.md') -Encoding UTF8
+    }
+
     if(-not $KeepRunning) {
         foreach($p in $script:processes.Values) {
             try { if(-not $p.HasExited) { [void]$p.CloseMainWindow() } } catch {}
