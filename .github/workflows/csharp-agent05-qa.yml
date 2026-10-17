@@ -100,17 +100,21 @@ jobs:
           test -f .artifacts/dist/AOI_SIM11_Windows/VisionLab/AOI.Vision.Cli.exe
           dotnet .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.dll verify .artifacts/qa-11channels/diagnostics/evidence.zip
           echo 'AOI_WIN_SIM11_PACKAGE_PASS host=1 ui=1 diagnostics=1 redacted_bundle_verified=1'
-      - name: Attempt real native Windows desktop click and screenshot smoke
+      - name: Real Windows six-page mouse navigation and dual-Core ROI operation
         if: matrix.os == 'windows-2025'
         shell: pwsh
-        continue-on-error: true
         run: |
           powershell.exe -NoLogo -NoProfile -File qa/Windows-Operator-Smoke.ps1 -PackageRoot .artifacts/dist/AOI_SIM11_Windows -EvidenceRoot .artifacts/windows-operator-smoke -TimeoutSeconds 110 -TryCi1080p
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host 'A5_WINDOWS_DESKTOP_NOT_VERIFIED: inspect report and screenshots; hosted runner may lack interactive session'
+          $operatorExit = $LASTEXITCODE
+          if ($operatorExit -eq 3) {
+            Write-Warning 'A5_NATIVE_GUI_OPERATION_PASS: two real desktops, 12 mouse navigations and dual-Core ROI are verified; hosted 1920x1080 visual readability remains NOT_VERIFIED'
+            exit 0
+          }
+          if ($operatorExit -ne 0) {
+            Write-Host ('A5_NATIVE_GUI_OPERATION_FAIL: actual EXE workflow returned code '+$operatorExit+'; see dedicated desktop screenshot/report artifact')
             exit 1
           }
-          Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS actual UI windows, mouse clicks, SQLite and PNG evidence'
+          Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS: real native six-page GUI and 1080p evidence'
       - name: Upload Windows x64 SIM_ONLY preview package
         if: matrix.os == 'windows-2025'
         uses: actions/upload-artifact@v4
