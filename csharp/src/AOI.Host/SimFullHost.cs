@@ -460,12 +460,13 @@ public static class SimFullHost
                         // abnormal scanner reply needs the historic *reverse* FINS
                         // sequence; it does NOT authorize FIFO D4003 ejection.
                         held.Add(exit);
-                        if (legacyFins is not null && (scanFailure || scanMismatch))
+                        if (journaledOutput is not null && (scanFailure || scanMismatch))
                         {
                             try
                             {
-                                await LegacyShadowHostBridge.WriteAbnormalFinalAsync(
-                                    legacyFins, exit, abnormal, item.Barcode, ct);
+                                await journaledOutput.WriteFinalAsync(
+                                    store, item, exit, abnormal,
+                                    FinalDisposition.Reject, ct);
                             }
                             catch (LegacyOutputIncompleteException ex) when (!ct.IsCancellationRequested)
                             {
@@ -496,12 +497,32 @@ public static class SimFullHost
                         store.StoreFinal(item, decision);
                         bridge.FinalPersisted(item.WorkpieceId, decision);
                         ushort command = decision.Disposition == FinalDisposition.Good ? (ushort)1 : (ushort)2;
-                        // In the opt-in legacy profile, this is a real TWO-write FINS
-                        // handshake. D4003 remains only the simulator FIFO commit.
-                        // A lost ACK/readback is deliberately fatal; never auto-redrive.
-                        if (legacyFins is not null)
-                            await LegacyShadowHostBridge.WriteNormalFinalAsync(
-                                legacyFins, exit, decision.Disposition, ct);
+                        // A1 fsyncs an exclusive one-time claim BEFORE each
+                        // actual A2 FINS send. The second write is forbidden
+                        // until the first SID ACK AND readback are committed.
+                        // A possibly-applied write is UNKNOWN and never retried.
+                        if (journaledOutput is not null)
+                        {
+                            try
+                            {
+                                await journaledOutput.WriteFinalAsync(
+                                    store, item, exit, LegacyExitScenario.Normal,
+                                    decision.Disposition, ct);
+                            }
+                            catch (LegacyOutputIncompleteException ex) when (!ct.IsCancellationRequested)
+                            {
+                                // Final quality is an immutable detection decision,
+                                // NOT proof of physical output. Host-wide interlock
+                                // freezes future side effects; do not issue D4003.
+                                held.Add(exit);
+                                Console.Error.WriteLine(
+                                    "SIM_FULL_NORMAL_OUTPUT_UNCERTAIN token=" + exit +
+                                    " workpiece=" + item.WorkpieceId +
+                                    " confirmed_steps=" + ex.ConfirmedSteps.Count +
+                                    " manual_reconciliation=1 no_automatic_retry=1");
+                                continue;
+                            }
+                        }
                         await EnsureNonceAsync(fins, bootNonce, ct);
                         await fins.WriteAsync(SimFullVirtualPlc.ExitDecisionAddress, exit, command);
                         ledger.MarkExited(exit, decision);
