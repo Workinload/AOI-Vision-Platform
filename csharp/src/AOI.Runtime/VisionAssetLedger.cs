@@ -60,6 +60,31 @@ public static class VisionPixelOps
         return new PixelProbe(mean.Val0, deviation.Val0,
             Cv2.CountNonZero(mask) / ((double)gray.Rows * gray.Cols), gray.Cols, gray.Rows);
     }
+
+    /// <summary>Extract one logical line-camera channel by row parity, never by rectangle crop.</summary>
+    public static Mat ExtractInterleavedRows(Mat parent, int parity)
+    {
+        RequireSupported(parent, lineScan: true);
+        if (parity is not (0 or 1) || parent.Rows < 2)
+            throw new ArgumentOutOfRangeException(nameof(parity),
+                "Interleaved line camera requires at least two rows and parity 0 or 1.");
+        int height = (parent.Rows + 1 - parity) / 2;
+        var child = new Mat(height, parent.Cols, MatType.CV_8UC1);
+        try
+        {
+            int sourceHeight = parent.Rows;
+            var sourceRows = parent.AsRows<byte>();
+            var destinationRows = child.AsRows<byte>();
+            for (int y = parity; y < sourceHeight; y += 2)
+                sourceRows[y].CopyTo(destinationRows[y / 2]);
+            return child;
+        }
+        catch
+        {
+            child.Dispose();
+            throw;
+        }
+    }
 }
 
 /// <summary>
@@ -70,7 +95,8 @@ public sealed record VisionAsset(
     Guid FrameId, Guid WorkpieceId, Guid TraceId, long Epoch, string ReleaseId,
     Guid CaptureId, string PhysicalDeviceId, string? ChannelId, Guid? ParentFrameId,
     int AttemptNo, int Width, int Height, string ContentSha256, string SourceFrameSha256,
-    string RelativePath, ImageRegion? ParentRoi, DateTimeOffset CapturedUtc, bool IsSimulation);
+    string RelativePath, ImageRegion? ParentRoi, DateTimeOffset CapturedUtc, bool IsSimulation,
+    string? PixelTransform = null);
 
 public sealed record VisionLedgerStats(long Assets, long AreaFrames, long LineParents,
     long LineChildren, long Workpieces, long StoredBytes, long ChannelResults);
@@ -155,6 +181,23 @@ public sealed class VisionAssetLedger
         return Persist(item, [(frame, pixels)], simRule)[0];
     }
 
+    /// <summary>Commit the actual pixels with a result computed by the A3 OpenCV detector.</summary>
+    public ChannelResult CaptureAreaDetected(WorkpieceIdentity item, string channelId,
+        Mat pixels, ChannelOutcome outcome, int attemptNo = 1)
+    {
+        item.Validate();
+        var channel = ChannelCatalog.Require(channelId);
+        if (channel.SharedFrameGroup is not null)
+            throw new ArgumentException("Line-scan channel requires shared parent.", nameof(channelId));
+        ValidateCapture(pixels, attemptNo, rule: null, lineScan: false);
+        RequireDetectedOutcome(outcome);
+        var captureId = Guid.NewGuid();
+        var frame = NewAsset(item, channel.PhysicalDeviceId, channelId, captureId,
+            Guid.NewGuid(), null, attemptNo, pixels, null);
+        return Persist(item, [(frame, pixels)], null,
+            new Dictionary<string, ChannelOutcome>(StringComparer.Ordinal) { [channelId] = outcome })[0];
+    }
+
     /// <summary>
     /// Save ONE unchanged line-scan parent and TWO lossless, configured ROI crops atomically
     /// in the WAL metadata. No implicit geometry, approximate interpolation or fake cameras.
@@ -191,6 +234,50 @@ public sealed class VisionAssetLedger
         return Persist(item, [(parentAsset, parent), (childA, first), (childB, second)], simRule);
     }
 
+    /// <summary>
+    /// Extract row 0/2/4/... into the first mapped channel and 1/3/5/... into the second;
+    /// retain the immutable complete parent and verify pixel-exact parity upon readback.
+    /// </summary>
+    public IReadOnlyList<ChannelResult> CaptureLineInterleaved(WorkpieceIdentity item,
+        string sharedFrameGroup, Mat parent, int attemptNo = 1,
+        IReadOnlyDictionary<string, ChannelOutcome>? detectedOutcomes = null)
+    {
+        item.Validate();
+        ArgumentException.ThrowIfNullOrWhiteSpace(sharedFrameGroup);
+        ValidateCapture(parent, attemptNo, rule: null, lineScan: true);
+        var channels = ChannelCatalog.All.Where(c =>
+            string.Equals(c.SharedFrameGroup, sharedFrameGroup, StringComparison.Ordinal))
+            .OrderBy(c => c.ChannelId, StringComparer.Ordinal).ToArray();
+        if (channels.Length != 2 || channels[0].PhysicalDeviceId != channels[1].PhysicalDeviceId ||
+            channels[0].StationId != channels[1].StationId || channels[0].OwnerRole != channels[1].OwnerRole)
+            throw new ArgumentException("Unknown or invalid two-channel line-scan group.", nameof(sharedFrameGroup));
+        if (detectedOutcomes is not null)
+        {
+            if (detectedOutcomes.Count != 2 ||
+                channels.Any(c => !detectedOutcomes.TryGetValue(c.ChannelId, out var verdict) ||
+                                  verdict is not (ChannelOutcome.Ok or ChannelOutcome.Ng or ChannelOutcome.Uncertain)))
+                throw new ArgumentException("Missing or unknown line channel detection outcome.",
+                    nameof(detectedOutcomes));
+        }
+        using var even = VisionPixelOps.ExtractInterleavedRows(parent, 0);
+        using var odd = VisionPixelOps.ExtractInterleavedRows(parent, 1);
+        var captureId = Guid.NewGuid();
+        var parentId = Guid.NewGuid();
+        var asset = NewAsset(item, channels[0].PhysicalDeviceId, null,
+            captureId, parentId, null, attemptNo, parent, null);
+        var first = NewAsset(item, channels[0].PhysicalDeviceId, channels[0].ChannelId,
+            captureId, Guid.NewGuid(), parentId, attemptNo, even, null, "interleaved-even-rows");
+        var second = NewAsset(item, channels[1].PhysicalDeviceId, channels[1].ChannelId,
+            captureId, Guid.NewGuid(), parentId, attemptNo, odd, null, "interleaved-odd-rows");
+        return Persist(item, [(asset, parent), (first, even), (second, odd)], null, detectedOutcomes);
+    }
+
+    private static void RequireDetectedOutcome(ChannelOutcome outcome)
+    {
+        if (outcome is not (ChannelOutcome.Ok or ChannelOutcome.Ng or ChannelOutcome.Uncertain))
+            throw new ArgumentOutOfRangeException(nameof(outcome), "Only an actual A3 detection result can be persisted.");
+    }
+
     private static void ValidateCapture(Mat pixels, int attemptNo, SimPixelRule? rule, bool lineScan)
     {
         VisionPixelOps.RequireSupported(pixels, lineScan);
@@ -199,11 +286,12 @@ public sealed class VisionAssetLedger
     }
 
     private static VisionAsset NewAsset(WorkpieceIdentity item, string device, string? channel,
-        Guid captureId, Guid frameId, Guid? parentId, int attempt, Mat pixels, ImageRegion? roi) =>
+        Guid captureId, Guid frameId, Guid? parentId, int attempt, Mat pixels, ImageRegion? roi,
+        string? transform = null) =>
         new(frameId, item.WorkpieceId, item.TraceId, item.Epoch, item.ReleaseId,
             captureId, device, channel, parentId, attempt, pixels.Cols, pixels.Rows,
             string.Empty, string.Empty, RelativeName(item.WorkpieceId, frameId), roi,
-            DateTimeOffset.UtcNow, IsSimulation: true);
+            DateTimeOffset.UtcNow, IsSimulation: true, PixelTransform: transform);
 
     private static string RelativeName(Guid workpiece, Guid frame) =>
         Path.Combine("objects", workpiece.ToString("N"), frame.ToString("N") + ".png");
@@ -211,7 +299,8 @@ public sealed class VisionAssetLedger
     private sealed record Encoded(VisionAsset Asset, long Bytes, string PendingPath);
 
     private IReadOnlyList<ChannelResult> Persist(WorkpieceIdentity item,
-        IReadOnlyList<(VisionAsset Asset, Mat Pixels)> drafts, SimPixelRule? rule)
+        IReadOnlyList<(VisionAsset Asset, Mat Pixels)> drafts, SimPixelRule? rule,
+        IReadOnlyDictionary<string, ChannelOutcome>? detectedOutcomes = null)
     {
         var encoded = new List<Encoded>(drafts.Count);
         // A line parent is the first item; all children reference exactly this parent digest.
@@ -246,7 +335,13 @@ public sealed class VisionAssetLedger
             var asset = encoded[i].Asset;
             if (asset.ChannelId is null) continue; // parent alone is not an inspection result
             var outcome = ChannelOutcome.Uncertain;
-            if (rule is not null)
+            if (detectedOutcomes is not null)
+            {
+                if (!detectedOutcomes.TryGetValue(asset.ChannelId, out outcome))
+                    throw new InvalidDataException("Missing OpenCV detection outcome for real image channel.");
+                RequireDetectedOutcome(outcome);
+            }
+            else if (rule is not null)
             {
                 var probe = VisionPixelOps.Probe(drafts[i].Pixels, rule.BrightThreshold);
                 outcome = probe.BrightFraction >= rule.MinimumBrightFraction
@@ -381,17 +476,24 @@ public sealed class VisionAssetLedger
                     parent.WorkpieceId != asset.WorkpieceId || parent.TraceId != asset.TraceId ||
                     parent.Epoch != asset.Epoch || parent.ReleaseId != asset.ReleaseId ||
                     parent.CaptureId != asset.CaptureId || parent.PhysicalDeviceId != asset.PhysicalDeviceId ||
-                    parent.ContentSha256 != asset.SourceFrameSha256 || asset.ParentRoi is null)
+                    parent.ContentSha256 != asset.SourceFrameSha256 || asset.ChannelId is null)
                     throw new InvalidDataException("Wrong line-scan parent/child identity or source hash.");
-                asset.ParentRoi.ValidateWithin(parent.Width, parent.Height);
-                if (asset.ParentRoi.Width != image.Cols || asset.ParentRoi.Height != image.Rows)
-                    throw new InvalidDataException("Line child/ROI dimension mismatch.");
                 using var original = LoadVerified(parentId);
-                using var expected = new Mat(original, asset.ParentRoi.ToRect());
+                using Mat expected = asset.PixelTransform switch
+                {
+                    null when asset.ParentRoi is not null => CropExpected(original, asset.ParentRoi),
+                    "interleaved-even-rows" when CorrectInterleavedChannel(asset, parity: 0) && asset.ParentRoi is null
+                        => VisionPixelOps.ExtractInterleavedRows(original, 0),
+                    "interleaved-odd-rows" when CorrectInterleavedChannel(asset, parity: 1) && asset.ParentRoi is null
+                        => VisionPixelOps.ExtractInterleavedRows(original, 1),
+                    _ => throw new InvalidDataException("Unsupported or mismatched parent-to-child pixel transform.")
+                };
+                if (expected.Cols != image.Cols || expected.Rows != image.Rows)
+                    throw new InvalidDataException("Line child pixel dimensions differ from source transform.");
                 using var delta = new Mat();
                 Cv2.Absdiff(image, expected, delta);
                 if (Cv2.CountNonZero(delta) != 0)
-                    throw new InvalidDataException("Child pixels do not match original parent ROI.");
+                    throw new InvalidDataException("Child pixels do not match original parent transformation.");
             }
             return image;
         }
@@ -400,6 +502,22 @@ public sealed class VisionAssetLedger
             image.Dispose();
             throw;
         }
+    }
+
+    private static Mat CropExpected(Mat parent, ImageRegion roi)
+    {
+        roi.ValidateWithin(parent.Cols, parent.Rows);
+        return new Mat(parent, roi.ToRect());
+    }
+
+    private static bool CorrectInterleavedChannel(VisionAsset child, int parity)
+    {
+        var definition = ChannelCatalog.Require(child.ChannelId!);
+        if (definition.SharedFrameGroup is null || definition.PhysicalDeviceId != child.PhysicalDeviceId)
+            return false;
+        var members = ChannelCatalog.All.Where(x => x.SharedFrameGroup == definition.SharedFrameGroup)
+            .OrderBy(x => x.ChannelId, StringComparer.Ordinal).ToArray();
+        return members.Length == 2 && members[parity].ChannelId == child.ChannelId;
     }
 
     public VisionLedgerStats Stats()
