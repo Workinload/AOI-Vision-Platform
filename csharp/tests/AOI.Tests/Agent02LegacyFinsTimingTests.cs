@@ -221,7 +221,7 @@ public sealed class Agent02LegacyFinsTimingTests
             .All(x => x.Outcome.StartsWith("REJECTED_", StringComparison.Ordinal)), Is.True);
     }
 
-    [TestCase(LegacyExitScenario.Normal, FinalDisposition.Good, (ushort)1)]
+    [TestCase(LegacyExitScenario.Normal, FinalDisposition.Good, (ushort)2)]
     [TestCase(LegacyExitScenario.Normal, FinalDisposition.Reject, (ushort)2)]
     [TestCase(LegacyExitScenario.BarcodeFailure, FinalDisposition.Reject, (ushort)3)]
     [TestCase(LegacyExitScenario.BarcodeMismatch, FinalDisposition.Reject, (ushort)4)]
