@@ -19,7 +19,8 @@ param(
     [Parameter(Mandatory=$true,ParameterSetName='Folder')][string]$PackageRoot,
     [string]$EvidenceRoot = (Join-Path $env:TEMP ('AOI_A5_WindowsSmoke_' + [guid]::NewGuid().ToString('N'))),
     [ValidateRange(30,300)][int]$TimeoutSeconds=110,
-    [switch]$KeepRunning
+    [switch]$KeepRunning,
+    [switch]$PauseForInspection
 )
 
 $ErrorActionPreference='Stop'
@@ -427,6 +428,11 @@ public static class AoiWin {
         $issue | Set-Content -LiteralPath (Join-Path $script:evidence 'operator-failure-issue.md') -Encoding UTF8
     }
 
+    if($PauseForInspection) {
+        Write-Host 'Five SIM_ONLY child processes are still running. Inspect BOTH GUI windows and screenshots.'
+        Write-Host 'Press ENTER here after inspection to cleanly stop ONLY these five child processes.'
+        try { [void](Read-Host 'Complete manual operator inspection') } catch {}
+    }
     if(-not $KeepRunning) {
         foreach($p in $script:processes.Values) {
             try { if(-not $p.HasExited) { [void]$p.CloseMainWindow() } } catch {}
