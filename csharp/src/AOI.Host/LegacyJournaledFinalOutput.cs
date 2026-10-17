@@ -1,5 +1,7 @@
 using AOI.Domain;
+using AOI.Diagnostics;
 using AOI.Runtime;
+using System.Collections.Immutable;
 using AOI.Runtime.Agent01;
 using AOI.Runtime.Plc;
 using System.Net.Sockets;
@@ -16,13 +18,16 @@ internal sealed class LegacyJournaledFinalOutput
     private readonly LegacyFinsLoopbackClient _plc;
     private readonly FinalPlcOutputJournal _journal;
     private readonly HostPeerInterlock _safety;
+    private readonly FinalOutputAuditJournal _audit;
 
     public LegacyJournaledFinalOutput(LegacyFinsLoopbackClient plc,
-        FinalPlcOutputJournal journal, HostPeerInterlock safety)
+        FinalPlcOutputJournal journal, HostPeerInterlock safety,
+        FinalOutputAuditJournal audit)
     {
         _plc = plc ?? throw new ArgumentNullException(nameof(plc));
         _journal = journal ?? throw new ArgumentNullException(nameof(journal));
         _safety = safety ?? throw new ArgumentNullException(nameof(safety));
+        _audit = audit ?? throw new ArgumentNullException(nameof(audit));
     }
 
     public async Task<LegacyOutputReceipt> WriteFinalAsync(
@@ -42,6 +47,27 @@ internal sealed class LegacyJournaledFinalOutput
             throw new InvalidOperationException(
                 "Previous final PLC intent is completed or uncertain; never replay.");
         Guid intentId = progress.Intent.IntentId;
+        // A7 is evidence, NEVER output authority. A1 has already durably
+        // reserved this WorkpieceId. Each actual A2 packet is subsequently
+        // linked to the SAME A1 ClaimId, SID and raw FINS byte hashes.
+        Guid auditAttempt;
+        try
+        {
+            var auditScenario = scenario switch
+            {
+                LegacyExitScenario.Normal => FinalOutputAuditScenario.Normal,
+                LegacyExitScenario.BarcodeFailure => FinalOutputAuditScenario.BarcodeFailure,
+                LegacyExitScenario.BarcodeMismatch => FinalOutputAuditScenario.BarcodeMismatch,
+                _ => throw new InvalidDataException("Unknown final audit scenario.")
+            };
+            auditAttempt = _audit.Begin(item, token, auditScenario, disposition);
+        }
+        catch (Exception ex)
+        {
+            _safety.Latch("FINAL_FINS_UNCERTAIN",
+                "A7 audit unavailable before final PLC output: " + ex);
+            throw new LegacyOutputIncompleteException(token, [], ex);
+        }
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
         deadline.CancelAfter(LegacyPlcTiming.HistoricalReference.EndResultDeadline);
         var budget = deadline.Token;
@@ -53,8 +79,15 @@ internal sealed class LegacyJournaledFinalOutput
             // original D2099=1/D2100 input. No production DM is written yet.
             await _plc.WriteAsync(LegacyPlcShadow.SimOfferExitAddress,
                 [token, (ushort)scenario], budget);
-            var scanRequest = await _plc.ReadAsync(
-                LegacyPlcShadow.EndRequestAddress, 1, budget);
+            // A7 accepts only the actual on-wire scanner request/reply.
+            // An invented or merely expected D2099=1 can never be recorded.
+            var scanRequest = await _plc.ReadRawObservedAsync(
+                LegacyPlcShadow.EndRequestAddress, 1, Guid.NewGuid(), evt =>
+                {
+                    if (evt.Stage == LegacyFinsObservationStage.ReadbackVerified)
+                        _audit.ScannerRequestVerified(auditAttempt, evt.OperationId,
+                            evt.RequestBytes.AsSpan(), evt.ResponseBytes.AsSpan());
+                }, budget);
             var words = await _plc.ReadAsync(
                 LegacyPlcShadow.EndBarcodeAddress, 10, budget);
             if (scanRequest.Length != 1 || scanRequest[0] != 1)
@@ -87,27 +120,75 @@ internal sealed class LegacyJournaledFinalOutput
 
         while (!budget.IsCancellationRequested)
         {
+            if (_safety.IsLatched())
+                throw new InvalidOperationException(
+                    "Hardware output interlocked before issuing next FINS claim.");
             var claim = _journal.ClaimNextWrite(intentId);
             if (claim is null) break;
             DateTimeOffset started = DateTimeOffset.UtcNow;
+            int stepNumber = claim.StepIndex + 1;
+            bool auditPrepared = false;
+            bool auditAckAccepted = false;
+            bool auditTerminalReply = false;
+            bool auditReadbackRecorded = false;
             try
             {
-                var ack = await _plc.WriteObservedAsync(
-                    claim.DmAddress, claim.Value,
-                    beforeSend =>
+                var ack = await _plc.WriteRawObservedAsync(
+                    claim.DmAddress, claim.Value, claim.ClaimId,
+                    evt =>
                     {
-                        if (!_journal.ObserveWireSend(claim.ClaimId, beforeSend))
-                            throw new InvalidOperationException(
-                                "FINS wire evidence already consumed; no duplicate send.");
+                        if (evt.Stage == LegacyFinsObservationStage.Prepared)
+                        {
+                            var beforeSend = new LegacyFinsWriteProof(
+                                claim.ClaimId, evt.Sid, claim.DmAddress, claim.Value,
+                                evt.OccurredUtc, AcknowledgedUtc: null,
+                                ReplyVerified: false);
+                            // A1's exclusive persisted write entitlement owns
+                            // the physical send. A7 must additionally capture
+                            // the exact outgoing UDP bytes before any SendAsync.
+                            if (!_journal.ObserveWireSend(claim.ClaimId, beforeSend))
+                                throw new InvalidOperationException(
+                                    "A1 FINS ClaimId was already consumed.");
+                            _audit.PrepareStep(auditAttempt, stepNumber,
+                                evt.OperationId, evt.RequestBytes.AsSpan());
+                            auditPrepared = true;
+                        }
+                        else if (evt.Stage == LegacyFinsObservationStage.WireSent)
+                        {
+                            _audit.WireSent(auditAttempt, stepNumber, evt.OperationId);
+                        }
+                        else if (evt.Stage is LegacyFinsObservationStage.AckAccepted or
+                                 LegacyFinsObservationStage.AckRejected)
+                        {
+                            _audit.RecordWriteReply(auditAttempt, stepNumber,
+                                evt.OperationId, evt.RequestBytes.AsSpan(),
+                                evt.ResponseBytes.AsSpan());
+                            auditTerminalReply =
+                                evt.Stage == LegacyFinsObservationStage.AckRejected;
+                            auditAckAccepted =
+                                evt.Stage == LegacyFinsObservationStage.AckAccepted;
+                        }
                     }, budget);
                 if (!ack.ReplyVerified || ack.AcknowledgedUtc is null ||
                     !_journal.ConfirmFinsAck(claim.ClaimId, ack))
                     throw new IOException("Unverified actual FINS reply.");
-                var readback = await _plc.ReadAsync(claim.DmAddress, 1, budget);
+                var readback = await _plc.ReadRawObservedAsync(
+                    claim.DmAddress, 1, Guid.NewGuid(), evt =>
+                    {
+                        if (evt.Stage == LegacyFinsObservationStage.ReadbackVerified)
+                        {
+                            _audit.RecordReadback(auditAttempt, stepNumber,
+                                evt.OperationId, evt.RequestBytes.AsSpan(),
+                                evt.ResponseBytes.AsSpan());
+                            auditReadbackRecorded = true;
+                        }
+                    }, budget);
                 DateTimeOffset readbackUtc = DateTimeOffset.UtcNow;
                 if (readback.Length != 1 ||
                     !_journal.ConfirmReadback(claim.ClaimId, readback[0]))
                     throw new IOException("Unverified actual FINS result readback.");
+                if (_safety.IsLatched())
+                    throw new IOException("Peer/PLC safety latch changed during FINS output.");
                 confirmed.Add(new LegacyOutputStep(claim.DmAddress, claim.Value,
                     started, ack.AcknowledgedUtc.Value, readbackUtc, readback[0]));
             }
@@ -115,16 +196,34 @@ internal sealed class LegacyJournaledFinalOutput
                                        InvalidDataException or OperationCanceledException or
                                        InvalidOperationException)
             {
-                // A1 has already fsynced the unique claim. A failed/ambiguous
-                // ACK, readback or cancellation can NEVER grant a second send.
-                _journal.MarkUnknown(claim.ClaimId, "FINS_ACK_OR_READBACK_UNKNOWN");
+                // The A1 ClaimId is fsynced BEFORE actual UDP SendAsync.
+                // First freeze ALL further output, then persist A1 UNKNOWN.
+                // A7 audits uncertainty but can never grant replay rights.
                 _safety.Latch("FINAL_FINS_UNCERTAIN",
                     "token=" + token + " item=" + item.WorkpieceId +
                     " step=" + claim.StepIndex + " " + ex);
+                if (auditPrepared && !auditTerminalReply && !auditReadbackRecorded)
+                {
+                    try
+                    {
+                        if (auditAckAccepted)
+                            _audit.ReadbackUnknown(auditAttempt, stepNumber,
+                                Guid.NewGuid(), "FINS_READBACK_NOT_PROVEN");
+                        else
+                            _audit.AckUnknown(auditAttempt, stepNumber,
+                                claim.ClaimId, "FINS_ACK_NOT_PROVEN");
+                    }
+                    catch (Exception auditEx)
+                    {
+                        Console.Error.WriteLine("SIM_A7_OUTPUT_AUDIT_INCOMPLETE " +
+                            auditEx.GetType().Name);
+                    }
+                }
+                _journal.MarkUnknown(claim.ClaimId, "FINS_ACK_OR_READBACK_UNKNOWN");
                 Console.Error.WriteLine(
                     "SIM_LEGACY_FINS_OUTPUT_UNCERTAIN token=" + token +
                     " workpiece=" + item.WorkpieceId +
-                    " intent=" + intentId +
+                    " intent=" + intentId + " A7_attempt=" + auditAttempt +
                     " step=" + claim.StepIndex +
                     " acknowledged_steps=" + confirmed.Count +
                     " no_automatic_retry=1 " + ex.Message);
