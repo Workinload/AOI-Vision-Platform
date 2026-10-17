@@ -70,6 +70,12 @@ jobs:
         run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --st05-order FRAME_FIRST --count 5 --evidence-root .artifacts/p0-nine-cameras-frame-first
       - name: P0 five concurrent identical-barcode workpieces keep physical capture IDs isolated
         run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --repeat-barcode --count 5 --evidence-root .artifacts/p0-nine-cameras-duplicate-barcode
+      - name: A5 independent actual FINS raw SID and A7 causal pipeline request-first
+        run: python qa/p0_five_process_acceptance.py --audit-existing --count 5 --ordering REQUEST_FIRST --expected-status NG --verify-final --evidence-root .artifacts/p0-nine-cameras-request-first
+      - name: A5 independent actual FINS raw SID and A7 causal pipeline frame-first
+        run: python qa/p0_five_process_acceptance.py --audit-existing --count 5 --ordering FRAME_FIRST --expected-status NG --verify-final --evidence-root .artifacts/p0-nine-cameras-frame-first
+      - name: A5 independent physical FINS causal proof with duplicate-barcode workpieces
+        run: python qa/p0_five_process_acceptance.py --audit-existing --count 5 --ordering REQUEST_FIRST --expected-status NG --verify-final --repeat-barcode --evidence-root .artifacts/p0-nine-cameras-duplicate-barcode
       - name: SIM_FULL five-process end-barcode corruption must block physical exit
         run: python scripts/e2e_sim_full.py --count 5 --flip-token 3 --evidence-root .artifacts/simfull-flipped
       - name: A6 immutable solution edit publish dual-node commit and live SIM_FULL recipe

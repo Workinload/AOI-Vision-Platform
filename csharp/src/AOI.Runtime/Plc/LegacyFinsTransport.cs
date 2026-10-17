@@ -143,6 +143,14 @@ public static class LegacyFinsWire
 }
 
 /// <summary>
+/// Actual loopback FINS WRITE boundary, with one immutable operation identity and
+/// the SID used in the raw UDP datagram. A sent write is NEVER a confirmed write.
+/// </summary>
+public sealed record LegacyFinsWriteProof(
+    Guid OperationId, byte Sid, ushort DmAddress, ushort Value,
+    DateTimeOffset SentUtc, DateTimeOffset? AcknowledgedUtc, bool ReplyVerified);
+
+/// <summary>
 /// Strict IPv4-loopback FINS/UDP test client; never accepts hostnames or production IPs.
 /// FINS protocol SID, route and endpoint validated on each real network reply.
 /// </summary>
@@ -170,6 +178,33 @@ public sealed class LegacyFinsLoopbackClient
     public async Task WriteAsync(ushort address, ushort[] values,
         CancellationToken cancellationToken = default) =>
         _ = await ExecuteAsync(true, address, values, cancellationToken);
+
+    /// <summary>
+    /// Execute a single REAL loopback UDP datagram. onBeforeSend runs BEFORE
+    /// SendAsync, so a durable timing event never asserts an ACK prematurely.
+    /// An acknowledged proof is returned only after actual SID, route, opcode
+    /// and FINS end-code validation. The raw vPLC logs retain the matching SID.
+    /// </summary>
+    public async Task<LegacyFinsWriteProof> WriteObservedAsync(
+        ushort address, ushort value, Action<LegacyFinsWriteProof> onBeforeSend,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(onBeforeSend);
+        using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        budget.CancelAfter(_timeout);
+        byte sid = unchecked((byte)Interlocked.Increment(ref _sid));
+        var request = LegacyFinsWire.MakeRequest(true, address, [value], sid, _nodes);
+        var sent = new LegacyFinsWriteProof(Guid.NewGuid(), sid, address, value,
+            DateTimeOffset.UtcNow, AcknowledgedUtc: null, ReplyVerified: false);
+        onBeforeSend(sent);
+        using var udp = new UdpClient(AddressFamily.InterNetwork);
+        await udp.SendAsync(request, _endpoint, budget.Token);
+        var reply = await udp.ReceiveAsync(budget.Token);
+        if (!reply.RemoteEndPoint.Equals(_endpoint))
+            throw new InvalidDataException("Unexpected loopback FINS responder.");
+        _ = LegacyFinsWire.DecodeResponse(request, reply.Buffer, _nodes);
+        return sent with { AcknowledgedUtc = DateTimeOffset.UtcNow, ReplyVerified = true };
+    }
 
     private async Task<ushort[]> ExecuteAsync(bool write, ushort address, ushort[] values,
         CancellationToken cancellationToken)
