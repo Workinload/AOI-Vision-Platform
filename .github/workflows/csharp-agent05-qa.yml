@@ -27,6 +27,18 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Verify Windows PowerShell 5.1 real operator script syntax
+        if: matrix.os == 'windows-2025'
+        shell: powershell
+        run: |
+          $tokens = $null
+          $parseErrors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path 'qa/Windows-Operator-Smoke.ps1'), [ref]$tokens, [ref]$parseErrors) | Out-Null
+          if ($parseErrors.Count -gt 0) {
+            $parseErrors | ForEach-Object { Write-Error $_.Message }
+            exit 1
+          }
+          Write-Host 'A5_WINDOWS_OPERATOR_SMOKE_SYNTAX_PASS'
       - name: Independent virtual FINS fault-fixture Python unit tests
         run: python -m unittest discover -s qa -p 'test_*.py' -v
       - name: Restore pinned dependencies
@@ -75,6 +87,11 @@ jobs:
           cp scripts/Launch-SIMFULL-Images.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           cp scripts/Configure-SIM-Recipe.cmd .artifacts/dist/AOI_SIM11_Windows/Configure-SIM-Recipe.cmd
           cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
+          cp qa/Windows-Operator-Smoke.ps1 .artifacts/dist/AOI_SIM11_Windows/Windows-Operator-Smoke.ps1
+          cp qa/Run-Windows-Operator-Smoke.cmd .artifacts/dist/AOI_SIM11_Windows/Run-Windows-Operator-Smoke.cmd
+          cp qa/WINDOWS_OPERATOR_MANUAL.md .artifacts/dist/AOI_SIM11_Windows/OPERATOR_QA_README.md
+          test -f .artifacts/dist/AOI_SIM11_Windows/Windows-Operator-Smoke.ps1
+          test -f .artifacts/dist/AOI_SIM11_Windows/Run-Windows-Operator-Smoke.cmd
           test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
@@ -83,6 +100,21 @@ jobs:
           test -f .artifacts/dist/AOI_SIM11_Windows/VisionLab/AOI.Vision.Cli.exe
           dotnet .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.dll verify .artifacts/qa-11channels/diagnostics/evidence.zip
           echo 'AOI_WIN_SIM11_PACKAGE_PASS host=1 ui=1 diagnostics=1 redacted_bundle_verified=1'
+      - name: Real Windows six-page mouse navigation and dual-Core ROI operation
+        if: matrix.os == 'windows-2025'
+        shell: pwsh
+        run: |
+          powershell.exe -NoLogo -NoProfile -File qa/Windows-Operator-Smoke.ps1 -PackageRoot .artifacts/dist/AOI_SIM11_Windows -EvidenceRoot .artifacts/windows-operator-smoke -TimeoutSeconds 110 -TryCi1080p
+          $operatorExit = $LASTEXITCODE
+          if ($operatorExit -eq 3) {
+            Write-Warning 'A5_NATIVE_GUI_OPERATION_PASS: two real desktops, 12 mouse navigations and dual-Core ROI are verified; hosted 1920x1080 visual readability remains NOT_VERIFIED'
+            exit 0
+          }
+          if ($operatorExit -ne 0) {
+            Write-Host ('A5_NATIVE_GUI_OPERATION_FAIL: actual EXE workflow returned code '+$operatorExit+'; see dedicated desktop screenshot/report artifact')
+            exit 1
+          }
+          Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS: real native six-page GUI and 1080p evidence'
       - name: Upload Windows x64 SIM_ONLY preview package
         if: matrix.os == 'windows-2025'
         uses: actions/upload-artifact@v4
@@ -91,6 +123,14 @@ jobs:
           path: csharp/.artifacts/dist/AOI_SIM11_Windows/
           retention-days: 14
           if-no-files-found: error
+      - name: Upload native Windows operator screen and click evidence
+        if: always() && matrix.os == 'windows-2025'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOI_Agent05_Windows_Desktop_Evidence-${{ github.run_id }}
+          path: csharp/.artifacts/windows-operator-smoke/
+          retention-days: 14
+          if-no-files-found: warn
       - name: Save logs on failure and success
         if: always()
         uses: actions/upload-artifact@v4
