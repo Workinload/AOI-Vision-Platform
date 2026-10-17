@@ -68,7 +68,7 @@ class Wire:
 
     @property
     def ok(self) -> bool:
-        return self.response_seen and self.end_code == 0
+        return self.response_seen and self.end_code == 0 and self.outcome == "OK"
 
 
 def parse_wire(row: dict) -> Wire:
@@ -166,20 +166,28 @@ def verify_station_wire(wire: list[Wire], spec: dict):
     offered = one([w for w in wire if w.token == token and w.address == 4300
                    and w.write and w.words == (token, addr) and w.ok],
                   f"token {token} private external capture offer")
-    read = one([w for w in wire if w.token == token and w.address == addr
-                and not w.write and w.ok and w.reply_words == (1,)],
-               f"token {token} actual PLC D{addr}=1 read")
     sent = one([w for w in wire if w.token == token and w.address == addr
                 and w.write and w.ok and w.words == (ack,)],
                f"token {token} D{addr} CamDone={ack} reply")
-    readback = one([w for w in wire if w.token == token and w.address == addr
-                    and not w.write and w.ok and w.reply_words == (ack,)],
-                   f"token {token} CamDone FINS readback {ack}")
-    demand(offered.seq < read.seq < sent.seq < readback.seq,
-           "CAPTURE_WIRE_ORDER", "External request must precede FINS ACK and readback")
+    # Core may poll D1011=1 multiple times while awaiting the hard frame.
+    # Repeated READS are legal; duplicate CamDone WRITES are not.
+    requests = [w for w in wire if w.token == token and w.address == addr
+                and not w.write and w.ok and w.reply_words == (1,)
+                and offered.seq < w.seq < sent.seq]
+    demand(bool(requests), "MISSING_OR_DUPLICATE",
+           f"token {token} no actual PLC D{addr}=1 observed before CamDone")
+    reads_after = [w for w in wire if w.token == token and w.address == addr
+                   and not w.write and w.seq > sent.seq]
+    demand(bool(reads_after) and reads_after[0].ok
+           and reads_after[0].reply_words == (ack,),
+           "CAPTURE_READBACK_MISMATCH",
+           f"token {token} first FINS D{addr} read after CamDone is not {ack}")
+    demand(requests[0].seq > offered.seq,
+           "CAPTURE_WIRE_ORDER", "External offer/request is out of order")
     competing = [w for w in wire if w.token == token and w.address == addr and
-                 w.write and w.ok and w is not sent]
-    demand(not competing, "DUPLICATE_CAM_DONE", f"D{addr} has extra successful writes")
+                 w.write and w is not sent]
+    demand(not competing, "DUPLICATE_CAM_DONE",
+           f"D{addr} has an extra, rejected or unacknowledged CamDone write")
     return sent
 
 
@@ -200,22 +208,28 @@ def verify_final_wire(wire: list[Wire], spec: dict):
     offer = one([w for w in wire if w.token == token and w.address == 4303
                  and w.write and w.words == (token, offer_value) and w.ok],
                 f"token {token} end scanner private offer")
-    ready = one([w for w in wire if w.token == token and w.address == 2099
-                 and not w.write and w.ok and w.reply_words == (1,)],
-                f"token {token} FINS D2099=1 read")
-    writes = [w for w in wire if w.token == token and w.write
-              and w.address in (1016, 2099) and w.ok]
+    # The end-scan request may be polled repeatedly; require at least one
+    # verified D2099=1 before either final write, not exactly one read.
+    ready = [w for w in wire if w.token == token and w.address == 2099
+             and not w.write and w.ok and w.reply_words == (1,)]
+    all_writes = [w for w in wire if w.token == token and w.write
+                  and w.address in (1016, 2099)]
+    demand(len(all_writes) == 2 and all(x.ok for x in all_writes),
+           "INCOMPLETE_FINAL_WRITE",
+           f"token {token}: every final write must have a successful actual FINS response; never assume a timeout was not applied")
+    writes = all_writes
     demand([(w.address, *w.words) for w in writes] == list(expected),
            "FINAL_WIRE_ORDER", f"token {token}: actual {[(w.address, w.words) for w in writes]}, expected {expected}")
-    demand(offer.seq < ready.seq < writes[0].seq < writes[1].seq,
+    demand(bool(ready) and offer.seq < ready[0].seq < writes[0].seq < writes[1].seq,
            "FINAL_SEQUENCE", f"token {token} result written without valid end request")
     for i, w in enumerate(writes):
         next_write = writes[i + 1].seq if i + 1 < len(writes) else 2 ** 62
-        readback = one([x for x in wire if x.token == token and not x.write
-                        and x.address == w.address and x.reply_words == w.words and x.ok
-                        and w.seq < x.seq < next_write],
-                       f"token {token} D{w.address} readback before next write")
-        demand(readback.utc >= w.utc, "FINAL_ACK_TIME", "Readback preceded write")
+        reads = [x for x in wire if x.token == token and not x.write
+                 and x.address == w.address and w.seq < x.seq < next_write]
+        demand(bool(reads) and reads[0].ok and reads[0].reply_words == w.words,
+               "FINAL_READBACK_MISMATCH",
+               f"token {token} first FINS D{w.address} readback not equal to acknowledged write")
+        demand(reads[0].utc >= w.utc, "FINAL_ACK_TIME", "Readback preceded write")
     return writes
 
 
