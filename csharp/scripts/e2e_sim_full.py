@@ -289,6 +289,16 @@ def main():
             'Conveyor must show real overlap without exceeding three slots', observed)
         assert master_log.count('SIM_FULL_LOADED') == args.count
         assert master_log.count('SIM_FULL_EXITED') == target
+        assert master_log.count('SIM_BRIDGE_LOAD') == args.count, 'A2 mechanical load missing'
+        assert master_log.count('SIM_BRIDGE_EJECTED') == target, 'A2 token ejection mismatch'
+        assert master_log.count('SIM_BRIDGE_STATION_COMPLETE') >= target * 7, (
+            'A1 all seven stations must complete before a final can be dispatched')
+        assert master_log.count('SIM_BRIDGE_MECHANICAL event=SensorTriggered') >= target * 8
+        flow_db = evidence / 'master/production-progress.db'
+        assert scalar(flow_db, "SELECT COUNT(*) FROM a1_production_flow_events "
+                      "WHERE json_extract(event_json,'$.kind')='stationCompleted'") >= target * 7
+        assert scalar(flow_db, "SELECT COUNT(*) FROM a1_production_flow_events "
+                      "WHERE json_extract(event_json,'$.kind')='ejectionConfirmed'") == target
         if args.flip_token:
             assert f'SIM_FULL_HOLD token={args.flip_token}' in master_log
         for name, proc in processes[3:]:
@@ -303,6 +313,18 @@ def main():
                 snapshot = json.loads(view.readline())
         assert snapshot['simulationMode'] == 'SIM_FULL', snapshot['simulationMode']
         assert snapshot['realHardwareWritesEnabled'] is False
+        motion = snapshot.get('conveyor')
+        assert motion and motion['loadedCount'] == args.count, motion
+        assert motion['exitedCount'] == target, motion
+        assert len(motion['active']) == args.count - target, motion
+        assert motion['tick'] > 10 and not motion['stuckSensors'], motion
+        assert len({row['workpieceId'] for row in motion['active']}) == len(motion['active'])
+        if args.flip_token:
+            assert any(row['stationId'] == 'ST11' and row['readyForExit']
+                       for row in motion['active']), motion
+        print(f"SIM_MECHANICAL_A1_A2_IPC_PASS loaded={motion['loadedCount']} "
+              f"out={motion['exitedCount']} in_flight={len(motion['active'])} "
+              "seven_station_progress=1 no_early_eject=1", flush=True)
         hold_overview = snapshot.get('holds')
         assert hold_overview and hold_overview['activeCount'] == (1 if args.flip_token else 0), hold_overview
         assert len(hold_overview['recent']) == (1 if args.flip_token else 0), hold_overview

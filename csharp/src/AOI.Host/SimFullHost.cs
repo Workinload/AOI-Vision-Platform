@@ -142,7 +142,9 @@ public static class SimFullHost
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
-        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL", product.Overview, simConfig);
+        var bridge = new SimProductionBridge(folder);
+        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL",
+            product.Overview, simConfig, bridge.Snapshot);
         _ = RoiDraftIpc.ServeAsync(simConfig, 19641,
             Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN"), ct);
         _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
@@ -159,7 +161,7 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, folder, bootNonce, product, linked.Token);
+            var production = PollAsync(store, ledger, fins, folder, bootNonce, product, bridge, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
             try
             {
@@ -180,7 +182,8 @@ public static class SimFullHost
     }
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
-        FinsSimClient fins, string folder, uint bootNonce, SimProductRuntime product, CancellationToken ct)
+        FinsSimClient fins, string folder, uint bootNonce, SimProductRuntime product,
+        SimProductionBridge bridge, CancellationToken ct)
     {
         var held = new HashSet<ushort>();
         var exited = new HashSet<ushort>();
@@ -192,7 +195,7 @@ public static class SimFullHost
             uint current = ((uint)nonce[0] << 16) | nonce[1];
             if (current != bootNonce) throw new InvalidDataException("SIM_FULL_VPLC_RESTART_HOLD");
             ushort load = (await fins.ReadAsync(SimFullVirtualPlc.LoadTokenAddress, 1, ct))[0];
-            if (load != 0)
+            if (load != 0 && bridge.CanLoad)
             {
                 if (ledger.Find(load) is not null)
                     throw new InvalidDataException("SIM_FULL_DUPLICATE_LOAD_HOLD");
@@ -207,12 +210,17 @@ public static class SimFullHost
                 ledger.Register(load, item);
                 int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master, store, folder, product);
                 if (frames != 5) throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
+                bridge.Register(load, item);
                 await EnsureNonceAsync(fins, bootNonce, ct);
                 await fins.WriteAsync(SimFullVirtualPlc.LoadAckAddress, load);
                 Console.WriteLine($"SIM_FULL_LOADED token={load} id={item.WorkpieceId} " +
                     $"barcode={item.Barcode} master_channels={frames}");
             }
 
+            // Existing verified frames are accounted for only once a virtual
+            // station sensor actually fires. This drives A1 WAL progress and
+            // A2 item positions while keeping PeerLink ownership unchanged.
+            bridge.Advance(store);
             ushort exit = (await fins.ReadAsync(SimFullVirtualPlc.ExitTokenAddress, 1, ct))[0];
             if (exit != 0 && !held.Contains(exit) && !exited.Contains(exit))
             {
@@ -220,14 +228,21 @@ public static class SimFullHost
                     ?? throw new InvalidDataException("SIM_FULL_UNKNOWN_EXIT_TOKEN_HOLD");
                 var observations = store.ResultsFor(item.WorkpieceId);
                 if (observations.Select(x => x.ChannelId).Distinct(StringComparer.Ordinal).Count() == 11 &&
-                    observations.Count == 11)
+                    observations.Count == 11 &&
+                    bridge.ReadyToScan(exit, item.WorkpieceId))
                 {
                     var scanned = FinsDm.SimBarcode(
                         await fins.ReadAsync(SimFullVirtualPlc.EndBarcodeAddress, 10, ct));
+                    var coordinated = bridge.ObserveAndEvaluate(item.WorkpieceId, scanned);
                     var decision = QualityRules.Evaluate(item,
                         SimElevenChannelFixture.InspectionChannels, observations,
                         endBarcodeMatches: scanned == item.Barcode);
-                    if (decision.Disposition == FinalDisposition.Hold || !decision.IsSimulation)
+                    if (decision.Disposition == FinalDisposition.Hold ||
+                        !decision.IsSimulation || coordinated is null ||
+                        coordinated.Disposition != decision.Disposition ||
+                        coordinated.Proof != decision.Proof ||
+                        !coordinated.Expected.SequenceEqual(decision.Expected, StringComparer.Ordinal) ||
+                        !coordinated.Received.SequenceEqual(decision.Received, StringComparer.Ordinal))
                     {
                         // Persist the actual failure reason BEFORE marking the FIFO blocked.
                         // Never accept this workpiece for a subsequent GOOD/NG final.
@@ -243,10 +258,12 @@ public static class SimFullHost
                         // Persist immutable final first. Unknown PLC response/restart is
                         // an operator-reconciliation HOLD, never an untracked re-drive.
                         store.StoreFinal(item, decision);
+                        bridge.FinalPersisted(item.WorkpieceId, decision);
                         ushort command = decision.Disposition == FinalDisposition.Good ? (ushort)1 : (ushort)2;
                         await EnsureNonceAsync(fins, bootNonce, ct);
                         await fins.WriteAsync(SimFullVirtualPlc.ExitDecisionAddress, exit, command);
                         ledger.MarkExited(exit, decision);
+                        bridge.ConfirmEjection(exit, item.WorkpieceId, decision.Disposition);
                         exited.Add(exit);
                         Console.WriteLine($"SIM_FULL_EXITED token={exit} id={item.WorkpieceId} " +
                             $"decision={decision.Disposition} barcode={item.Barcode} " +

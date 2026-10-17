@@ -176,8 +176,33 @@
                 <Border Background="White" CornerRadius="10" Padding="17">
                   <StackPanel Spacing="10">
                     <TextBlock Text="生产线布局 / 虚拟设备分布" Foreground="#1D405F" FontSize="19" FontWeight="SemiBold"/>
-                    <TextBlock Text="点击工位即可定位对应 CH 通道；地图为逻辑示意，不代表设备的实测几何坐标或实时运动。"
+                    <TextBlock Text="逐工件虚拟运动由 Master Core + 传感器状态提供；地图不代表实机定位或真实 PLC 驱动。"
                                FontSize="11" Foreground="#6D8197" TextWrapping="Wrap"/>
+                    <TextBlock Text="{Binding ConveyorSummary}" FontSize="12" FontWeight="SemiBold"
+                               Foreground="#1E729C" TextWrapping="Wrap"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                      <ItemsControl ItemsSource="{Binding LiveConveyor}">
+                        <ItemsControl.ItemsPanel>
+                          <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8"/></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                          <DataTemplate>
+                            <Border MinWidth="134" Background="#E3F1F8" BorderBrush="#92B6CC"
+                                    BorderThickness="1" CornerRadius="8" Padding="9">
+                              <StackPanel Spacing="3">
+                                <TextBlock Text="{Binding Workpiece}" FontSize="12" FontWeight="Bold"
+                                           Foreground="#1D5275"/>
+                                <TextBlock Text="{Binding Stage}" FontSize="15" FontWeight="SemiBold"
+                                           Foreground="#1C739E"/>
+                                <TextBlock Text="{Binding Progress}" FontSize="10" Foreground="#476B84"/>
+                                <TextBlock Text="{Binding Sensor}" FontSize="10" Foreground="#667C8C"/>
+                                <TextBlock Text="{Binding State}" FontSize="10" Foreground="#357C9B"/>
+                              </StackPanel>
+                            </Border>
+                          </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                      </ItemsControl>
+                    </ScrollViewer>
                     <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                       <Canvas Width="910" Height="425" Background="#E8F1F8">
                         <Border Canvas.Left="195" Canvas.Top="188" Width="65" Height="5" Background="#80A8C5"/>
