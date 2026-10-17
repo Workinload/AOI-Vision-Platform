@@ -142,6 +142,11 @@ public static class ProductionTimingAnalyzer
                 if (sent is null)
                     Error("UNPAIRED_CAMDONE_ACK", acknowledgement,
                         "CamDone acknowledgement has no matching recorded FINS write operation.");
+                else if (sent.FinsSid != acknowledgement.FinsSid ||
+                         sent.PlcDmAddress != acknowledgement.PlcDmAddress ||
+                         sent.PlcValue != acknowledgement.PlcValue)
+                    Error("CAMDONE_RESPONSE_MISMATCH", acknowledgement,
+                        "CamDone reply does not match the sent FINS SID/DM/value for this operation.");
                 if (ready is null && acknowledgement.PlcValue == 2)
                     Error("CAMDONE_OK_WITHOUT_FRAME_READY", acknowledgement,
                         "CamDone=2 observed without a directly recorded FrameReady for this capture.");
@@ -172,6 +177,16 @@ public static class ProductionTimingAnalyzer
                 Error("FRAME_REUSED_ACROSS_CAPTURES", group.First(),
                     "One immutable FrameId was bound to multiple capture/physical item identities.");
         }
+        foreach (var response in direct.Where(e => e.Stage == TimingStage.FinsReadCompleted))
+        {
+            if (!direct.Any(e => e.Stage == TimingStage.FinsReadSent &&
+                e.NodeId == response.NodeId && e.ProcessRunId == response.ProcessRunId &&
+                e.OperationId == response.OperationId &&
+                e.PlcDmAddress == response.PlcDmAddress &&
+                e.FinsSid == response.FinsSid))
+                Error("UNPAIRED_FINS_READ_RESPONSE", response,
+                    "Read response has no matching actually-sent FINS request/SID.");
+        }
         foreach (var response in direct.Where(e => e.Stage is
             TimingStage.FinsWriteAcknowledged or TimingStage.FinalPlcWriteAcknowledged))
         {
@@ -180,6 +195,7 @@ public static class ProductionTimingAnalyzer
             if (!direct.Any(e => e.Stage == matchingSendStage &&
                 e.NodeId == response.NodeId && e.ProcessRunId == response.ProcessRunId &&
                 e.OperationId == response.OperationId &&
+                e.FinsSid == response.FinsSid &&
                 e.PlcDmAddress == response.PlcDmAddress && e.PlcValue == response.PlcValue))
                 Error("UNPAIRED_FINS_WRITE_ACK", response, "No matching transmitted FINS write evidence.");
         }
