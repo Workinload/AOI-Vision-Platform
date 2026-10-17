@@ -250,9 +250,9 @@ function Find-UIA([Windows.Automation.AutomationElement]$Root,[Windows.Automatio
     throw ("UIA element missing: "+$Name)
 }
 function Click-Workspace([IntPtr]$Window,[int]$Index) {
-    # Merged Agent04 (Issue #87) replaced five tabs with SIX sidebar buttons.
-    $names=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI')
-    $headers=@('生产总览','整机设备地图','11 路图集','历史与报警','PLC 工程','产品方案与 ROI')
+    # Seven-page operator navigation with compact tab headers avoids nested wrapping.
+    $names=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI','生产日报 / 周报')
+    $headers=@('总览','设备地图','11路图集','历史HOLD','PLC','产品ROI','日报周报')
     if($Index -lt 0 -or $Index -ge $names.Count){throw "Invalid workspace index $Index"}
     $rect=New-Object AoiRect
     if(-not [AoiWin]::GetWindowRect($Window,[ref]$rect)){throw 'Window disappeared'}
@@ -289,7 +289,7 @@ function Click-Workspace([IntPtr]$Window,[int]$Index) {
     return $method
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
-    # Target right-side ROI editor of the CURRENT six-page workbench.
+    # Target right-side ROI editor of the seven-page workbench.
     $filter=[Windows.Automation.AndCondition]::new(@(
         [Windows.Automation.PropertyCondition]::new(
             [Windows.Automation.AutomationElement]::ControlTypeProperty,[Windows.Automation.ControlType]::Text),
@@ -299,7 +299,7 @@ function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
     for($attempt=1;$attempt -le 5;$attempt++) {
         try {
             $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-            $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品方案与 ROI'
+            $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品ROI'
             $label=$tab.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
             if($null -eq $label){
                 $label=$root.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
@@ -316,7 +316,7 @@ function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
 }
 function Click-RoiSave([IntPtr]$Window) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-    $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品方案与 ROI'
+    $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) '产品ROI'
     $edits=Elements $tab ([Windows.Automation.ControlType]::Edit)
     if($edits.Count -lt 4) {
         # Avalonia's selected ContentPresenter may be a sibling of TabItem.
@@ -524,8 +524,8 @@ public static class AoiWin {
     Screenshot $masterWindow 'master-start'
     Screenshot $slaveWindow 'slave-start'
     Record-Check 'desktop_screenshots' 'PASS' 'Real visible Windows desktop captures saved separately for both GUI processes'
-    # ACTUAL operator-facing sidebar navigation, six pages on both Windows EXEs.
-    $allPages=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI')
+    # ACTUAL operator-facing sidebar navigation, all seven pages on both Windows EXEs.
+    $allPages=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI','生产日报 / 周报')
     for($i=0;$i -lt $allPages.Count;$i++) {
         try {
             $method=Click-Workspace $masterWindow $i
@@ -551,6 +551,7 @@ public static class AoiWin {
         Click-LocalChannel $masterWindow 'CH06'
         Screenshot $masterWindow 'master-selected-CH06'
         Click-RoiSave $masterWindow
+        try { Screenshot $masterWindow 'master-after-real-roi-save-click' } catch { Write-Host ("A5_ROI_CLICK_SCREENSHOT_WARN "+$_.Exception.Message) }
         Wait-Until {
             $fresh=Get-CoreSnapshot 19621
             return (@($fresh.roiDrafts | Where-Object {
@@ -569,6 +570,7 @@ public static class AoiWin {
         Click-LocalChannel $slaveWindow 'CH02'
         Screenshot $slaveWindow 'slave-selected-CH02'
         Click-RoiSave $slaveWindow
+        try { Screenshot $slaveWindow 'slave-after-real-roi-save-click' } catch { Write-Host ("A5_ROI_CLICK_SCREENSHOT_WARN "+$_.Exception.Message) }
         Wait-Until {
             $fresh=Get-CoreSnapshot 19622
             return (@($fresh.roiDrafts | Where-Object {
