@@ -60,7 +60,7 @@ internal sealed class HostPeerInterlock
     public void Latch(string reason, string detail)
     {
         if (reason is not ("PEER_LINK_LOST" or "PEER_SEND_FAILED" or
-                          "PEER_INBOUND_FAILED"))
+                          "PEER_INBOUND_FAILED" or "FINAL_FINS_UNCERTAIN"))
             throw new ArgumentException("Unknown interlock reason.", nameof(reason));
         if (string.IsNullOrWhiteSpace(detail))
             throw new ArgumentException("A durable interlock requires a cause.", nameof(detail));
