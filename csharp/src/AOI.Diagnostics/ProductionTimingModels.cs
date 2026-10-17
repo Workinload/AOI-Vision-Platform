@@ -99,9 +99,14 @@ public sealed record TimingObservation(
             TimingStage.CamDoneSent or TimingStage.CamDoneAcknowledged or
             TimingStage.FinalPlcWriteSent or TimingStage.FinalPlcWriteAcknowledged;
         if (isFinsStage &&
-            (OperationId is null || FinsSid is null || PlcValue is null ||
+            (OperationId is null || FinsSid is null ||
+             (Stage != TimingStage.FinsReadSent && PlcValue is null) ||
              string.IsNullOrWhiteSpace(PlcDmAddress)))
             throw new ArgumentException("FINS boundary requires OperationId, SID, DM address and value.");
+
+        if (Stage == TimingStage.PlcCaptureRequestObserved &&
+            (PlcDmAddress is null || PlcValue != 1))
+            throw new ArgumentException("An observed PLC capture request requires a DM address with value 1.");
 
         if (PlcDmAddress is not null &&
             (PlcDmAddress.Length < 2 || PlcDmAddress[0] != 'D' ||
