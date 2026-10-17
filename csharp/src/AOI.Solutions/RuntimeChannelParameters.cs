@@ -271,7 +271,32 @@ public sealed class WorkpieceParameterBinding
             throw new InvalidOperationException("CAPTURE_DEVICE_CHANNEL_MISMATCH");
         return values with { Camera = CameraConfigurationView.Compare(values.Camera.Target, readback) };
     }
+
+    public PhysicalCaptureParameters ForPhysicalDevice(string physicalDeviceId,
+        CameraConfigurationReadback? readback = null)
+    {
+        var channels = ChannelCatalog.All
+            .Where(c => c.PhysicalDeviceId == physicalDeviceId)
+            .OrderBy(c => c.ChannelId, StringComparer.Ordinal).ToArray();
+        if (channels.Length == 0)
+            throw new ArgumentException("Unknown physical camera.", nameof(physicalDeviceId));
+        if (channels.Any(c => c.StationId != channels[0].StationId ||
+                              c.OwnerRole != channels[0].OwnerRole ||
+                              c.PlcSignalAddress != channels[0].PlcSignalAddress))
+            throw new InvalidDataException("Physical trigger mapping is inconsistent.");
+        var one = ForChannel(channels[0].ChannelId, physicalDeviceId, readback);
+        return new(physicalDeviceId, channels[0].StationId, channels[0].OwnerRole,
+            channels[0].PlcSignalAddress,
+            Array.AsReadOnly(channels.Select(c => c.ChannelId).ToArray()),
+            one.Camera);
+    }
 }
+
+/// <summary>One physical hardware trigger yields one frame; line-scan can feed two channels.</summary>
+public sealed record PhysicalCaptureParameters(
+    string PhysicalDeviceId, string StationId, MachineRole OwnerRole,
+    string PlcSignalAddress, IReadOnlyList<string> ChannelIds,
+    CameraConfigurationView Camera);
 
 /// <summary>
 /// Plugin router, intentionally no hardcoded image algorithm and no fallback
