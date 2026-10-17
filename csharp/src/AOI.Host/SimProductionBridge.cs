@@ -39,7 +39,7 @@ internal sealed class SimProductionBridge
         Console.WriteLine($"SIM_BRIDGE_LOAD token={token} id={item.WorkpieceId}");
     }
 
-    public void Advance(ProductionStore store)
+    public IReadOnlyList<SimMechanicalEvent> Advance(ProductionStore store)
     {
         _mechanics.AdvanceTicks();
         var positions = _mechanics.Snapshot().Active;
@@ -70,7 +70,8 @@ internal sealed class SimProductionBridge
                 }
             }
         }
-        foreach (var evt in _mechanics.DrainEvents())
+        var observedEvents = _mechanics.DrainEvents();
+        foreach (var evt in observedEvents)
         {
             if (evt.Kind is SimMechanicalEventKind.SensorTriggered or
                 SimMechanicalEventKind.CaptureRequested or
@@ -80,6 +81,7 @@ internal sealed class SimProductionBridge
                 Console.WriteLine($"SIM_BRIDGE_MECHANICAL event={evt.Kind} id={evt.WorkpieceId} " +
                     $"station={evt.StationId} device={evt.PhysicalDeviceId} tick={evt.Tick}");
         }
+        return observedEvents;
     }
 
     public bool ReadyToScan(ushort token, Guid workpieceId)

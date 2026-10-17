@@ -2,6 +2,7 @@ using AOI.Contracts;
 using AOI.Domain;
 using AOI.Runtime;
 using AOI.Runtime.Plc;
+using AOI.Runtime.Plc.Mechanics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -150,6 +151,8 @@ public static class SimFullHost
         _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
+        var st05Capture = legacyFins is null ? null :
+            new LegacySt05Capture(folder, store, product, legacyFins);
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL",
             product.Overview, simConfig, bridge.Snapshot);
         _ = RoiDraftIpc.ServeAsync(simConfig, 19641,
@@ -168,7 +171,8 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, legacyFins, folder, bootNonce, product, bridge, linked.Token);
+            var production = PollAsync(store, ledger, fins, legacyFins, st05Capture,
+                folder, bootNonce, product, bridge, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
             // A production task can fault while the peer read task waits forever.
             // Observe the FIRST task to finish and surface production failure to
@@ -205,7 +209,8 @@ public static class SimFullHost
     }
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
-        FinsSimClient fins, LegacyFinsLoopbackClient? legacyFins, string folder,
+        FinsSimClient fins, LegacyFinsLoopbackClient? legacyFins,
+        LegacySt05Capture? st05Capture, string folder,
         uint bootNonce, SimProductRuntime product, SimProductionBridge bridge,
         CancellationToken ct)
     {
@@ -237,8 +242,11 @@ public static class SimFullHost
                     "workpiece_registered", item);
                 store.CreateAndQueueRegistration(item, registration);
                 ledger.Register(load, item);
-                int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master, store, folder, product);
-                if (frames != 5) throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
+                int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master,
+                    store, folder, product,
+                    deferredPhysicalDeviceId: st05Capture is null ? null : "HIK-M-2");
+                if (frames != (st05Capture is null ? 5 : 4))
+                    throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
                 bridge.Register(load, item);
                 if (legacyFins is not null)
                     await LegacyShadowHostBridge.ConfirmLoadAsync(
@@ -252,7 +260,18 @@ public static class SimFullHost
             // Existing verified frames are accounted for only once a virtual
             // station sensor actually fires. This drives A1 WAL progress and
             // A2 item positions while keeping PeerLink ownership unchanged.
-            bridge.Advance(store);
+            var stationEvents = bridge.Advance(store);
+            if (st05Capture is not null)
+                foreach (var evt in stationEvents)
+                {
+                    if (evt.Kind != SimMechanicalEventKind.CaptureRequested ||
+                        evt.PhysicalDeviceId != "HIK-M-2") continue;
+                    var capturedItem = ledger.Find(evt.Token);
+                    if (capturedItem is null ||
+                        capturedItem.WorkpieceId != evt.WorkpieceId)
+                        throw new InvalidDataException("ST05 physical trigger has no durable workpiece owner.");
+                    await st05Capture.HandleCaptureAsync(evt.Token, capturedItem, ct);
+                }
             ushort exit = (await fins.ReadAsync(SimFullVirtualPlc.ExitTokenAddress, 1, ct))[0];
             if (exit != 0 && !held.Contains(exit) && !exited.Contains(exit))
             {

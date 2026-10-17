@@ -27,7 +27,8 @@ public static class SimElevenChannelFixture
             .Select(c => c.ChannelId).Order(StringComparer.Ordinal).ToArray();
 
     public static int CaptureOwned(WorkpieceIdentity item, MachineRole role,
-        ProductionStore store, string nodeFolder, SimProductRuntime? product = null)
+        ProductionStore store, string nodeFolder, SimProductRuntime? product = null,
+        string? deferredPhysicalDeviceId = null)
     {
         if (product is null)
         {
@@ -35,6 +36,9 @@ public static class SimElevenChannelFixture
                 throw new InvalidOperationException("SIM_LIGHT fixture does not accept an unverified product.");
         }
         else product.VerifyWorkpiece(item);
+        if (deferredPhysicalDeviceId is not null &&
+            (role != MachineRole.Master || deferredPhysicalDeviceId != "HIK-M-2"))
+            throw new InvalidOperationException("Only ST05 HIK-M-2 may be deferred in the first P0 vertical slice.");
         var ledger = new VisionAssetLedger(Path.Combine(nodeFolder, "vision"));
         Func<ChannelDefinition, SimPixelRule>? rules = product is null ? null : product.RuleFor;
         ImageRegion? ReleasedRoi(ChannelDefinition c, int width, int height)
@@ -70,7 +74,8 @@ public static class SimElevenChannelFixture
                     ReleasedRoi(ChannelCatalog.Require(channelId), width, height),
                 releasedRuleForChannel: channelId =>
                     new ContourDefectRule(product?.RuleFor(ChannelCatalog.Require(channelId)).BrightThreshold
-                        ?? (byte)127, minArea));
+                        ?? (byte)127, minArea),
+                deferPhysicalDeviceId: deferredPhysicalDeviceId);
             if (batch.Missing != 0 || batch.Channels.Any(c =>
                 c.Observation is null || c.Outcome is ChannelOutcome.Missing or ChannelOutcome.Error or ChannelOutcome.Uncertain))
                 throw new InvalidDataException("SIM_IMAGE_INPUT_INCOMPLETE: no fake GOOD, missing/invalid real PNG.");
@@ -80,10 +85,13 @@ public static class SimElevenChannelFixture
         }
         else
         {
+            if (deferredPhysicalDeviceId is not null)
+                throw new InvalidOperationException("P0 legacy station trigger requires explicit real PNG frame source.");
             frames = SimVisionFixture.CaptureOwnedChannels(item, role, ledger,
                 new SimPixelRule(127, 0.1), rules, ReleasedRoi);
         }
-        int expected = ChannelCatalog.All.Count(c => c.OwnerRole == role);
+        int expected = ChannelCatalog.All.Count(c => c.OwnerRole == role &&
+            (deferredPhysicalDeviceId is null || c.PhysicalDeviceId != deferredPhysicalDeviceId));
         if (frames.Count != expected ||
             frames.Any(x => !x.IsSimulated || x.Outcome is ChannelOutcome.Missing or ChannelOutcome.Error or ChannelOutcome.Uncertain))
             throw new InvalidDataException("SIM_ONLY channel capture incomplete, HOLD.");
