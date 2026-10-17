@@ -31,6 +31,7 @@ internal sealed class LegacyPhysicalCapture
     private readonly ProductionStore _store;
     private readonly SimProductRuntime _product;
     private readonly bool _frameFirst;
+    private readonly LineScanRowMapping _lineRowMapping;
     private long _resultSequence;
 
     public LegacyPhysicalCapture(string nodeFolder, MachineRole owner,
@@ -51,13 +52,19 @@ internal sealed class LegacyPhysicalCapture
             "FRAME_FIRST" => true,
             _ => throw new InvalidOperationException("Unknown PLC/frame arrival ordering.")
         };
+        _lineRowMapping = Environment.GetEnvironmentVariable("AOI_SIM_LINE_ROW_MAPPING") switch
+        {
+            null or "" or "DEMO_EVEN_ODD" => LineScanRowMapping.DemoEvenOdd,
+            "LEGACY_DROP_ROW0" => LineScanRowMapping.LegacySkipFirstRow,
+            _ => throw new InvalidOperationException("Unknown line-scan physical row mapping.")
+        };
         _source = new PngFileFrameSource(imageRoot,
             flatLab: Environment.GetEnvironmentVariable("AOI_SIM_IMAGE_LAYOUT") == "FLAT");
         _captures = new CaptureHandshakeCoordinator(
             Path.Combine(nodeFolder, "capture-handshake.sqlite"));
         _inspection = new TriggeredVisionEngine(
             new VisionAssetLedger(Path.Combine(nodeFolder, "vision")),
-            new OpenCvInspectionProcessor());
+            new OpenCvInspectionProcessor(), lineRowMapping: _lineRowMapping);
         _timeline = new ProductionTimingJournal(nodeFolder,
             owner == MachineRole.Master ? "master" : "slave");
     }
@@ -216,7 +223,7 @@ internal sealed class LegacyPhysicalCapture
                         if (line)
                         {
                             int parity = trigger.Channels[0].ChannelId == c.ChannelId ? 0 : 1;
-                            height = (height + 1 - parity) / 2;
+                            height = VisionPixelOps.InterleavedChildRows(height, parity, _lineRowMapping);
                         }
                         var rect = preset.Bounds.ToPixels(width, height);
                         roi = new ImageRegion(rect.X, rect.Y, rect.Width, rect.Height);
