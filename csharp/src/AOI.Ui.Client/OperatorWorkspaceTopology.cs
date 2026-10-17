@@ -50,11 +50,16 @@ public static class OperatorWorkspaceTopology
     public static string? ResolveSignalStation(PlcEngineeringSignal signal)
     {
         ArgumentNullException.ThrowIfNull(signal);
-        var channelIds = ResolveSignalChannels(signal.DmAddress);
+        return ResolveSignalStation(signal.DmAddress, signal.StationId);
+    }
+
+    public static string? ResolveSignalStation(string dmAddress, string declaredStation)
+    {
+        var channelIds = ResolveSignalChannels(dmAddress);
         if (channelIds.Count != 0)
             return ChannelCatalog.Require(channelIds[0]).StationId;
-        return Stations.Any(s => s.StationId == signal.StationId)
-            ? signal.StationId : null;
+        return Stations.Any(s => s.StationId == declaredStation)
+            ? declaredStation : null;
     }
 
     public static int FramePreviewPort(string channelId) =>
