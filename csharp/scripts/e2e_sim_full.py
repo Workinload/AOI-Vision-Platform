@@ -116,7 +116,7 @@ def make_png(path, bright_defect=False, line_parent=False):
     path.write_bytes(png)
 
 
-def verify(root, count, flip, real_images=False):
+def verify(root, count, flip, real_images=False, legacy_shadow=False):
     master = root / 'master/production.db'
     slave = root / 'slave/production.db'
     ledger = root / 'master/sim-full-cycle.db'
@@ -173,12 +173,16 @@ def verify(root, count, flip, real_images=False):
         assert scalar(path, "SELECT COUNT(*) FROM vision_assets WHERE kind='parent'") == count, node
         assert scalar(path, "SELECT COUNT(*) FROM vision_assets WHERE kind='child'") == count * 2, node
 
-    for sender, expected in [('master', count), ('slave', count * 6)]:
+    for sender, expected in [('master', count * (6 if legacy_shadow else 1)),
+                             ('slave', count * 6)]:
         path = root / sender / 'production.db'
         assert scalar(path, 'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL') == expected, sender
         assert scalar(path, 'SELECT COUNT(*) FROM outbox') == expected, sender
     assert scalar(master, 'SELECT COUNT(*) FROM inbox') == count * 6
-    assert scalar(slave, 'SELECT COUNT(*) FROM inbox') == count
+    assert scalar(slave, 'SELECT COUNT(*) FROM inbox') == count * (6 if legacy_shadow else 1)
+    if legacy_shadow:
+        assert scalar(slave, 'SELECT COUNT(*) FROM capture_triggers') == count * 5
+        assert scalar(slave, 'SELECT COUNT(*) FROM capture_triggers WHERE processed_utc IS NOT NULL') == count * 5
 
     assert fins_read(4005) == expect_exit, 'virtual hardware released unexpected number'
     assert fins_read(4002) == (flip if flip else 0), 'FIFO exit token is wrong'
@@ -296,7 +300,7 @@ def main():
             raise TimeoutError('SIM_FULL timed out without complete concurrent production evidence')
         # A matched set must remain stable, especially when the front item is held.
         time.sleep(0.55)
-        verify(evidence, args.count, args.flip_token, args.with_images)
+        verify(evidence, args.count, args.flip_token, args.with_images, args.legacy_shadow)
         if args.legacy_shadow:
             wire_path = evidence / 'p0-fins-wire.jsonl'
             assert wire_path.is_file(), 'Shadow did not export real UDP request/response evidence'
@@ -308,16 +312,19 @@ def main():
                         and p['ResponseHex'].startswith('C0')]
             for token in range(1, target + 1):
                 assert len(written(token, 1999, 2)) == 1, ('missing D1999 actual FINS ACK', token)
-                offers = [p for p in packets if p['Token'] == token and
-                          p['Address'] == 4300 and p['IsWrite'] and
-                          p['Values'] == [token, 1011] and p['Outcome'] == 'OK']
-                assert len(offers) == 1, ('ST05 did not issue one physical PLC offer', token)
-                cam_ack = written(token, 1011, 2)
-                assert len(cam_ack) == 1, ('no D1011=2 actual FINS CamDone', token)
-                assert offers[0]['Sequence'] < cam_ack[0]['Sequence']
-                assert any(p['Token'] == token and p['Address'] == 1011 and
-                           not p['IsWrite'] and p['Sequence'] > cam_ack[0]['Sequence']
-                           for p in packets), ('D1011 readback missing', token)
+                # Exactly NINE physical requests, not 11 invented camera exposures.
+                for camera in range(1006, 1015):
+                    offers = [p for p in packets if p['Token'] == token and
+                              p['Address'] == 4300 and p['IsWrite'] and
+                              p['Values'] == [token, camera] and p['Outcome'] == 'OK']
+                    assert len(offers) == 1, ('missing physical camera PLC offer', token, camera)
+                    cam_ack = written(token, camera, 2)
+                    assert len(cam_ack) == 1, ('missing actual FINS CamDone2', token, camera)
+                    assert offers[0]['Sequence'] < cam_ack[0]['Sequence']
+                    assert any(p['Token'] == token and p['Address'] == camera and
+                               not p['IsWrite'] and p['Sequence'] > cam_ack[0]['Sequence']
+                               and p['ResponseHex'].startswith('C0') for p in packets), (
+                               'physical FINS CamDone readback missing', token, camera)
                 desired = 2 if args.with_images else 1
                 first = written(token, 1016, desired)
                 second = written(token, 2099, 2)
@@ -332,13 +339,15 @@ def main():
                 assert any(p['Token'] == token and p['Address'] == 2099 and not p['IsWrite']
                            and p['Sequence'] > second[0]['Sequence'] and
                            p['ResponseHex'].startswith('C0') for p in packets)
-            assert scalar(evidence / 'master/timing-events.sqlite',
-                          "SELECT COUNT(*) FROM timing_events WHERE stage='FrameReady'") == args.count
-            assert scalar(evidence / 'master/timing-events.sqlite',
-                          "SELECT COUNT(*) FROM timing_events WHERE stage='PlcCaptureRequestObserved'") == args.count
+            for node, physical_count in [('master', 4), ('slave', 5)]:
+                db = evidence / node / 'timing-events.sqlite'
+                for stage in ('FrameReady', 'PlcCaptureRequestObserved'):
+                    assert scalar(db, "SELECT COUNT(*) FROM timing_events WHERE stage='" +
+                                  stage + "'") == physical_count * args.count, (node, stage)
             print('A0_LEGACY_SHADOW_FINS_NORMAL_PASS items=' + str(target) +
-                  ' D1011_FrameReady_CamDone=1 D1999=1 D1016_then_D2099=1 actual_udp=1 ' +
-                  'ordering=' + args.st05_order + ' real_writes=0', flush=True)
+                  ' physical_events_per_item=9 logical_results=11 D1999=1 ' +
+                  'D1016_then_D2099=1 actual_udp=1 ordering=' + args.st05_order +
+                  ' dual_core=1 real_writes=0', flush=True)
         master_log = (evidence / 'master.log').read_text(encoding='utf-8')
         virtual_log = (evidence / 'vplc.log').read_text(encoding='utf-8')
         # Different OS scheduling can finish item #1 before slot #3 fills.
@@ -513,21 +522,25 @@ def main():
             barcodes = query(evidence / 'master/production.db', 'SELECT barcode FROM workpieces')
             assert len({x[0] for x in barcodes}) == 1, 'Duplicate barcode test was not exercised'
         if args.with_images:
-            assert master_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
             slave_log = (evidence / 'slave.log').read_text(encoding='utf-8')
-            assert slave_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
             if args.legacy_shadow:
+                assert master_log.count('SIM_PHYSICAL_CAPTURE_PASS') == args.count * 4
+                assert slave_log.count('SIM_PHYSICAL_CAPTURE_PASS') == args.count * 5
                 assert master_log.count('SIM_ST05_TRIGGERED_CAPTURE_PASS') == args.count
                 assert master_log.count('SIM_ST05_REAL_FINS_CAM_DONE_PASS') == args.count
+                assert master_log.count('SIM_MASTER_SLAVE_TRIGGER_QUEUED') == args.count * 5
+                assert slave_log.count('SIM_SLAVE_TRIGGER_COMPLETED') == args.count * 5
             else:
+                assert master_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
+                assert slave_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
                 assert 'defective=1' in master_log
-            assert 'defective=0' in slave_log
+                assert 'defective=0' in slave_log
             print('SIM_REAL_IMAGE_E2E_PASS actual_png=9 per_item_channels=11 '
                   'line_parity=2 contour_ng=1 per_item_REJECT=1', flush=True)
         result = 'HOLD' if args.flip_token else 'REJECT' if args.with_images else 'GOOD'
         print(f'SIM_FULL_E2E_PASS items={args.count} finals={target} outcome={result} '
               f'master_channels={args.count * 11} slave_channels={args.count * 6} '
-              f'ack={args.count * 7} fifo=STRICT max_inflight={max(observed)} false_release=0 UI=2',
+              f'ack={args.count * (12 if args.legacy_shadow else 7)} fifo=STRICT max_inflight={max(observed)} false_release=0 UI=2',
               flush=True)
         return 0
     except Exception as exc:
