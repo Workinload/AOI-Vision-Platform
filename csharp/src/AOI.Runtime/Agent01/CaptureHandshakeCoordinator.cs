@@ -21,6 +21,8 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
         public bool FrameIsValidated { get; set; }
         public ushort? CamDoneSent { get; set; }
         public string? Failure { get; set; }
+        public int RejectedFrames { get; set; }
+        public string? LastRejectedFrameReason { get; set; }
         public long LastSequence { get; set; } = sequence;
         public Dictionary<string, ChannelResult> Results { get; } = new(StringComparer.Ordinal);
         public bool HasAllResults => Ticket.ChannelIds.All(Results.ContainsKey);
@@ -34,7 +36,9 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
                 Frame = Frame,
                 FrameIsValidated = FrameIsValidated,
                 CamDoneSent = CamDoneSent,
-                Failure = Failure
+                Failure = Failure,
+                RejectedFrames = RejectedFrames,
+                LastRejectedFrameReason = LastRejectedFrameReason
             };
             foreach (var result in Results) other.Results.Add(result.Key, result.Value);
             return other;
@@ -176,10 +180,12 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
             return;
         }
         var state = Require(states, evt.CaptureId);
-        RequireCurrent(states, state);
-        if (state.Failure is not null && evt.Kind is not CaptureHandshakeEventKind.CamDoneConfirmed)
+        if (evt.Kind != CaptureHandshakeEventKind.FrameRejected)
+            RequireCurrent(states, state);
+        if (state.Failure is not null &&
+            evt.Kind is not (CaptureHandshakeEventKind.CamDoneConfirmed or CaptureHandshakeEventKind.FrameRejected))
             throw new InvalidOperationException("Failed attempt cannot acquire a later frame/result.");
-        if (state.HasAllResults)
+        if (state.HasAllResults && evt.Kind != CaptureHandshakeEventKind.FrameRejected)
             throw new InvalidOperationException("Completed attempt cannot be modified.");
         switch (evt.Kind)
         {
@@ -219,6 +225,13 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
                 if (string.IsNullOrWhiteSpace(evt.FailureReason) || evt.FailureReason.Length > 256)
                     throw new InvalidDataException("Capture failure needs a bounded diagnostic reason.");
                 state.Failure = evt.FailureReason;
+                break;
+            case CaptureHandshakeEventKind.FrameRejected:
+                if (evt.Frame is null || evt.Frame.CaptureId != state.Ticket.CaptureId ||
+                    string.IsNullOrWhiteSpace(evt.FailureReason) || evt.FailureReason.Length > 256)
+                    throw new InvalidDataException("Frame rejection needs capture-bound evidence and reason.");
+                state.RejectedFrames++;
+                state.LastRejectedFrameReason = evt.FailureReason;
                 break;
             default:
                 throw new InvalidDataException("Unsupported capture event: " + evt.Kind);
@@ -315,6 +328,44 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
                 frame.CaptureId, default, Frame: frame));
             return true;
         }
+    }
+
+    /// <summary>
+    /// Non-throwing camera callback entrypoint for malformed, duplicate or late frames.
+    /// Mismatched frames are journaled as rejections against the referenced CaptureId,
+    /// NEVER remapped to another WorkpieceId even if the barcodes match.
+    /// Unknown CaptureId has no trustworthy owner; A7 should record it as orphan input.
+    /// </summary>
+    public bool TryFrameAcquired(CaptureFrameEvidence frame)
+    {
+        ArgumentNullException.ThrowIfNull(frame);
+        lock (_sync)
+        {
+            if (!_states.TryGetValue(frame.CaptureId, out var state)) return false;
+            if (!IsLatest(state))
+                return RejectFrame(frame, "SUPERSEDED_CAPTURE_LATE_FRAME");
+            if (state.Failure is not null)
+                return RejectFrame(frame, "FRAME_AFTER_FAILED_CAPTURE");
+            try
+            {
+                return FrameAcquired(frame);
+            }
+            catch (InvalidDataException)
+            {
+                return RejectFrame(frame, "FRAME_IDENTITY_OR_SOURCE_MISMATCH");
+            }
+            catch (InvalidOperationException)
+            {
+                return RejectFrame(frame, "FRAME_INVALID_STATE");
+            }
+        }
+    }
+
+    private bool RejectFrame(CaptureFrameEvidence frame, string reason)
+    {
+        Append(new(0, CaptureHandshakeEventKind.FrameRejected, frame.CaptureId,
+            default, Frame: frame, FailureReason: reason));
+        return false;
     }
 
     public bool FrameValidated(Guid captureId, Guid frameId)
@@ -421,7 +472,9 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
             Array.AsReadOnly(completed), state.Failure, state.LastSequence)
         {
             Outcomes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, ChannelOutcome>(
-                state.Results.ToDictionary(x => x.Key, x => x.Value.Outcome, StringComparer.Ordinal))
+                state.Results.ToDictionary(x => x.Key, x => x.Value.Outcome, StringComparer.Ordinal)),
+            RejectedFrameCount = state.RejectedFrames,
+            LastRejectedFrameReason = state.LastRejectedFrameReason
         };
     }
 
