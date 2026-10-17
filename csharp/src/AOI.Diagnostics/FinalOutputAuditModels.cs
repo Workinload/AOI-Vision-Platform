@@ -93,7 +93,8 @@ public static class FinalOutputFinsEvidence
     public static (ushort EndCode, ushort? Word) VerifiedReply(
         ReadOnlySpan<byte> request, ReadOnlySpan<byte> reply, bool isRead)
     {
-        _ = isRead ? ReadRequest(request) : WriteRequest(request);
+        if (isRead) _ = ReadRequest(request);
+        else _ = WriteRequest(request);
         if (reply.Length < 14 || reply[0] != 0xc0 ||
             reply[1] != request[1] || reply[2] != request[2] ||
             reply[3] != request[6] || reply[4] != request[7] ||
