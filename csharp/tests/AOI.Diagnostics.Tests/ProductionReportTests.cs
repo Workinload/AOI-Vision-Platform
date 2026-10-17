@@ -113,7 +113,7 @@ public sealed class ProductionReportTests
 
         var duplicates = reports.Search(new ProductionSearch(Barcode: "REPEAT"));
         Assert.That(duplicates.TotalMatches, Is.EqualTo(2));
-        Assert.That(duplicates.Rows.Select(x => x.WorkpieceId).Distinct(), Has.Count.EqualTo(2));
+        Assert.That(duplicates.Rows.Select(x => x.WorkpieceId).Distinct().ToArray(), Has.Length.EqualTo(2));
         Assert.That(duplicates.Rows.All(x => x.WorkpieceId == items[0].WorkpieceId ||
                                              x.WorkpieceId == items[1].WorkpieceId), Is.True);
 
@@ -169,7 +169,8 @@ public sealed class ProductionReportTests
         Assert.That(reports.Trace(identity.WorkpieceId).Channels.Single().Image.State, Is.EqualTo("VERIFIED"));
         string png = Path.Combine(_root, "master", "assets", identity.WorkpieceId.ToString("N"),
             "CH06", result.FrameId.ToString("N") + ".png");
-        File.AppendAllBytes(png, [1, 2, 3]); // intentionally corrupt real bytes while keeping PNG signature
+        using (var append = new FileStream(png, FileMode.Append, FileAccess.Write))
+            append.Write(new byte[] { 1, 2, 3 }); // corrupt real bytes while keeping PNG signature
         Assert.That(reports.Trace(identity.WorkpieceId).Channels.Single().Image.State,
             Is.EqualTo("SHA256_MISMATCH"));
         File.Delete(png);
