@@ -145,7 +145,8 @@ public sealed class TriggeredVisionTests
         var ticket = Ticket(device: "LINE-S-8");
         var parentFrameId = Guid.NewGuid();
         using var parent = new Mat(9, 30, MatType.CV_8UC1, Scalar.Black);
-        for (int y = 1; y < parent.Rows; y += 2)
+        int totalRows = parent.Rows;
+        for (int y = 1; y < totalRows; y += 2)
             Cv2.Rectangle(parent, new Rect(0, y, 30, 1), Scalar.White, -1);
         var ready = FrameRead.Ready(CameraFrame.CopyFrom(ticket, parentFrameId, parent));
         var report = new TriggeredVisionEngine(_ledger, new OpenCvInspectionProcessor())
