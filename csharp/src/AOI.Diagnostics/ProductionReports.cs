@@ -94,7 +94,7 @@ public sealed class ProductionReports
         long count;
         using (var cmd = db.CreateCommand())
         {
-            cmd.CommandText = "SELECT COUNT(*) " + JoinedRows + WhereClause;
+            cmd.CommandText = "SELECT COUNT(*) " + JoinedRows + " " + WhereClause;
             Apply(cmd, filter);
             count = Convert.ToInt64(cmd.ExecuteScalar(), CultureInfo.InvariantCulture);
         }
@@ -105,7 +105,7 @@ public sealed class ProductionReports
                 SELECT w.workpiece_id,w.identity_json,w.final_json,h.reason_code,
                        (SELECT COUNT(DISTINCT r.channel_id) FROM channel_results r
                         WHERE r.workpiece_id=w.workpiece_id)
-                """ + JoinedRows + WhereClause
+                """ + " " + JoinedRows + " " + WhereClause
                 + " ORDER BY w.created_utc DESC,w.workpiece_id DESC LIMIT $limit OFFSET $offset";
             Apply(cmd, filter);
             cmd.Parameters.AddWithValue("$limit", filter.Limit);
@@ -137,7 +137,7 @@ public sealed class ProductionReports
         long good = 0, ng = 0, held = 0, unfinished = 0;
         using var db = Open("master");
         using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT w.final_json,h.reason_code " + JoinedRows + WhereClause;
+        cmd.CommandText = "SELECT w.final_json,h.reason_code " + JoinedRows + " " + WhereClause;
         Apply(cmd, filter);
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
