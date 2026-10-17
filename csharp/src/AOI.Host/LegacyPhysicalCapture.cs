@@ -32,6 +32,8 @@ internal sealed class LegacyPhysicalCapture
     private readonly SimProductRuntime _product;
     private readonly bool _frameFirst;
     private readonly LineScanRowMapping _lineRowMapping;
+    private readonly ushort _missingToken;
+    private readonly string? _missingDevice;
     private long _resultSequence;
 
     public LegacyPhysicalCapture(string nodeFolder, MachineRole owner,
@@ -52,6 +54,15 @@ internal sealed class LegacyPhysicalCapture
             "FRAME_FIRST" => true,
             _ => throw new InvalidOperationException("Unknown PLC/frame arrival ordering.")
         };
+        var missingToken = Environment.GetEnvironmentVariable("AOI_SIM_MISSING_FRAME_TOKEN");
+        _missingDevice = Environment.GetEnvironmentVariable("AOI_SIM_MISSING_FRAME_DEVICE");
+        if (!string.IsNullOrWhiteSpace(missingToken) &&
+            (!ushort.TryParse(missingToken, out _missingToken) || _missingToken == 0 ||
+             string.IsNullOrWhiteSpace(_missingDevice) ||
+             !ChannelCatalog.All.Any(c => c.PhysicalDeviceId == _missingDevice &&
+                 c.OwnerRole == _owner)))
+            throw new InvalidOperationException(
+                "SIM_ONLY missing-frame injection requires valid Token and camera owned by this Core.");
         _lineRowMapping = Environment.GetEnvironmentVariable("AOI_SIM_LINE_ROW_MAPPING") switch
         {
             null or "" or "DEMO_EVEN_ODD" => LineScanRowMapping.DemoEvenOdd,
@@ -67,6 +78,26 @@ internal sealed class LegacyPhysicalCapture
             new OpenCvInspectionProcessor(), lineRowMapping: _lineRowMapping);
         _timeline = new ProductionTimingJournal(nodeFolder,
             owner == MachineRole.Master ? "master" : "slave");
+    }
+
+    private void PersistFault(PhysicalCaptureTrigger trigger,
+        string reasonCode, string detail)
+    {
+        if (_owner == MachineRole.Slave)
+        {
+            var fault = new PhysicalCaptureFault(trigger, reasonCode, detail,
+                DateTimeOffset.UtcNow);
+            var outbound = PeerEnvelope.Create("slave", "master",
+                Interlocked.Increment(ref _resultSequence), trigger.Workpiece,
+                "capture_fault", fault, trigger.Channels[0].ChannelId);
+            _store.HoldAndQueueCaptureFault(fault, outbound);
+            Console.WriteLine("SIM_SLAVE_FAULT_QUEUED token=" + trigger.Token +
+                " workpiece=" + trigger.Workpiece.WorkpieceId +
+                " capture=" + trigger.CaptureId + " device=" +
+                trigger.PhysicalDeviceId + " reason=" + reasonCode);
+        }
+        else
+            _store.RecordWorkpieceHold(trigger.Workpiece, reasonCode, detail);
     }
 
     public async Task HandleAsync(PhysicalCaptureTrigger trigger, CancellationToken ct)
@@ -110,7 +141,10 @@ internal sealed class LegacyPhysicalCapture
 
         async Task ReceiveActualFrameAsync()
         {
-            read = await _source.ReadAsync(frameTicket, timeout, ct);
+            read = _missingToken != 0 && trigger.Token == _missingToken &&
+                trigger.PhysicalDeviceId == _missingDevice
+                ? FrameRead.Missing("SIM_INJECTED_HARD_FRAME_ABSENT")
+                : await _source.ReadAsync(frameTicket, timeout, ct);
             if (read.Status != ChannelOutcome.Ok || read.Frame is null) return;
             // The original source Mat is encoded losslessly BEFORE any algorithm.
             // A1 verifies its source SHA against the persisted A3 ChannelResult.
@@ -193,7 +227,7 @@ internal sealed class LegacyPhysicalCapture
         if (ack == 3)
         {
             read?.Frame?.Dispose();
-            _store.RecordWorkpieceHold(item, "PHYSICAL_FRAME_MISSING",
+            PersistFault(trigger, "PHYSICAL_FRAME_MISSING",
                 $"{trigger.PhysicalDeviceId}: frame unavailable or invalid; D{dm}=3 confirmed.");
             _timeline.Append(new TimingObservation(item, TimingStage.CaptureFailed,
                 trigger.CaptureId, trigger.PhysicalDeviceId,
@@ -239,7 +273,7 @@ internal sealed class LegacyPhysicalCapture
             {
                 _captures.FailCapture(trigger.CaptureId,
                     "INSPECTOR_FAILURE:" + channel.ChannelId + ":" + channel.Reason);
-                _store.RecordWorkpieceHold(item, "PHYSICAL_INSPECTION_ERROR",
+                PersistFault(trigger, "PHYSICAL_INSPECTION_ERROR",
                     trigger.PhysicalDeviceId + " algorithm failed; result remains non-GOOD.");
                 return;
             }
