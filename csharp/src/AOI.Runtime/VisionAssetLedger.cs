@@ -90,9 +90,10 @@ public static class VisionPixelOps
         var child = new Mat(height, parent.Cols, MatType.CV_8UC1);
         try
         {
+            int sourceHeight = parent.Rows; // OpenCvSharp P/Invoke: cache before loop
             var sourceRows = parent.AsRows<byte>();
             var destinationRows = child.AsRows<byte>();
-            for (int y = first; y < parent.Rows; y += 2)
+            for (int y = first; y < sourceHeight; y += 2)
                 sourceRows[y].CopyTo(destinationRows[(y - first) / 2]);
             return child;
         }
