@@ -151,8 +151,7 @@
               </Grid>
               <ListBox Grid.Row="2" ItemsSource="{Binding PlcSignals}"
                        SelectedItem="{Binding SelectedPlcSignal, Mode=TwoWay}"
-                       Background="#F5F8FB" BorderThickness="0"
-                       HorizontalContentAlignment="Stretch">
+                       Background="#F5F8FB" BorderThickness="0">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Grid ColumnDefinitions="170,100,80,90,90,*" Margin="6,7">
@@ -180,8 +179,7 @@
                          Foreground="#923D31" FontSize="11" TextWrapping="Wrap"/>
               <ListBox Grid.Row="1" ItemsSource="{Binding PlcGates}"
                        SelectedItem="{Binding SelectedFieldGate, Mode=TwoWay}"
-                       BorderThickness="0" Background="#F6F8FB"
-                       HorizontalContentAlignment="Stretch">
+                       BorderThickness="0" Background="#F6F8FB">
                 <ListBox.ItemTemplate>
                   <DataTemplate>
                     <Border Margin="3" Padding="9" CornerRadius="7"
