@@ -70,6 +70,25 @@ jobs:
         run: python scripts/e2e_sim_full.py --with-product --count 5 --evidence-root .artifacts/simfull-recipe
       - name: SIM_FULL actual operator PNGs, OpenCV contour NG and line row-deinterleave
         run: python scripts/e2e_sim_full.py --with-images --count 5 --evidence-root .artifacts/simfull-real-png
+      - name: P0 wire-and-frame audit of actual five-process SIM_FULL evidence
+        shell: bash
+        run: |
+          set +e
+          python qa/p0_five_process_acceptance.py --audit-existing --count 5 \
+            --ordering REQUEST_FIRST --expected-status NG \
+            --evidence-root .artifacts/simfull-real-png \
+            > .artifacts/p0-independent-fins-audit.log 2>&1
+          audit_status=$?
+          set -e
+          cat .artifacts/p0-independent-fins-audit.log
+          if [ "$audit_status" -eq 3 ]; then
+            echo 'A5_P0_NOT_VERIFIED: five real demo processes passed but A2 raw FINS/A7 causal Host evidence is not connected yet'
+          elif [ "$audit_status" -eq 0 ]; then
+            echo 'A5_P0_REAL_FINS_FRAME_CAUSAL_PASS'
+          else
+            echo "A5_P0_INDEPENDENT_AUDIT_FAIL exit=$audit_status"
+            exit "$audit_status"
+          fi
       - name: Publish Windows x64 framework-dependent SIM_ONLY preview
         if: matrix.os == 'windows-2025'
         shell: bash
