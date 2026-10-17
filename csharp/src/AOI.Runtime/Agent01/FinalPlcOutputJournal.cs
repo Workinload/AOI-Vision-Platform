@@ -192,7 +192,9 @@ public sealed class FinalPlcOutputJournal : IDisposable
         var db = new SqliteConnection(_connectionString);
         db.Open();
         using var timeout = db.CreateCommand();
-        timeout.CommandText = "PRAGMA busy_timeout=5000;";
+        // synchronous is per SQLite connection: every event append must use FULL,
+        // not just the one-time schema connection opened by the constructor.
+        timeout.CommandText = "PRAGMA busy_timeout=5000; PRAGMA synchronous=FULL;";
         timeout.ExecuteNonQuery();
         return db;
     }
