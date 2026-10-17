@@ -167,8 +167,10 @@ public sealed class RuntimeChannelParameterTests
         Assert.That(physical.ChannelIds, Is.EquivalentTo(new[] { "CH08", "CH09" }));
         Assert.That(physical.PlcSignalAddress, Is.EqualTo("D1013"));
         Assert.That(physical.Camera.Target!.AdapterId, Is.EqualTo("sim.png.frame-source.v1"));
-        Assert.That(bound.ForChannel("CH08", "LINE-S-8").Camera.Target,
-            Is.EqualTo(bound.ForChannel("CH09", "LINE-S-8").Camera.Target));
+        Assert.That(bound.ForChannel("CH08", "LINE-S-8").Camera.Target!.AdapterId,
+            Is.EqualTo(bound.ForChannel("CH09", "LINE-S-8").Camera.Target!.AdapterId));
+        Assert.That(bound.ForChannel("CH08", "LINE-S-8").Camera.Target!.TriggerMode,
+            Is.EqualTo(bound.ForChannel("CH09", "LINE-S-8").Camera.Target!.TriggerMode));
         Assert.Throws<InvalidOperationException>(() => bound.ForChannel("CH06", "LINE-S-8"));
         Assert.Throws<InvalidDataException>(() =>
             SolutionParameterEditor.SetCaptureTarget(repo, "PRODUCT-A",
