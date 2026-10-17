@@ -291,4 +291,50 @@ public sealed class ProductionTimingTests
         Assert.That(events.Where(e => e.OperationId == op).Select(e => e.FinsSid)
             .Distinct(), Is.EquivalentTo(new byte?[] { 31 }));
     }
+
+    [Test]
+    public void SameFrameIdForDifferentPhysicalWorkpieces_IsFoundEvenWhenQueryFiltersOneItem()
+    {
+        var journal = Journal();
+        var first = Item("BARCODE_REUSED");
+        var second = Item("BARCODE_REUSED");
+        Guid duplicatedFrame = Guid.NewGuid();
+        journal.Append(Capture(first, TimingStage.FrameArrived, Guid.NewGuid(), duplicatedFrame));
+        journal.Append(Capture(second, TimingStage.FrameArrived, Guid.NewGuid(), duplicatedFrame));
+        var firstOnly = new ProductionTimelineReader(_root)
+            .Query(new TimingFilter(first.WorkpieceId));
+        Assert.That(firstOnly.Events.All(e => e.WorkpieceId == first.WorkpieceId), Is.True);
+        Assert.That(firstOnly.DiagnosticDifferences.Select(d => d.Code),
+            Does.Contain("FRAME_REUSED_ACROSS_WORKPIECES"));
+        Assert.That(firstOnly.DiagnosticDifferences.Single(d =>
+            d.Code == "FRAME_REUSED_ACROSS_WORKPIECES").Detail,
+            Does.Contain(second.WorkpieceId.ToString("D")));
+    }
+
+    [Test]
+    public void MissingFrameAndMissingCamDoneAckAreDiagnosedAfterExplicitWindows()
+    {
+        var item = Item();
+        var journal = Journal();
+        Guid capture = Guid.NewGuid();
+        var request = journal.Append(Capture(item, TimingStage.PlcCaptureRequestObserved, capture));
+        var lateWindow = ProductionTimingAnalyzer.Diagnose([request],
+            evaluatedUtc: request.Utc.AddSeconds(11), frameDeadline: TimeSpan.FromSeconds(10));
+        Assert.That(lateWindow.Select(d => d.Code),
+            Does.Contain("FRAME_NOT_ARRIVED_BEFORE_DEADLINE"));
+
+        var frame = Guid.NewGuid();
+        journal.Append(Capture(item, TimingStage.FrameArrived, capture, frame));
+        journal.Append(Capture(item, TimingStage.FrameReady, capture, frame));
+        Guid op = Guid.NewGuid();
+        var sent = journal.Append(Capture(item, TimingStage.CamDoneSent, capture,
+            operation: op, value: 2, sid: 41));
+        var queried = new ProductionTimelineReader(_root).Query(new TimingFilter(item.WorkpieceId));
+        var overdue = ProductionTimingAnalyzer.Diagnose(queried.Events,
+            evaluatedUtc: sent.Utc.AddSeconds(3),
+            camDoneDeadline: TimeSpan.FromSeconds(2));
+        Assert.That(overdue.Select(d => d.Code), Does.Contain("CAMDONE_ACK_TIMEOUT"));
+        Assert.That(overdue.Select(d => d.Code), Does.Not.Contain("FRAME_NOT_ARRIVED_BEFORE_DEADLINE"));
+    }
+
 }
