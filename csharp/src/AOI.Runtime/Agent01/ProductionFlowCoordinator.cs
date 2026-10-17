@@ -17,7 +17,7 @@ namespace AOI.Runtime.Agent01;
 public sealed class ProductionFlowCoordinator : IProductionFlowCoordinator
 {
     public static IReadOnlyList<string> StationOrder { get; } =
-        Array.AsReadOnly(["LOADING", "ST03", "ST04", "ST05", "ST06", "ST09", "ST10"]);
+        Array.AsReadOnly(new[] { "LOADING", "ST03", "ST04", "ST05", "ST06", "ST09", "ST10" });
 
     private static readonly IReadOnlyDictionary<string, string[]> ChannelsByStation =
         StationOrder.ToDictionary(station => station,
