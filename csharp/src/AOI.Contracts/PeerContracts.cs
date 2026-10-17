@@ -51,6 +51,44 @@ public sealed record PeerEnvelope(
     }
 }
 
+
+/// <summary>
+/// Durable Master-to-Slave instruction to associate an already observed physical
+/// station sensor with ONE immutable WorkpieceId and ONE physical camera exposure.
+/// This is SIM_ONLY event metadata, not a camera software-trigger command.
+/// </summary>
+public sealed record PhysicalCaptureTrigger(
+    WorkpieceIdentity Workpiece, Guid CaptureId, ushort Token,
+    string PhysicalDeviceId, int AttemptNo, long SensorEventSequence,
+    DateTimeOffset ObservedUtc)
+{
+    public IReadOnlyList<ChannelDefinition> Channels => ChannelCatalog.All
+        .Where(c => c.PhysicalDeviceId == PhysicalDeviceId)
+        .OrderBy(c => c.ChannelId, StringComparer.Ordinal).ToArray();
+
+    public string StationId => Channels[0].StationId;
+    public string PlcAddress => Channels[0].PlcSignalAddress;
+    public MachineRole OwnerRole => Channels[0].OwnerRole;
+
+    public void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Workpiece);
+        Workpiece.Validate();
+        if (CaptureId == Guid.Empty || Token == 0 || AttemptNo is < 1 or > 1000 ||
+            SensorEventSequence < 1 || ObservedUtc == default ||
+            string.IsNullOrWhiteSpace(PhysicalDeviceId) || Channels.Count is < 1 or > 2)
+            throw new InvalidDataException("Invalid physical capture trigger identity.");
+        var first = Channels[0];
+        if (Channels.Any(c => c.OwnerRole != first.OwnerRole ||
+            c.StationId != first.StationId || c.PlcSignalAddress != first.PlcSignalAddress))
+            throw new InvalidDataException("Physical exposure crosses a device, station or PLC owner.");
+        if (Channels.Count == 2 &&
+            (first.SharedFrameGroup != PhysicalDeviceId ||
+             Channels[1].SharedFrameGroup != PhysicalDeviceId))
+            throw new InvalidDataException("Two logical line results must share one parent exposure.");
+    }
+}
+
 public sealed record PersistedAck(Guid MessageId, string SenderNodeId, string PayloadHash,
     DateTimeOffset PersistedAtUtc);
 public sealed record PeerPacket(string Kind, PeerEnvelope? Envelope, PersistedAck? Ack);
