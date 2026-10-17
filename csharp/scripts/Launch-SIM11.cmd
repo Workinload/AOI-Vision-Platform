@@ -4,6 +4,8 @@ title AOI-Vision-Platform SIM11 launcher
 set "BASE=%~dp0"
 set "DATA=%BASE%sim-data"
 set "AOI_SIM_CHANNEL_SET=ALL_11"
+for /f "delims=" %%G in ('powershell -NoProfile -Command "[guid]::NewGuid().ToString('N')"') do set "AOI_SIM_CONFIG_TOKEN=%%G"
+if not defined AOI_SIM_CONFIG_TOKEN echo SIM_ONLY_ROI_WRITE_DISABLED - PowerShell session token unavailable
 if not exist "%BASE%Host\AOI.Host.exe" goto missing
 if not exist "%BASE%UI\AOI.Ui.Avalonia.exe" goto missing
 if not exist "%BASE%Diagnostics\AOI.Diagnostics.Cli.exe" goto missing
@@ -27,7 +29,7 @@ echo [5/5] Slave Avalonia window
 start "AOI SIM Slave UI" /D "%BASE%UI" "%BASE%UI\AOI.Ui.Avalonia.exe" --slave
 echo.
 echo Startup requested. If a process fails, inspect its console window.
-echo Both UIs are READ-ONLY; the simulated result appears after both Cores finish.
+echo PLC is read-only; operator ROI edits create SIM_ONLY drafts ONLY (not applied to production).
 echo Snapshot and asset data: "%DATA%"
 echo Close ALL five SIM processes before starting another run.
 echo An existing run uses fixed local ports; repeated launches will conflict.

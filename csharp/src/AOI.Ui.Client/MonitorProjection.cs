@@ -17,6 +17,7 @@ public sealed record MonitorProjection(
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
     public WorkpieceHoldOverview? Holds { get; init; }
     public SimActiveProductSnapshot? ActiveProduct { get; init; }
+    public IReadOnlyList<RoiDraftState>? RoiDrafts { get; init; }
 
     public static MonitorProjection Offline(MachineRole role) => new(
         role == MachineRole.Master ? "master" : "slave", role, "IPC_OFFLINE", "SIM_ONLY",
@@ -46,6 +47,18 @@ public sealed record MonitorProjection(
         snapshot.PlcEngineering?.Validate();
         snapshot.Holds?.Validate();
         snapshot.ActiveProduct?.Validate();
+        if (snapshot.RoiDrafts is { } drafts)
+        {
+            if (drafts.Count > 11 ||
+                drafts.Select(d => d.ChannelId).Distinct(StringComparer.Ordinal).Count() != drafts.Count)
+                throw new InvalidDataException("Invalid or duplicate ROI drafts in Core IPC.");
+            foreach (var draft in drafts)
+            {
+                draft.Validate();
+                if (ChannelCatalog.Require(draft.ChannelId).OwnerRole != expectedRole)
+                    throw new InvalidDataException("Remote node cannot inject editable ROI into this UI.");
+            }
+        }
         var byId = new Dictionary<string, ChannelSnapshot>(StringComparer.Ordinal);
         foreach (var c in snapshot.Channels)
         {
@@ -75,7 +88,8 @@ public sealed record MonitorProjection(
             Production = snapshot.Production,
             PlcEngineering = snapshot.PlcEngineering,
             Holds = snapshot.Holds,
-            ActiveProduct = snapshot.ActiveProduct
+            ActiveProduct = snapshot.ActiveProduct,
+            RoiDrafts = snapshot.RoiDrafts
         };
     }
 }

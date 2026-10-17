@@ -48,6 +48,25 @@ def png_preview(port, workpiece_id, channel):
         return receive(length) if length else None
 
 
+def roi_edit(port, edit, token):
+    with socket.create_connection(('127.0.0.1', port), timeout=3) as sock:
+        sock.settimeout(3)
+        request = json.dumps({'edit': edit, 'accessToken': token},
+                             separators=(',', ':')) + '\n'
+        sock.sendall(request.encode('utf-8'))
+        with sock.makefile('r', encoding='utf-8') as reader:
+            answer = reader.readline()
+            assert answer, 'Missing durable ROI edit response'
+            return json.loads(answer)
+
+
+def core_snapshot(port):
+    with socket.create_connection(('127.0.0.1', port), timeout=3) as sock:
+        sock.settimeout(3)
+        with sock.makefile('r', encoding='utf-8') as reader:
+            return json.loads(reader.readline())
+
+
 def query(path, statement):
     if not path.is_file():
         return None
@@ -165,7 +184,8 @@ def main():
                 'AOI_SIM_ITEM_COUNT': str(args.count), 'AOI_SIM_MAX_IN_FLIGHT': '3',
                 'AOI_SIM_END_BARCODE_FLIP_TOKEN': str(args.flip_token),
                 'AOI_SIM_REPEAT_BARCODE': '1' if args.repeat_barcode else '0',
-                'DOTNET_CLI_TELEMETRY_OPTOUT': '1'})
+                'DOTNET_CLI_TELEMETRY_OPTOUT': '1',
+                'AOI_SIM_CONFIG_TOKEN': 'SIM_ONLY_E2E_ROI_OPERATOR_TOKEN_2026'})
     if args.with_product:
         cli = source / 'src/AOI.Solutions.Cli/bin/Debug/net10.0/AOI.Solutions.Cli.dll'
         assert cli.is_file(), 'Build AOI.slnx including A6 Solutions.Cli first'
@@ -310,6 +330,43 @@ def main():
         assert png_preview(19631, first, 'CH02') is None, 'Master must not serve Slave-owned source frame'
         assert png_preview(19632, first, 'CH06') is None, 'Slave must not serve Master-owned source frame'
         print('SIM_FULL_PREVIEW_IPC_PASS local_2=1 sha256=2 remote_leak=0', flush=True)
+        # Real writable-but-DRAFT-ONLY operator IPC, launched inside BOTH Cores;
+        # CAS revisions, token auth and node ownership are mandatory.
+        token = env['AOI_SIM_CONFIG_TOKEN']
+        master_roi = {'channelId': 'CH06', 'x': 0.15, 'y': 0.1,
+                      'width': 0.7, 'height': 0.8, 'expectedRevision': 0,
+                      'actor': 'sim_operator'}
+        slave_roi = {'channelId': 'CH02', 'x': 0.1, 'y': 0.2,
+                     'width': 0.8, 'height': 0.6, 'expectedRevision': 0,
+                     'actor': 'sim_operator'}
+        ack_master = roi_edit(19641, master_roi, token)
+        ack_slave = roi_edit(19642, slave_roi, token)
+        assert ack_master['accepted'] and ack_master['saved']['revision'] == 1, ack_master
+        assert ack_slave['accepted'] and ack_slave['saved']['revision'] == 1, ack_slave
+        assert roi_edit(19641, master_roi, token)['accepted'] is False, 'stale revision accepted'
+        assert roi_edit(19641, master_roi, 'incorrect_ROI_2026_access_token')['accepted'] is False, 'bad token accepted'
+        assert roi_edit(19641, slave_roi, token)['accepted'] is False, 'cross-node ROI owner forged'
+        post_master = core_snapshot(19621)
+        post_slave = core_snapshot(19622)
+        assert len(post_master['roiDrafts']) == len(post_slave['roiDrafts']) == 1
+        assert post_master['roiDrafts'][0]['channelId'] == 'CH06'
+        assert post_slave['roiDrafts'][0]['channelId'] == 'CH02'
+        assert post_master['roiDrafts'][0]['revision'] == 1
+        assert post_master['roiDrafts'][0]['x'] == 0.15
+        assert post_slave['roiDrafts'][0]['revision'] == 1
+        assert scalar(evidence / 'master/sim-config.sqlite',
+                      "SELECT revision FROM sim_roi_drafts WHERE channel_id='CH06'") == 1
+        assert scalar(evidence / 'slave/sim-config.sqlite',
+                      "SELECT revision FROM sim_roi_drafts WHERE channel_id='CH02'") == 1
+        assert scalar(evidence / 'master/sim-config.sqlite',
+                      'SELECT COUNT(*) FROM sim_roi_drafts') == 1
+        assert scalar(evidence / 'slave/sim-config.sqlite',
+                      'SELECT COUNT(*) FROM sim_roi_drafts') == 1
+        assert post_master.get('activeProduct') == snapshot.get('activeProduct'), 'ROI draft changed active product'
+        assert post_master.get('production') == snapshot.get('production'), 'ROI draft changed production final'
+        print('SIM_ROI_EDIT_E2E_PASS accepted=2 stale=1 bad_token=1 foreign=1 '
+              'master_ipc=1 slave_ipc=1 no_activation=1', flush=True)
+
         if args.repeat_barcode:
             barcodes = query(evidence / 'master/production.db', 'SELECT barcode FROM workpieces')
             assert len({x[0] for x in barcodes}) == 1, 'Duplicate barcode test was not exercised'

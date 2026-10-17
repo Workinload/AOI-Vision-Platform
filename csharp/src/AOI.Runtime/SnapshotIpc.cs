@@ -11,7 +11,7 @@ public static class SnapshotIpc
 {
     public static async Task ServeAsync(ProductionStore store, string nodeId,
         MachineRole role, int port, CancellationToken ct, string simulationMode = "SIM_LIGHT",
-        SimActiveProductSnapshot? activeProduct = null)
+        SimActiveProductSnapshot? activeProduct = null, RoiConfigStore? roiStore = null)
     {
         var server = new TcpListener(IPAddress.Loopback, port);
         server.Start();
@@ -36,7 +36,8 @@ public static class SnapshotIpc
                                 {
                                     SimulationMode = simulationMode,
                                     PlcEngineering = PlcEngineeringProjection.Snapshot,
-                                    ActiveProduct = activeProduct
+                                    ActiveProduct = activeProduct,
+                                    RoiDrafts = roiStore?.Snapshot()
                                 };
                                 await writer.WriteLineAsync(WireFormat.Serialize(snapshot));
                                 await Task.Delay(350, ct);

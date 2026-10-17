@@ -58,7 +58,10 @@ static async Task RunSlaveAsync(string root, bool allEleven, CancellationToken c
     const string self = "slave";
     var folder = Path.Combine(root, self);
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
-    _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct);
+    var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Slave);
+    _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, roiStore: simConfig);
+    _ = RoiDraftIpc.ServeAsync(simConfig, 19642,
+        Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN"), ct);
     _ = FramePreviewIpc.ServeAsync(store, MachineRole.Slave, folder, 19632, ct);
     if (allEleven)
     {
@@ -136,7 +139,10 @@ static async Task RunMasterAsync(string root, bool allEleven, CancellationToken 
     var folder = Path.Combine(root, self);
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
     using var finalGate = new SemaphoreSlim(1, 1);
-    _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct);
+    var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
+    _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, roiStore: simConfig);
+    _ = RoiDraftIpc.ServeAsync(simConfig, 19641,
+        Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN"), ct);
     _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
     var fins = new FinsSimClient();
     while (!ct.IsCancellationRequested)

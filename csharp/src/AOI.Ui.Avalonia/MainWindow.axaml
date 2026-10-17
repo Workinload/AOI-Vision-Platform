@@ -285,10 +285,10 @@
               <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
               <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
             </Grid>
-            <Button Content="验证本地 ROI 草稿（不保存、不下发）" Command="{Binding ValidateRoiCommand}"
+            <Button Content="校验并保存本机 ROI 草稿（不影响当前检测）" Command="{Binding ValidateRoiCommand}"
                     HorizontalAlignment="Stretch"/>
             <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#7D5C2C" TextWrapping="Wrap"/>
-            <TextBlock Text="历史与统计来自 Core WAL；方案发布、报警操作和现场硬件编辑仍未授权。"
+            <TextBlock Text="本机 ROI 草稿保存到 Core WAL；需正式版本发布后才能影响检测。真实 PLC/相机编辑仍未授权。"
                        TextWrapping="Wrap" FontSize="11" Foreground="#738497"/>
           </StackPanel>
         </Border>

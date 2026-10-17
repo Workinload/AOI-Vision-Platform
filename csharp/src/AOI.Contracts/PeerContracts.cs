@@ -168,6 +168,36 @@ public sealed record SimActiveProductSnapshot(
     }
 }
 
+/// <summary>Offline draft; never automatically applies to camera or released product.</summary>
+public sealed record RoiDraftEdit(
+    string ChannelId, double X, double Y, double Width, double Height,
+    long ExpectedRevision, string Actor)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(ChannelId) || string.IsNullOrWhiteSpace(Actor) ||
+            Actor.Length > 64 || ExpectedRevision is < 0 or >= long.MaxValue ||
+            new[] { X, Y, Width, Height }.Any(v => !double.IsFinite(v)) ||
+            X < 0 || Y < 0 || Width <= 0 || Height <= 0 ||
+            X > 1 || Y > 1 || X + Width > 1 || Y + Height > 1)
+            throw new InvalidDataException("Invalid bounded normalized SIM_ONLY ROI draft.");
+        _ = ChannelCatalog.Require(ChannelId);
+    }
+}
+public sealed record RoiDraftState(
+    string ChannelId, double X, double Y, double Width, double Height,
+    long Revision, string Actor, DateTimeOffset EditedUtc)
+{
+    public void Validate()
+    {
+        new RoiDraftEdit(ChannelId, X, Y, Width, Height, Revision - 1, Actor).Validate();
+        if (Revision < 1 || EditedUtc == default)
+            throw new InvalidDataException("Invalid saved SIM_ONLY ROI revision.");
+    }
+}
+public sealed record RoiDraftSaveRequest(RoiDraftEdit Edit, string AccessToken);
+public sealed record RoiDraftSaveReply(bool Accepted, string Error, RoiDraftState? Saved);
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
@@ -177,4 +207,5 @@ public sealed record MachineSnapshot(string NodeId, MachineRole Role, string Mac
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
     public WorkpieceHoldOverview? Holds { get; init; }
     public SimActiveProductSnapshot? ActiveProduct { get; init; }
+    public IReadOnlyList<RoiDraftState>? RoiDrafts { get; init; }
 }

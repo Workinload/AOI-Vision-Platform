@@ -4,6 +4,8 @@ title AOI Vision Platform SIM_FULL continuous conveyor
 set "BASE=%~dp0"
 set "DATA=%BASE%sim-full-data"
 set "AOI_SIM_CHANNEL_SET=ALL_11"
+for /f "delims=" %%G in ('powershell -NoProfile -Command "[guid]::NewGuid().ToString('N')"') do set "AOI_SIM_CONFIG_TOKEN=%%G"
+if not defined AOI_SIM_CONFIG_TOKEN echo SIM_ONLY_ROI_WRITE_DISABLED - PowerShell session token unavailable
 set "AOI_SIM_MODE=SIM_FULL"
 set "AOI_SIM_ITEM_COUNT=5"
 set "AOI_SIM_MAX_IN_FLIGHT=3"
@@ -21,7 +23,7 @@ start "AOI SIMFULL Master Core" /D "%BASE%Host" "%BASE%Host\AOI.Host.exe" master
 timeout /t 2 /nobreak >nul
 start "AOI SIMFULL Master UI" /D "%BASE%UI" "%BASE%UI\AOI.Ui.Avalonia.exe" --master
 start "AOI SIMFULL Slave UI" /D "%BASE%UI" "%BASE%UI\AOI.Ui.Avalonia.exe" --slave
-echo SIM_FULL running. Review Core logs; terminate all five processes together.
+echo SIM_FULL running. ROI edits save only local revisioned drafts, never change active release.
 echo Retain sim-full-data for evidence; do not auto-continue a failed physical queue.
 exit /b 0
 :hold
