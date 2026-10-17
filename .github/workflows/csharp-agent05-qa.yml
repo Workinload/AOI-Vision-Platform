@@ -1,5 +1,8 @@
 name: Agent05 CSharp SIM_ONLY Quality Gate
 on:
+  push:
+    branches: ['migration/csharp-avalonia-20261016']
+    paths: ['csharp/**', '.github/workflows/csharp-agent05-qa.yml']
   pull_request:
     paths: ['csharp/**', '.github/workflows/csharp-agent05-qa.yml']
   workflow_dispatch:
