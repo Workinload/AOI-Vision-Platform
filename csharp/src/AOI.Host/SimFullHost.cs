@@ -1,6 +1,7 @@
 using AOI.Contracts;
 using AOI.Domain;
 using AOI.Runtime;
+using AOI.Runtime.Plc;
 using System.Net;
 using System.Net.Sockets;
 
@@ -23,7 +24,10 @@ public static class SimFullHost
                 int flip = GetInt("AOI_SIM_END_BARCODE_FLIP_TOKEN", 0, 0, count);
                 var plc = new SimFullVirtualPlc(count, slots, flip == 0 ? null : flip,
                     Environment.GetEnvironmentVariable("AOI_SIM_REPEAT_BARCODE") == "1");
-                await plc.RunAsync(ct);
+                if (LegacyShadowHostBridge.Enabled)
+                    await LegacyShadowHostBridge.RunPlcAsync(plc, dataRoot, ct);
+                else
+                    await plc.RunAsync(ct);
                 break;
             case "master":
                 await RunMasterAsync(dataRoot, ct);
@@ -121,6 +125,8 @@ public static class SimFullHost
         Console.WriteLine($"SIM_FULL_MASTER_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         // Bind one boot nonce before accepting any virtual load or exit token.
         var fins = new FinsSimClient();
+        var legacyFins = LegacyShadowHostBridge.Enabled
+            ? LegacyShadowHostBridge.NewClient() : null;
         ushort[] nonceParts;
         while (true)
         {
@@ -162,7 +168,7 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, folder, bootNonce, product, bridge, linked.Token);
+            var production = PollAsync(store, ledger, fins, legacyFins, folder, bootNonce, product, bridge, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
             try
             {
@@ -183,8 +189,9 @@ public static class SimFullHost
     }
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
-        FinsSimClient fins, string folder, uint bootNonce, SimProductRuntime product,
-        SimProductionBridge bridge, CancellationToken ct)
+        FinsSimClient fins, LegacyFinsLoopbackClient? legacyFins, string folder,
+        uint bootNonce, SimProductRuntime product, SimProductionBridge bridge,
+        CancellationToken ct)
     {
         var held = new HashSet<ushort>();
         var exited = new HashSet<ushort>();
@@ -212,6 +219,9 @@ public static class SimFullHost
                 int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master, store, folder, product);
                 if (frames != 5) throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
                 bridge.Register(load, item);
+                if (legacyFins is not null)
+                    await LegacyShadowHostBridge.ConfirmLoadAsync(
+                        legacyFins, load, item.Barcode, ct);
                 await EnsureNonceAsync(fins, bootNonce, ct);
                 await fins.WriteAsync(SimFullVirtualPlc.LoadAckAddress, load);
                 Console.WriteLine($"SIM_FULL_LOADED token={load} id={item.WorkpieceId} " +
@@ -261,6 +271,12 @@ public static class SimFullHost
                         store.StoreFinal(item, decision);
                         bridge.FinalPersisted(item.WorkpieceId, decision);
                         ushort command = decision.Disposition == FinalDisposition.Good ? (ushort)1 : (ushort)2;
+                        // In the opt-in legacy profile, this is a real TWO-write FINS
+                        // handshake. D4003 remains only the simulator FIFO commit.
+                        // A lost ACK/readback is deliberately fatal; never auto-redrive.
+                        if (legacyFins is not null)
+                            await LegacyShadowHostBridge.WriteNormalFinalAsync(
+                                legacyFins, exit, decision.Disposition, ct);
                         await EnsureNonceAsync(fins, bootNonce, ct);
                         await fins.WriteAsync(SimFullVirtualPlc.ExitDecisionAddress, exit, command);
                         ledger.MarkExited(exit, decision);
