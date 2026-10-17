@@ -282,7 +282,10 @@ function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
             if($ancestor.Current.ControlType -eq [Windows.Automation.ControlType]::ListItem) {
                 # Only the LEFT device map, not the right PLC table.
                 if($ancestor.Current.BoundingRectangle.Left -le $wr.Left+($wr.Right-$wr.Left)*0.65) {
-                    Click-Element $Window $ancestor
+                    # Click the actual channel TEXT, not the ListItem center.
+                    # The second-row tile CH06 center can fall below its parent
+                    # ScrollViewer viewport even when its header text is visible.
+                    Click-Element $Window $el
                     Start-Sleep -Milliseconds 300
                     $descriptions=Elements $root ([Windows.Automation.ControlType]::Text)
                     if(-not @($descriptions | Where-Object { $_.Current.Name -like ($Id+' ·*') }).Count) {
