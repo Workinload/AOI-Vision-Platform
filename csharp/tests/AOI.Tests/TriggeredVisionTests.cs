@@ -192,6 +192,79 @@ public sealed class TriggeredVisionTests
     }
 
     [Test]
+    public async Task FileAdapter_ActuallyImportsCurrentWorkpiecePngAtStationEvent()
+    {
+        var ticket = Ticket();
+        var folder = Path.Combine(_root, "images", ticket.Workpiece.WorkpieceId.ToString("N"));
+        Directory.CreateDirectory(folder);
+        using (var native = new Mat(30, 50, MatType.CV_8UC1, Scalar.Black))
+        {
+            Cv2.Rectangle(native, new Rect(10, 8, 9, 12), Scalar.White, -1);
+            Assert.That(Cv2.ImWrite(Path.Combine(folder, "CH06.png"), native), Is.True);
+        }
+        var source = new PngFileFrameSource(Path.Combine(_root, "images"));
+        var engine = new TriggeredVisionEngine(_ledger, new OpenCvInspectionProcessor());
+        var actual = await engine.CaptureAndInspectAsync(ticket, source, Settings,
+            TimeSpan.FromSeconds(3));
+        Assert.That(actual.Channels.Single().Outcome, Is.EqualTo(ChannelOutcome.Ng));
+        Assert.That(actual.Channels.Single().Observation!.CaptureId, Is.EqualTo(ticket.CaptureId));
+        Assert.That(actual.Channels.Single().Defects.Single().Width, Is.EqualTo(9));
+        var another = Ticket(WorkpieceIdentity.New(ticket.Workpiece.Barcode, 7, "RELEASE-A"));
+        var missing = await engine.CaptureAndInspectAsync(another, source, Settings,
+            TimeSpan.FromSeconds(3));
+        Assert.That(missing.Channels.Single().Outcome, Is.EqualTo(ChannelOutcome.Missing));
+        Assert.That(missing.PersistedResults, Is.Zero);
+    }
+
+    private sealed class FailingModel : IInspectionProcessor
+    {
+        public PixelInspection Inspect(ChannelDefinition channel, Mat pixels, InspectionSettings settings)
+            => throw new FormatException("Model plugin is unable to decode its recipe");
+    }
+
+    [Test]
+    public async Task BrokenReplaceableAlgorithm_IsOnlyAnErrorOnItsOwnWorkpiece()
+    {
+        var broken = Ticket();
+        var healthy = Ticket();
+        using var raw = new Mat(32, 32, MatType.CV_8UC1, Scalar.Black);
+        var failed = await new TriggeredVisionEngine(_ledger, new FailingModel())
+            .InspectAndPersistAsync(broken, FrameRead.Ready(CameraFrame.CopyFrom(
+                broken, Guid.NewGuid(), raw)), Settings);
+        Assert.That(failed.PersistedResults, Is.Zero);
+        Assert.That(failed.Channels.Single().Outcome, Is.EqualTo(ChannelOutcome.Error));
+        var recovered = await new TriggeredVisionEngine(_ledger, new OpenCvInspectionProcessor())
+            .InspectAndPersistAsync(healthy, FrameRead.Ready(CameraFrame.CopyFrom(
+                healthy, Guid.NewGuid(), raw)), Settings);
+        Assert.That(recovered.Channels.Single().Outcome, Is.EqualTo(ChannelOutcome.Ok));
+        Assert.That(_ledger.ResultsFor(broken.Workpiece.WorkpieceId), Is.Empty);
+        Assert.That(_ledger.ResultsFor(healthy.Workpiece.WorkpieceId), Has.Count.EqualTo(1));
+    }
+
+    [Test]
+    public async Task FullSize8200x15000LineParent_FitsOnlyOneBoundedOwnedFrame()
+    {
+        var ticket = Ticket(device: "LINE-M-2");
+        const long rawBytes = 8200L * 15000;
+        using var inbox = new BoundedCameraFrameInbox(maxPending: 2, maxBufferedBytes: rawBytes);
+        var native = new Mat(15000, 8200, MatType.CV_8UC1, Scalar.Black);
+        var owned = CameraFrame.TakeOwnership(ticket, Guid.NewGuid(), native);
+        Assert.That(owned.AllocatedBytes, Is.EqualTo(rawBytes));
+        Assert.That(inbox.TryOffer(owned), Is.True);
+        using var tiny = new Mat(1, 1, MatType.CV_8UC1, Scalar.Black);
+        Assert.That(inbox.TryOffer(CameraFrame.CopyFrom(Ticket(device: "LINE-M-2"),
+            Guid.NewGuid(), tiny)), Is.False);
+        Assert.That(inbox.BufferedBytes, Is.EqualTo(rawBytes));
+        var acquired = await inbox.ReadAsync(ticket, TimeSpan.FromSeconds(3));
+        Assert.That(acquired.Status, Is.EqualTo(ChannelOutcome.Ok));
+        Assert.That(acquired.Frame!.Pixels.Rows, Is.EqualTo(15000));
+        Assert.That(acquired.Frame.Pixels.Cols, Is.EqualTo(8200));
+        acquired.Frame.Dispose();
+        Assert.That(inbox.BufferedBytes, Is.Zero);
+        // Memory/ownership test only: no field camera, PLC or full 123MB inspector benchmark.
+    }
+
+    [Test]
     public void UnknownAlgorithm_CannotBecomeGoodOrAccidentalModelProof()
     {
         var ticket = Ticket();

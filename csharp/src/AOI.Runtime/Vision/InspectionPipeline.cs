@@ -39,8 +39,9 @@ public sealed class OpenCvInspectionProcessor : IInspectionProcessor
         var inspected = ContourDefectDetector.Inspect(pixels, settings.Contour, settings.Roi);
         // Annotation is a bounded optional UI resource, never the immutable source evidence.
         byte[]? overlayPng = null;
-        using (var annotated = ContourDefectDetector.Annotate(pixels, inspected))
+        if ((long)pixels.Rows * pixels.Cols <= 8_000_000)
         {
+            using var annotated = ContourDefectDetector.Annotate(pixels, inspected);
             if (Cv2.ImEncode(".png", annotated, out var encoded) && encoded.Length <= 16 * 1024 * 1024)
                 overlayPng = encoded;
         }
@@ -71,11 +72,42 @@ public sealed class TriggeredVisionEngine
 {
     private readonly VisionAssetLedger _ledger;
     private readonly IInspectionProcessor _processor;
+    private readonly SemaphoreSlim _processingSlots;
 
-    public TriggeredVisionEngine(VisionAssetLedger ledger, IInspectionProcessor processor)
+    public TriggeredVisionEngine(VisionAssetLedger ledger, IInspectionProcessor processor,
+        int maxParallelInspections = 2)
     {
         _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
         _processor = processor ?? throw new ArgumentNullException(nameof(processor));
+        if (maxParallelInspections is < 1 or > 16)
+            throw new ArgumentOutOfRangeException(nameof(maxParallelInspections));
+        _processingSlots = new SemaphoreSlim(maxParallelInspections, maxParallelInspections);
+    }
+
+    /// <summary>
+    /// Nonblocking to the PLC event/ack loop. Acquired frame ownership is retained and
+    /// disposed by the inspector; cancellation while queued disposes it without a result.
+    /// Share one engine instance per Core to bound concurrent native inspections.
+    /// </summary>
+    public async Task<PhysicalCaptureOutput> InspectAndPersistAsync(CaptureTicket ticket,
+        FrameRead read, Func<ChannelDefinition, InspectionSettings> settingsFor,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _processingSlots.WaitAsync(cancellationToken).ConfigureAwait(false);
+        }
+        catch
+        {
+            read.Frame?.Dispose();
+            throw;
+        }
+        try
+        {
+            return await Task.Run(() => InspectAndPersist(ticket, read, settingsFor))
+                .ConfigureAwait(false);
+        }
+        finally { _processingSlots.Release(); }
     }
 
     /// <summary>Standalone convenience path. Host must use the split ReadAsync/InspectAndPersist
@@ -86,7 +118,8 @@ public sealed class TriggeredVisionEngine
     {
         ArgumentNullException.ThrowIfNull(source);
         var read = await source.ReadAsync(ticket, deadline, cancellationToken).ConfigureAwait(false);
-        return InspectAndPersist(ticket, read, settingsFor);
+        return await InspectAndPersistAsync(ticket, read, settingsFor, cancellationToken)
+            .ConfigureAwait(false);
     }
 
     /// <summary>
@@ -166,8 +199,8 @@ public sealed class TriggeredVisionEngine
                         inspections[i].ElapsedMilliseconds, inspections[i].AnnotationPng);
                 }).ToArray());
         }
-        catch (Exception ex) when (ex is ArgumentException or InvalidOperationException or
-            IOException or OpenCVException or Microsoft.Data.Sqlite.SqliteException)
+        catch (Exception ex) when (ex is not (OperationCanceledException or
+            OutOfMemoryException or StackOverflowException))
         {
             return Failure(ChannelOutcome.Error, "INSPECTION_OR_ASSET_ERROR:" + ex.GetType().Name,
                 frameId, readyUtc, monotonic);
