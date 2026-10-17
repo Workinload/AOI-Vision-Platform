@@ -27,7 +27,7 @@ public sealed class OperatorWorkspaceViewModelTests
             Assert.That(vm.GalleryChannels.All(x => x.Preview is null), Is.True,
                 "UI must not invent images before verified Core IPC returns pixels.");
 
-            vm.FollowLiveCommand.Execute();
+            vm.FollowLiveCommand.Execute(null);
             Assert.That(vm.ViewedWorkpieceLabel, Does.Contain("无可用工件"));
 
             // A map click must also select its exact PLC row, without forcing page navigation.
