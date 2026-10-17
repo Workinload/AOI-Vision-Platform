@@ -90,9 +90,20 @@ public static class ProductionTimingAnalyzer
     /// PLC request/physical trigger never physically happened: it may be uninstrumented.
     /// Missing milestones are reported by Compare() against an explicit A5 expectation.
     /// </summary>
-    public static TimingDifference[] Diagnose(IReadOnlyList<TimingEvent> events, bool truncated = false)
+    public static TimingDifference[] Diagnose(
+        IReadOnlyList<TimingEvent> events, bool truncated = false,
+        DateTimeOffset? evaluatedUtc = null,
+        TimeSpan? frameDeadline = null, TimeSpan? camDoneDeadline = null,
+        TimeSpan? inspectionDeadline = null)
     {
         ArgumentNullException.ThrowIfNull(events);
+        var now = evaluatedUtc ?? DateTimeOffset.UtcNow;
+        var frameBudget = frameDeadline ?? TimeSpan.FromSeconds(10);
+        var doneBudget = camDoneDeadline ?? TimeSpan.FromSeconds(2);
+        var inspectionBudget = inspectionDeadline ?? TimeSpan.FromSeconds(20);
+        if (frameBudget <= TimeSpan.Zero || doneBudget <= TimeSpan.Zero ||
+            inspectionBudget <= TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(frameDeadline), "Timing budgets must be positive.");
         var found = new List<TimingDifference>();
         void Error(string code, TimingEvent e, string detail) =>
             found.Add(new TimingDifference(code, "ERROR", -1, e.Stage, e.EventId, detail));
@@ -106,6 +117,24 @@ public static class ProductionTimingAnalyzer
             var ready = list.FirstOrDefault(e => e.Stage == TimingStage.FrameReady);
             var done = list.Where(e => e.Stage == TimingStage.CamDoneAcknowledged).ToArray();
             var inspection = list.Where(e => e.Stage == TimingStage.InspectionCompleted).ToArray();
+            var request = list.FirstOrDefault(e => e.Stage == TimingStage.PlcCaptureRequestObserved);
+            var arrived = list.FirstOrDefault(e => e.Stage == TimingStage.FrameArrived);
+            var sentDone = list.FirstOrDefault(e => e.Stage == TimingStage.CamDoneSent);
+            bool hasFailure = list.Any(e => e.Stage is
+                TimingStage.CaptureFailed or TimingStage.CaptureTimedOut);
+            if (request is not null && arrived is null && !hasFailure &&
+                now - request.Utc > frameBudget)
+                Error("FRAME_NOT_ARRIVED_BEFORE_DEADLINE", request,
+                    $"Request aged beyond {frameBudget.TotalMilliseconds:F0}ms without an observed frame; UTC-age estimate.");
+            if (ready is not null && done.Length == 0 && !hasFailure &&
+                now - (sentDone?.Utc ?? ready.Utc) > doneBudget)
+                Error(sentDone is null ? "CAMDONE_NOT_SENT_BEFORE_DEADLINE" : "CAMDONE_ACK_TIMEOUT",
+                    sentDone ?? ready,
+                    $"No confirmed CamDone by {doneBudget.TotalMilliseconds:F0}ms; UTC-age estimate.");
+            if (done.Any(e => e.PlcValue == 2) && inspection.Length == 0 && !hasFailure &&
+                now - done.Max(e => e.Utc) > inspectionBudget)
+                Error("INSPECTION_RESULT_TIMEOUT", done[^1],
+                    $"CamDone confirmed but inspection is not completed within {inspectionBudget.TotalMilliseconds:F0}ms.");
             foreach (var acknowledgement in done)
             {
                 var sent = list.FirstOrDefault(e =>
