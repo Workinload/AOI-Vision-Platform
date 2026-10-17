@@ -89,6 +89,27 @@ public sealed record PhysicalCaptureTrigger(
     }
 }
 
+
+/// <summary>
+/// Fault from the owning Slave camera; MUST be persisted in Master's SQLite
+/// transaction BEFORE PeerLink ACK. Never represents a valid inspection result.
+/// </summary>
+public sealed record PhysicalCaptureFault(
+    PhysicalCaptureTrigger Trigger, string ReasonCode, string Detail,
+    DateTimeOffset OccurredUtc)
+{
+    public void Validate()
+    {
+        ArgumentNullException.ThrowIfNull(Trigger);
+        Trigger.Validate();
+        if (Trigger.OwnerRole != MachineRole.Slave ||
+            ReasonCode is not ("PHYSICAL_FRAME_MISSING" or "PHYSICAL_INSPECTION_ERROR") ||
+            string.IsNullOrWhiteSpace(Detail) || Detail.Length > 512 ||
+            OccurredUtc == default)
+            throw new InvalidDataException("Capture fault requires an owned Slave camera and bounded failure evidence.");
+    }
+}
+
 public sealed record PersistedAck(Guid MessageId, string SenderNodeId, string PayloadHash,
     DateTimeOffset PersistedAtUtc);
 public sealed record PeerPacket(string Kind, PeerEnvelope? Envelope, PersistedAck? Ack);

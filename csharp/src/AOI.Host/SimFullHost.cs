@@ -212,7 +212,19 @@ public static class SimFullHost
             // Observe the FIRST task to finish and surface production failure to
             // the process supervisor; never leave an apparently live idle Core.
             var receive = session.ReadAsync(self, "slave", store,
-                (_, _, _) => Task.CompletedTask, linked.Token);
+                (message, duplicate, _) =>
+                {
+                    if (message.PayloadType == "capture_fault")
+                    {
+                        var fault = WireFormat.Parse<PhysicalCaptureFault>(message.PayloadJson);
+                        Console.WriteLine("SIM_MASTER_REMOTE_CAPTURE_HOLD token=" +
+                            fault.Trigger.Token + " workpiece=" +
+                            fault.Trigger.Workpiece.WorkpieceId + " capture=" +
+                            fault.Trigger.CaptureId + " device=" +
+                            fault.Trigger.PhysicalDeviceId + " duplicate=" + duplicate);
+                    }
+                    return Task.CompletedTask;
+                }, linked.Token);
             try
             {
                 var first = await Task.WhenAny(receive, production);
@@ -326,6 +338,17 @@ public static class SimFullHost
             {
                 var item = ledger.Find(exit)
                     ?? throw new InvalidDataException("SIM_FULL_UNKNOWN_EXIT_TOKEN_HOLD");
+                // Slave faults enter Master WAL in the SAME PeerLink inbox
+                // transaction that authorizes the peer ACK. A missing channel
+                // cannot silently stall forever or later become GOOD.
+                if (store.HasWorkpieceHold(item.WorkpieceId))
+                {
+                    held.Add(exit);
+                    Console.WriteLine("SIM_FULL_HOLD token=" + exit +
+                        " id=" + item.WorkpieceId +
+                        " why=CAPTURE_FAULT_DURABLE manual_reconciliation=1");
+                    continue;
+                }
                 var observations = store.ResultsFor(item.WorkpieceId);
                 if (observations.Select(x => x.ChannelId).Distinct(StringComparer.Ordinal).Count() == 11 &&
                     observations.Count == 11 &&
