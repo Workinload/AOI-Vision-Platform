@@ -220,6 +220,60 @@ public sealed class Agent02LegacyFinsTimingTests
             .All(x => x.Outcome.StartsWith("REJECTED_", StringComparison.Ordinal)), Is.True);
     }
 
+    [TestCase(LegacyExitScenario.Normal, FinalDisposition.Good, (ushort)1)]
+    [TestCase(LegacyExitScenario.Normal, FinalDisposition.Reject, (ushort)2)]
+    [TestCase(LegacyExitScenario.BarcodeFailure, FinalDisposition.Reject, (ushort)3)]
+    [TestCase(LegacyExitScenario.BarcodeMismatch, FinalDisposition.Reject, (ushort)4)]
+    public async Task HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(
+        LegacyExitScenario scenario, FinalDisposition disposition, ushort expectedScan)
+    {
+        await using var service = LiveShadow.Start();
+        await service.Client.WriteAsync(SimFullVirtualPlc.LoadAckAddress, [1]);
+        await service.Client.WriteAsync(LegacyPlcShadow.SimOfferExitAddress,
+            [1, (ushort)scenario]);
+
+        var receipt = await LegacyFinsOutputWriter.WriteFinalAsync(
+            service.Client, 1, scenario, disposition, TimeSpan.FromSeconds(1));
+        Assert.That(receipt.IsSimulation, Is.True);
+        Assert.That(receipt.ConfirmedSteps, Has.Count.EqualTo(2));
+        Assert.That(receipt.ConfirmedSteps.Select(x => x.DmAddress),
+            Is.EqualTo(scenario == LegacyExitScenario.Normal
+                ? new ushort[] { 1016, 2099 } : new ushort[] { 2099, 1016 }));
+        Assert.That(receipt.ConfirmedSteps.All(x => x.Value == x.ConfirmedValue &&
+            x.RequestUtc <= x.AckUtc && x.AckUtc <= x.ReadbackUtc), Is.True);
+        Assert.That((await service.Client.ReadAsync(2099, 1))[0], Is.EqualTo(expectedScan));
+        Assert.That(service.Shadow.EndSequenceComplete, Is.True);
+
+        // Evidence comes from the server's raw decoded FINS packets, not mirror words.
+        var actualWrites = service.Shadow.WireHistory
+            .Where(x => x.IsWrite && x.Address is 1016 or 2099).ToArray();
+        Assert.That(actualWrites.Select(x => x.Address),
+            Is.EqualTo(receipt.ConfirmedSteps.Select(x => x.DmAddress)));
+        Assert.That(actualWrites.All(x => x.RequestHex.Length == 40 &&
+            x.ResponseHex.Length == 28 && x.Outcome == "OK"), Is.True);
+        TestContext.Progress.WriteLine("A2_HOST_FINAL_WRITER " + scenario + " " +
+            string.Join(" -> ", receipt.ConfirmedSteps.Select(x =>
+                $"D{x.DmAddress}={x.Value} readback={x.ConfirmedValue}")));
+    }
+
+    [Test]
+    public async Task FinalWriterRejectsMissingRequestAndNeverWritesGoodOnBarcodeMismatch()
+    {
+        await using var service = LiveShadow.Start();
+        var beforeOffer = Assert.ThrowsAsync<LegacyOutputIncompleteException>(async () =>
+            await LegacyFinsOutputWriter.WriteFinalAsync(service.Client, 1,
+                LegacyExitScenario.Normal, FinalDisposition.Good, TimeSpan.FromSeconds(1)));
+        Assert.That(beforeOffer?.ConfirmedSteps, Is.Empty);
+        Assert.That(service.Shadow.WireHistory.Any(x => x.IsWrite &&
+            x.Address is 1016 or 2099), Is.False);
+
+        Assert.ThrowsAsync<ArgumentException>(async () =>
+            await LegacyFinsOutputWriter.WriteFinalAsync(service.Client, 1,
+                LegacyExitScenario.BarcodeMismatch, FinalDisposition.Good,
+                TimeSpan.FromSeconds(1)));
+        Assert.That(service.Shadow.EndSequenceComplete, Is.False);
+    }
+
     [Test]
     public void FinsNodeRouteAndSidAreValidatedBeforeAnyShadowMutation()
     {
