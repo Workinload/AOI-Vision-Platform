@@ -125,6 +125,7 @@ public sealed class Agent01CaptureHandshakeTests
             CaptureHandshakeEventKind.InspectionCompleted
         }));
         Assert.That(reopened.Get(result.CaptureId).ReadyForProductionResult, Is.True);
+        Assert.That(reopened.CompletedResults(result.CaptureId), Is.EqualTo(new[] { result }));
         Console.WriteLine("A1_ST05_REQUEST_FIRST_PASS " + reopened.ExportJson());
     }
 
@@ -252,8 +253,11 @@ public sealed class Agent01CaptureHandshakeTests
         Assert.That(coordinator.PendingCamDone().Single().PendingCamDone, Is.EqualTo((ushort)2));
         coordinator.CamDoneConfirmed(ticket.CaptureId, 2);
         coordinator.InspectionCompleted(pair[0]);
+        Assert.That(coordinator.CompletedResults(ticket.CaptureId), Is.Empty);
         Assert.That(coordinator.Get(ticket.CaptureId).HasAllInspections, Is.False);
         coordinator.InspectionCompleted(pair[1]);
+        Assert.That(coordinator.CompletedResults(ticket.CaptureId),
+            Is.EquivalentTo(pair));
         Assert.That(coordinator.Get(ticket.CaptureId).ReadyForProductionResult, Is.True);
         Assert.That(coordinator.Get(ticket.CaptureId).InspectionChannels,
             Is.EquivalentTo(new[] { "CH08", "CH09" }));
