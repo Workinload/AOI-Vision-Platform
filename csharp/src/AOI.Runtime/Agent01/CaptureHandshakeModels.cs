@@ -134,6 +134,7 @@ public interface ICaptureHandshakeCoordinator
     CaptureHandshakeProgress Get(Guid captureId);
     CaptureHandshakeProgress? Latest(Guid workpieceId, string physicalDeviceId);
     IReadOnlyList<CaptureHandshakeProgress> PendingCamDone();
+    IReadOnlyList<ChannelResult> CompletedResults(Guid captureId);
     IReadOnlyList<CaptureHandshakeEvent> EventsFor(Guid captureId);
     string ExportJson();
 }
