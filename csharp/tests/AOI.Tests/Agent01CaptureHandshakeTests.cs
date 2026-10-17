@@ -203,6 +203,55 @@ public sealed class Agent01CaptureHandshakeTests
     }
 
     [Test]
+    public void BadFrameIsJournaledWithoutInterruptingAHealthyPhysicalCapture()
+    {
+        var coordinator = Coordinator();
+        var item = Item();
+        var foreignItem = Item();
+        var result = NativeArea(AssetLedger(), item);
+        var ticket = Ticket(item, result);
+        coordinator.ExpectCapture(ticket);
+        var wrong = Evidence(item, result) with { WorkpieceId = foreignItem.WorkpieceId };
+        Assert.That(coordinator.TryFrameAcquired(wrong), Is.False);
+        Assert.That(coordinator.Get(ticket.CaptureId).RejectedFrameCount, Is.EqualTo(1));
+        Assert.That(coordinator.Get(ticket.CaptureId).FrameAcquired, Is.False);
+        Assert.That(coordinator.Get(ticket.CaptureId).LastRejectedFrameReason,
+            Is.EqualTo("FRAME_IDENTITY_OR_SOURCE_MISMATCH"));
+
+        CompleteAreaAfterExistingTicket(coordinator, ticket, Evidence(item, result), result);
+        var reopened = Coordinator();
+        Assert.That(reopened.Get(ticket.CaptureId).RejectedFrameCount, Is.EqualTo(1));
+        Assert.That(reopened.Get(ticket.CaptureId).ReadyForProductionResult, Is.True);
+        Assert.That(reopened.EventsFor(ticket.CaptureId).Count(e =>
+            e.Kind == CaptureHandshakeEventKind.FrameRejected), Is.EqualTo(1));
+        Console.WriteLine("A1_MISBOUND_FRAME_ISOLATED_PASS rejects=1 valid_capture=1");
+    }
+
+    [Test]
+    public void AlgorithmErrorRemainsExportableButNeverQualifiesAsGoodFinalEvidence()
+    {
+        var coordinator = Coordinator();
+        var item = Item();
+        var result = NativeArea(AssetLedger(), item);
+        var ticket = Ticket(item, result);
+        coordinator.ExpectCapture(ticket);
+        coordinator.ObservePlcRequest(ticket.CaptureId, "D1011");
+        var frame = Evidence(item, result);
+        coordinator.FrameAcquired(frame);
+        coordinator.FrameValidated(ticket.CaptureId, frame.SourceFrameId);
+        coordinator.CamDoneConfirmed(ticket.CaptureId, 2);
+        var failedInspection = result with { Outcome = ChannelOutcome.Error };
+        coordinator.InspectionCompleted(failedInspection);
+        var progress = coordinator.Get(ticket.CaptureId);
+        Assert.That(progress.Phase, Is.EqualTo("INSPECTION_ERROR"));
+        Assert.That(progress.ReadyForProductionResult, Is.False);
+        Assert.That(coordinator.CompletedResults(ticket.CaptureId),
+            Is.EqualTo(new[] { failedInspection }),
+            "ERROR should remain available for durable per-item trace, but never become GOOD.");
+        Console.WriteLine("A1_ALGORITHM_ERROR_ISOLATED_PASS outcome=ERROR good_eligible=0");
+    }
+
+    [Test]
     public void RetakeAttemptTwoOverridesFailedAttemptAndLateFirstFrameNeverBecomesCurrent()
     {
         var coordinator = Coordinator();
