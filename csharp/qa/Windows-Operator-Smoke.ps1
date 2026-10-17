@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
 .SYNOPSIS
   Agent05 Windows x64 REAL DESKTOP operator smoke for a published SIM_ONLY zip.

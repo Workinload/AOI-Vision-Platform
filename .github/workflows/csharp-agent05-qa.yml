@@ -24,9 +24,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
-      - name: Verify Windows operator smoke PowerShell syntax
+      - name: Verify Windows PowerShell 5.1 real operator script syntax
         if: matrix.os == 'windows-2025'
-        shell: pwsh
+        shell: powershell
         run: |
           $tokens = $null
           $parseErrors = $null
