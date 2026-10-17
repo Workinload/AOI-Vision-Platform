@@ -170,9 +170,25 @@ public static class SimFullHost
             var pump = session.PumpOutboxAsync(store, linked.Token);
             var production = PollAsync(store, ledger, fins, legacyFins, folder, bootNonce, product, bridge, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
+            // A production task can fault while the peer read task waits forever.
+            // Observe the FIRST task to finish and surface production failure to
+            // the process supervisor; never leave an apparently live idle Core.
+            var receive = session.ReadAsync(self, "slave", store,
+                (_, _, _) => Task.CompletedTask, linked.Token);
             try
             {
-                await session.ReadAsync(self, "slave", store, (_, _, _) => Task.CompletedTask, linked.Token);
+                var first = await Task.WhenAny(receive, production);
+                if (ReferenceEquals(first, production))
+                {
+                    try { await production; }
+                    catch (Exception ex)
+                    {
+                        Console.Error.WriteLine("SIM_FULL_MASTER_PRODUCTION_FAILED " + ex);
+                        throw new InvalidOperationException("SIM_FULL_MASTER_PRODUCTION_FAILED", ex);
+                    }
+                    throw new InvalidOperationException("SIM_FULL_PRODUCTION_STOPPED_WITHOUT_CANCELLATION");
+                }
+                await receive;
             }
             catch (Exception ex) when (!ct.IsCancellationRequested &&
                 ex is IOException or SocketException)
