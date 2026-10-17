@@ -1,0 +1,48 @@
+name: A0 PeerLink Interlock Real Five-Process Gate
+on:
+  pull_request:
+    paths: ['csharp/src/AOI.Host/**', 'csharp/scripts/e2e_peer_loss_interlock.py', '.github/workflows/a0-peerlink-interlock.yml']
+  push:
+    branches: ['migration/csharp-avalonia-20261016']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/scripts/e2e_peer_loss_interlock.py', '.github/workflows/a0-peerlink-interlock.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  peer-interlock:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: csharp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore pinned AOI dependency graph
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet restore AOI.slnx --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+      - name: Compile actual Master Slave vPLC and two Avalonia UI executables
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet build AOI.slnx --no-restore -c Debug
+      - name: A0 real five OS process TCP peer break and durable dual-Core output interlock
+        run: python scripts/e2e_peer_loss_interlock.py --evidence-root .artifacts/a0-peer-loss
+      - name: Preserve operator evidence if fail
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a0-peer-loss-${{ matrix.os }}-${{ github.run_id }}
+          path: csharp/.artifacts/a0-peer-loss/
+          retention-days: 14

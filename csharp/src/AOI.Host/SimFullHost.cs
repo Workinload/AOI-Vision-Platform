@@ -66,6 +66,10 @@ public static class SimFullHost
         var product = SimProductRuntime.Load(root);
         Console.WriteLine($"SIM_FULL_SLAVE_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
+        var interlock = new HostPeerInterlock(folder);
+        bool injectDisconnect = Environment.GetEnvironmentVariable(
+            "AOI_SIM_DROP_PEER_AFTER_SLAVE_REGISTRATION") == "1";
+        bool injectedOnce = false;
         var legacyFins = LegacyShadowHostBridge.Enabled
             ? LegacyShadowHostBridge.NewClient() : null;
         var physical = legacyFins is null ? null :
@@ -86,7 +90,11 @@ public static class SimFullHost
                 using var session = new PeerSession(tcp);
                 using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var pump = session.PumpOutboxAsync(store, linked.Token);
-                Task? captureWorker = physical is null ? null :
+                bool readonlySession = interlock.IsLatched();
+                if (readonlySession)
+                    Console.Error.WriteLine(
+                        "SIM_FULL_SLAVE_PEER_READONLY_RECONNECTED no_capture_retry=1");
+                Task? captureWorker = physical is null || readonlySession ? null :
                     RunSlaveCaptureWorkerAsync(store, physical, linked.Token);
                 try
                 {
@@ -106,6 +114,20 @@ public static class SimFullHost
                                 throw new InvalidDataException("SIM_FULL Slave received unsupported packet.");
                             var item = WireFormat.Parse<WorkpieceIdentity>(message.PayloadJson);
                             product.VerifyWorkpiece(item);
+                            if (injectDisconnect && !injectedOnce && !duplicate)
+                            {
+                                injectedOnce = true;
+                                Console.Error.WriteLine(
+                                    "SIM_ONLY_SLAVE_INJECT_PEER_DROP_AFTER_PERSISTED_REGISTRATION id=" +
+                                    item.WorkpieceId);
+                                throw new IOException("SIM_ONLY_PEER_LINK_LOSS_INJECTION");
+                            }
+                            if (interlock.IsLatched())
+                            {
+                                Console.Error.WriteLine("SIM_FULL_SLAVE_PEER_METADATA_ONLY id=" +
+                                    item.WorkpieceId + " no_capture_retry=1");
+                                return Task.CompletedTask;
+                            }
                             if (physical is not null)
                             {
                                 Console.WriteLine("SIM_FULL_SLAVE_REGISTERED_FOR_TRIGGER id=" +
@@ -123,29 +145,41 @@ public static class SimFullHost
                                 throw new InvalidDataException("Incomplete duplicate registration; manual HOLD.");
                             return Task.CompletedTask;
                         }, linked.Token);
-                    if (captureWorker is not null)
+                    // A send failure must not be hidden behind an idle TCP read.
+                    // Both sides monitor the receive task AND outbound WAL pump.
+                    Task first = captureWorker is null
+                        ? await Task.WhenAny(read, pump)
+                        : await Task.WhenAny(read, pump, captureWorker);
+                    if (ReferenceEquals(first, captureWorker))
                     {
-                        var first = await Task.WhenAny(read, captureWorker);
-                        if (ReferenceEquals(first, captureWorker))
-                        {
-                            await captureWorker; // propagate real worker failure
-                            throw new InvalidOperationException("Slave capture worker exited unexpectedly.");
-                        }
+                        await captureWorker!; // real camera worker failure is fatal
+                        throw new InvalidOperationException(
+                            "Slave capture worker exited unexpectedly.");
                     }
-                    await read;
+                    await first; // throws if the peer socket or writer failed
+                    throw new IOException("SIM_FULL_SLAVE_PEER_TASK_ENDED");
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested &&
                     ex is IOException or SocketException)
                 {
-                    Console.Error.WriteLine("SIM_FULL_SLAVE_RECONNECT " + ex.Message);
+                    linked.Cancel(); // freeze physical capture before reconciliation
+                    interlock.Latch("PEER_LINK_LOST", ex.ToString());
+                    Console.Error.WriteLine(
+                        "SIM_FULL_SLAVE_PEER_INTERLOCK_HOLD no_capture_retry=1 " +
+                        "manual_reconciliation=1 " + ex.Message);
                 }
                 finally
                 {
                     linked.Cancel();
-                    try { await pump; } catch (OperationCanceledException) { }
+                    try { await pump; }
+                    catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                    catch (IOException) when (linked.IsCancellationRequested) { }
+                    catch (SocketException) when (linked.IsCancellationRequested) { }
                     if (captureWorker is not null)
+                    {
                         try { await captureWorker; }
                         catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                    }
                 }
             }
         }
@@ -182,6 +216,7 @@ public static class SimFullHost
         if (bootNonce == 0) throw new InvalidDataException("Invalid virtual PLC boot proof.");
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
+        var interlock = new HostPeerInterlock(folder);
         _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
@@ -205,9 +240,15 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, legacyFins, physicalCapture,
-                folder, bootNonce, product, bridge, linked.Token);
-            Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
+            bool readonlySession = interlock.IsLatched();
+            // After any lost peer session, recover only the metadata TCP link.
+            // NEVER create another production loop or replay unknown PLC writes.
+            Task? production = readonlySession ? null :
+                PollAsync(store, ledger, fins, legacyFins, physicalCapture,
+                    folder, bootNonce, product, bridge, linked.Token);
+            Console.WriteLine(readonlySession
+                ? "SIM_FULL_MASTER_PEER_READONLY_RECONNECTED no_plc_writes=1 no_capture_retry=1"
+                : "SIM_FULL_MASTER_PEER_CONNECTED");
             // A production task can fault while the peer read task waits forever.
             // Observe the FIRST task to finish and surface production failure to
             // the process supervisor; never leave an apparently live idle Core.
@@ -227,29 +268,46 @@ public static class SimFullHost
                 }, linked.Token);
             try
             {
-                var first = await Task.WhenAny(receive, production);
+                // The sender can fail while ReadAsync is still waiting. Observe
+                // all live tasks rather than silently keeping production active.
+                Task first = production is null
+                    ? await Task.WhenAny(receive, pump)
+                    : await Task.WhenAny(receive, pump, production);
                 if (ReferenceEquals(first, production))
                 {
-                    try { await production; }
+                    try { await production!; }
                     catch (Exception ex)
                     {
                         Console.Error.WriteLine("SIM_FULL_MASTER_PRODUCTION_FAILED " + ex);
                         throw new InvalidOperationException("SIM_FULL_MASTER_PRODUCTION_FAILED", ex);
                     }
-                    throw new InvalidOperationException("SIM_FULL_PRODUCTION_STOPPED_WITHOUT_CANCELLATION");
+                    throw new InvalidOperationException(
+                        "SIM_FULL_PRODUCTION_STOPPED_WITHOUT_CANCELLATION");
                 }
-                await receive;
+                await first; // receive or send failure propagates from the real TCP task
+                throw new IOException("SIM_FULL_MASTER_PEER_TASK_ENDED");
             }
             catch (Exception ex) when (!ct.IsCancellationRequested &&
                 ex is IOException or SocketException)
             {
-                Console.Error.WriteLine("SIM_FULL_MASTER_RECONNECT " + ex.Message);
+                linked.Cancel(); // freeze PLC and station capture immediately
+                interlock.Latch("PEER_LINK_LOST", ex.ToString());
+                Console.Error.WriteLine(
+                    "SIM_FULL_MASTER_PEER_INTERLOCK_HOLD no_plc_writes=1 " +
+                    "no_automatic_replay=1 manual_reconciliation=1 " + ex.Message);
             }
             finally
             {
                 linked.Cancel();
-                try { await Task.WhenAll(pump, production); }
+                try { await pump; }
                 catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                catch (IOException) when (linked.IsCancellationRequested) { }
+                catch (SocketException) when (linked.IsCancellationRequested) { }
+                if (production is not null)
+                {
+                    try { await production; }
+                    catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                }
             }
         }
     }
