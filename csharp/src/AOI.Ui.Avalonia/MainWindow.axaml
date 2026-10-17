@@ -148,7 +148,7 @@
                     </ListBox.ItemsPanel>
                     <ListBox.ItemTemplate>
                       <DataTemplate>
-                        <StackPanel Spacing="3" Background="#EFF5FB" MinWidth="153" Margin="2" Padding="8">
+                        <StackPanel Spacing="3" Background="#EFF5FB" MinWidth="153" Margin="2">
                           <Grid ColumnDefinitions="*,Auto">
                             <TextBlock Text="{Binding ShortId}" FontSize="12" FontWeight="Bold"/>
                             <TextBlock Grid.Column="1" Text="{Binding Decision}" FontSize="10" Foreground="#267C9A"/>
@@ -320,7 +320,7 @@
                 </ListBox.ItemsPanel>
                 <ListBox.ItemTemplate>
                   <DataTemplate>
-                    <StackPanel Background="White" Spacing="5" Padding="12" MinWidth="175">
+                    <StackPanel Background="White" Spacing="5" MinWidth="175">
                       <TextBlock Text="{Binding ShortId}" FontWeight="Bold" FontSize="13" Foreground="#235A7B"/>
                       <TextBlock Text="{Binding Barcode}" FontSize="11" Foreground="#526D84"/>
                       <TextBlock Text="{Binding Decision}" FontSize="11" Foreground="#987039"/>
@@ -395,7 +395,7 @@
                          Background="#FFF8F4" BorderThickness="0">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <StackPanel Spacing="7" Margin="9" Padding="10" Background="White">
+                      <StackPanel Spacing="7" Margin="9" Background="White">
                         <Grid ColumnDefinitions="*,110">
                           <TextBlock Text="{Binding ReasonCode}" FontSize="13" FontWeight="Bold" Foreground="#A23D34"/>
                           <TextBlock Grid.Column="1" Text="{Binding ShortId}" FontSize="11" Foreground="#607790"/>
@@ -447,7 +447,7 @@
             <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="16">
               <Grid RowDefinitions="Auto,Auto,*" RowSpacing="9">
                 <TextBlock Text="工程详情 / 14 项现场验证记录" FontSize="17" FontWeight="SemiBold" Foreground="#1F4665"/>
-                <StackPanel Grid.Row="1" Spacing="5" Padding="10" Background="#EDF5FB">
+                <StackPanel Grid.Row="1" Spacing="5" Background="#EDF5FB">
                   <TextBlock Text="{Binding SelectedDescription}" FontSize="12" TextWrapping="Wrap" Foreground="#426A88"/>
                   <TextBlock Text="工程地址仅作查阅；尚非 PLC 实时读值，不能从界面发送生产写入。" FontSize="11"
                              Foreground="#986438" TextWrapping="Wrap"/>
@@ -457,7 +457,7 @@
                          BorderThickness="0" Background="#F6F8FB">
                   <ListBox.ItemTemplate>
                     <DataTemplate>
-                      <StackPanel Background="White" Margin="4" Padding="11" Spacing="5">
+                      <StackPanel Background="White" Margin="4" Spacing="5">
                         <Grid ColumnDefinitions="72,*,85">
                           <TextBlock Text="{Binding GateId}" FontSize="12" FontWeight="Bold"/>
                           <TextBlock Grid.Column="1" Text="{Binding Topic}" FontSize="12" TextWrapping="Wrap"/>
