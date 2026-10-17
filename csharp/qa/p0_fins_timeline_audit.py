@@ -159,6 +159,21 @@ def one(rows: list, label: str):
     return rows[0]
 
 
+def deadline_ms(spec: dict, name: str, fallback: int) -> int:
+    """Legacy test profile only, NOT a field-verified equipment deadline."""
+    milliseconds = spec.get(name, fallback)
+    demand(type(milliseconds) is int and 1 <= milliseconds <= 300000,
+           "INVALID_TEST_DEADLINE", f"{name} must be 1..300000 ms")
+    return milliseconds
+
+
+def enforce_window(first: Wire, last: Wire, limit_ms: int, code: str):
+    elapsed = (last.utc - first.utc).total_seconds() * 1000
+    demand(0 <= elapsed <= limit_ms, code,
+           f"D{first.address} sequence={first.seq} -> D{last.address} sequence={last.seq}: "
+           f"{elapsed:.3f} ms > legacy-test budget {limit_ms} ms; FIELD_PENDING")
+
+
 def verify_station_wire(wire: list[Wire], spec: dict):
     token = spec["token"]
     addr = spec.get("cameraAddress", 1011)
@@ -184,6 +199,8 @@ def verify_station_wire(wire: list[Wire], spec: dict):
            f"token {token} first FINS D{addr} read after CamDone is not {ack}")
     demand(requests[0].seq > offered.seq,
            "CAPTURE_WIRE_ORDER", "External offer/request is out of order")
+    deadline = deadline_ms(spec, "captureDeadlineMs", 20000 if addr in (1013, 1014) else 10000)
+    enforce_window(requests[0], sent, deadline, "CAM_ACK_WINDOW_EXCEEDED")
     competing = [w for w in wire if w.token == token and w.address == addr and
                  w.write and w is not sent]
     demand(not competing, "DUPLICATE_CAM_DONE",
@@ -222,6 +239,8 @@ def verify_final_wire(wire: list[Wire], spec: dict):
            "FINAL_WIRE_ORDER", f"token {token}: actual {[(w.address, w.words) for w in writes]}, expected {expected}")
     demand(bool(ready) and offer.seq < ready[0].seq < writes[0].seq < writes[1].seq,
            "FINAL_SEQUENCE", f"token {token} result written without valid end request")
+    enforce_window(ready[0], writes[1],
+                   deadline_ms(spec, "endDeadlineMs", 2000), "FINAL_WINDOW_EXCEEDED")
     for i, w in enumerate(writes):
         next_write = writes[i + 1].seq if i + 1 < len(writes) else 2 ** 62
         reads = [x for x in wire if x.token == token and not x.write
