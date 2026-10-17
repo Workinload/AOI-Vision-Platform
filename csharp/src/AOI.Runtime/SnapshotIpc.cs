@@ -10,7 +10,8 @@ namespace AOI.Runtime;
 public static class SnapshotIpc
 {
     public static async Task ServeAsync(ProductionStore store, string nodeId,
-        MachineRole role, int port, CancellationToken ct, string simulationMode = "SIM_LIGHT")
+        MachineRole role, int port, CancellationToken ct, string simulationMode = "SIM_LIGHT",
+        SimActiveProductSnapshot? activeProduct = null)
     {
         var server = new TcpListener(IPAddress.Loopback, port);
         server.Start();
@@ -34,7 +35,8 @@ public static class SnapshotIpc
                                 MachineSnapshot snapshot = store.Snapshot(nodeId, role) with
                                 {
                                     SimulationMode = simulationMode,
-                                    PlcEngineering = PlcEngineeringProjection.Snapshot
+                                    PlcEngineering = PlcEngineeringProjection.Snapshot,
+                                    ActiveProduct = activeProduct
                                 };
                                 await writer.WriteLineAsync(WireFormat.Serialize(snapshot));
                                 await Task.Delay(350, ct);

@@ -146,6 +146,8 @@ def main():
     parser.add_argument('--count', type=int, default=5)
     parser.add_argument('--flip-token', type=int, default=0)
     parser.add_argument('--repeat-barcode', action='store_true')
+    parser.add_argument('--with-product', action='store_true',
+                        help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
     parser.add_argument('--timeout', type=float, default=70.0)
     args = parser.parse_args()
     if args.count < 3 or args.count > 60 or args.flip_token not in (0, 3) or args.count < args.flip_token:
@@ -164,6 +166,24 @@ def main():
                 'AOI_SIM_END_BARCODE_FLIP_TOKEN': str(args.flip_token),
                 'AOI_SIM_REPEAT_BARCODE': '1' if args.repeat_barcode else '0',
                 'DOTNET_CLI_TELEMETRY_OPTOUT': '1'})
+    if args.with_product:
+        cli = source / 'src/AOI.Solutions.Cli/bin/Debug/net10.0/AOI.Solutions.Cli.dll'
+        assert cli.is_file(), 'Build AOI.slnx including A6 Solutions.Cli first'
+        def recipe(*parts):
+            p = subprocess.run([args.dotnet, str(cli), *map(str, parts)],
+                               env=env, cwd=source, capture_output=True, text=True, timeout=15)
+            assert p.returncode == 0, (parts, p.stdout, p.stderr)
+            print(p.stdout.strip(), flush=True)
+            return p.stdout
+        recipe('bootstrap', evidence, 'SIM_PRODUCT_A', 'Test SIM product A', 'sim_engineer')
+        recipe('tune', evidence, 'SIM_PRODUCT_A', 'ST05', 1, 110, 0.1, 'sim_engineer')
+        published = recipe('publish', evidence, 'SIM_PRODUCT_A', 'sim_engineer')
+        product_release = published.split('release=')[1].split()[0]
+        assert product_release.startswith('SIMREL-')
+        recipe('activate', evidence, product_release, 'sim_engineer')
+        assert 'real_writes=0' in recipe('status', evidence)
+    else:
+        product_release = 'SIM_LIGHT_TEST_RELEASE'
     processes, logs = [], []
     def start(name, dll, *flags):
         stream = (evidence / (name + '.log')).open('w', encoding='utf-8')
@@ -220,6 +240,8 @@ def main():
             ui_log = (evidence / (name + '.log')).read_text(encoding='utf-8')
             assert 'UI_HEADLESS_SNAPSHOT_OK' in ui_log, name
             assert 'UI_PLC_ENGINEERING_OK' in ui_log and 'signals=45 gates=14 live=False' in ui_log, name
+            if args.with_product:
+                assert 'UI_SIM_PRODUCT_OK' in ui_log and 'stations=7' in ui_log, name
         with socket.create_connection(('127.0.0.1', 19621), timeout=3) as sock:
             with sock.makefile('r', encoding='utf-8') as view:
                 snapshot = json.loads(view.readline())
@@ -254,6 +276,22 @@ def main():
         assert all(row['capturedChannels'] == 11 for row in overview['recent']), overview
         assert sum(row['final'] == 'good' for row in overview['recent']) == target
         assert snapshot['latestWorkpiece'] is not None
+        assert snapshot['latestWorkpiece']['releaseId'] == product_release
+        assert snapshot['latestWorkpiece']['epoch'] == 1
+        if args.with_product:
+            active = snapshot.get('activeProduct')
+            assert active and active['isSimulation'] is True, active
+            assert active['releaseId'] == product_release and active['solutionId'] == 'SIM_PRODUCT_A', active
+            assert active['epoch'] == 1 and len(active['stations']) == 7, active
+            assert next(s for s in active['stations'] if s['stationId'] == 'ST05')['brightThreshold'] == 110
+            assert next(s for s in active['stations'] if s['stationId'] == 'ST05')['minimumBrightFraction'] == 0.1
+            assert all(json.loads(row[1])['releaseId'] == product_release
+                       for row in query(evidence / 'master/production.db',
+                                        'SELECT workpiece_id, identity_json FROM workpieces'))
+            print(f'SIM_PRODUCT_RUNTIME_PASS release={product_release} stations=7 '
+                  'master=5 slave=6 epoch=1 virtual_pixels=1', flush=True)
+        else:
+            assert snapshot.get('activeProduct') is None, snapshot.get('activeProduct')
         # A4 operator preview is real pixel data delivered by the owning Core,
         # NOT a UI-side path to a local SQLite file.
         first = query(evidence / 'master/production.db',

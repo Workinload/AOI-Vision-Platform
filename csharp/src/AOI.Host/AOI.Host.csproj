@@ -1,4 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup><OutputType>Exe</OutputType></PropertyGroup>
-  <ItemGroup><ProjectReference Include="../AOI.Runtime/AOI.Runtime.csproj" /></ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../AOI.Runtime/AOI.Runtime.csproj" />
+    <ProjectReference Include="../AOI.Solutions/AOI.Solutions.csproj" />
+  </ItemGroup>
 </Project>

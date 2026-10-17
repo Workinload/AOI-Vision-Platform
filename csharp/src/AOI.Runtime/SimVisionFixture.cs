@@ -8,18 +8,20 @@ public static class SimVisionFixture
 {
     public static IReadOnlyList<ChannelResult> CaptureAllMappedChannels(
         WorkpieceIdentity item, VisionAssetLedger ledger, SimPixelRule? rule = null) =>
-        CaptureMappedChannels(item, ledger, rule, owner: null);
+        CaptureMappedChannels(item, ledger, rule, owner: null, perChannelRule: null);
 
     /// <summary>
     /// Capture only this Core's physical devices: 5 logical Master / 6 logical Slave channels.
     /// Shared line-camera parents are captured once, not once per child channel.
     /// </summary>
     public static IReadOnlyList<ChannelResult> CaptureOwnedChannels(
-        WorkpieceIdentity item, MachineRole owner, VisionAssetLedger ledger, SimPixelRule? rule = null) =>
-        CaptureMappedChannels(item, ledger, rule, owner);
+        WorkpieceIdentity item, MachineRole owner, VisionAssetLedger ledger, SimPixelRule? rule = null,
+        Func<ChannelDefinition, SimPixelRule>? perChannelRule = null) =>
+        CaptureMappedChannels(item, ledger, rule, owner, perChannelRule);
 
     private static IReadOnlyList<ChannelResult> CaptureMappedChannels(
-        WorkpieceIdentity item, VisionAssetLedger ledger, SimPixelRule? rule, MachineRole? owner)
+        WorkpieceIdentity item, VisionAssetLedger ledger, SimPixelRule? rule, MachineRole? owner,
+        Func<ChannelDefinition, SimPixelRule>? perChannelRule)
     {
         ArgumentNullException.ThrowIfNull(ledger);
         item.Validate();
@@ -30,7 +32,8 @@ public static class SimVisionFixture
         {
             using var image = new Mat(64, 64, MatType.CV_8UC1, Scalar.Black);
             Cv2.Rectangle(image, new Rect(8, 8, 48, 48), Scalar.White, -1);
-            results.Add(ledger.CaptureArea(item, channel.ChannelId, image, simRule: rule));
+            results.Add(ledger.CaptureArea(item, channel.ChannelId, image,
+                simRule: perChannelRule?.Invoke(channel) ?? rule));
         }
 
         foreach (var group in selected.Where(c => c.SharedFrameGroup is not null)
@@ -42,7 +45,7 @@ public static class SimVisionFixture
             Cv2.Rectangle(parent, new Rect(36, 4, 24, 24), Scalar.White, -1);
             results.AddRange(ledger.CaptureLinePair(item, group, parent,
                 new ImageRegion(0, 0, 32, 32), new ImageRegion(32, 0, 32, 32),
-                simRule: rule));
+                simRule: perChannelRule?.Invoke(selected.First(c => c.SharedFrameGroup == group)) ?? rule));
         }
         return results.OrderBy(x => x.ChannelId, StringComparer.Ordinal).ToArray();
     }

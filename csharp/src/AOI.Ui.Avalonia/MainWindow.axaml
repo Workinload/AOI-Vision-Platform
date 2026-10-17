@@ -231,6 +231,41 @@
               </ListBox>
             </Grid>
           </TabItem>
+          <TabItem Header="产品方案 / 换型">
+            <Grid Margin="10" RowDefinitions="Auto,Auto,*" RowSpacing="8">
+              <Border Padding="12" Background="#EAF4F7" CornerRadius="8">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="{Binding ActiveProductLabel}" FontSize="14"
+                             FontWeight="SemiBold" Foreground="#1C4D75" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding ActiveProductRelease}" FontSize="11"
+                             Foreground="#41708F" TextWrapping="Wrap"/>
+                  <TextBlock Text="方案由 A6 离线版本库发布、双机哈希读回后在 SIM_FULL 中使用；A6 SafeHold 不会自动解除，REAL 硬件不可操作。"
+                             Foreground="#6D768A" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+              <Grid Grid.Row="1" ColumnDefinitions="95,*,85,105" Margin="10,2">
+                <TextBlock Text="工位" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="1" Text="逻辑通道" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="2" Text="亮度阈值" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="3" Text="最小亮区比例" FontSize="11" FontWeight="SemiBold"/>
+              </Grid>
+              <ListBox Grid.Row="2" ItemsSource="{Binding ProductStations}"
+                       BorderThickness="0" Background="#F5F8FB">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="95,*,85,105" Margin="9,8">
+                      <TextBlock Text="{Binding StationId}" FontWeight="SemiBold"
+                                 FontSize="12" Foreground="#2B557B"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"
+                                 Foreground="#506983" TextWrapping="Wrap"/>
+                      <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
+                      <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </TabItem>
         </TabControl>
         <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
           <StackPanel Spacing="9">

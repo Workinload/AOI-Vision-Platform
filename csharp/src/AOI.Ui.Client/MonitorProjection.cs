@@ -16,6 +16,7 @@ public sealed record MonitorProjection(
     public ProductionOverview? Production { get; init; }
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
     public WorkpieceHoldOverview? Holds { get; init; }
+    public SimActiveProductSnapshot? ActiveProduct { get; init; }
 
     public static MonitorProjection Offline(MachineRole role) => new(
         role == MachineRole.Master ? "master" : "slave", role, "IPC_OFFLINE", "SIM_ONLY",
@@ -44,6 +45,7 @@ public sealed record MonitorProjection(
         snapshot.Production?.Validate();
         snapshot.PlcEngineering?.Validate();
         snapshot.Holds?.Validate();
+        snapshot.ActiveProduct?.Validate();
         var byId = new Dictionary<string, ChannelSnapshot>(StringComparer.Ordinal);
         foreach (var c in snapshot.Channels)
         {
@@ -72,7 +74,8 @@ public sealed record MonitorProjection(
         {
             Production = snapshot.Production,
             PlcEngineering = snapshot.PlcEngineering,
-            Holds = snapshot.Holds
+            Holds = snapshot.Holds,
+            ActiveProduct = snapshot.ActiveProduct
         };
     }
 }

@@ -7,6 +7,7 @@
     <Project Path="src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj" />
     <Project Path="src/AOI.Ui.Client/AOI.Ui.Client.csproj" />
     <Project Path="src/AOI.Solutions/AOI.Solutions.csproj" />
+    <Project Path="src/AOI.Solutions.Cli/AOI.Solutions.Cli.csproj" />
     <Project Path="src/AOI.Diagnostics/AOI.Diagnostics.csproj" />
     <Project Path="src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj" />
   </Folder>

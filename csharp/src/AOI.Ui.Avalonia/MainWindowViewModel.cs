@@ -61,6 +61,8 @@ public sealed record PlcSignalTile(
 
 public sealed record FieldGateTile(string GateId, string Topic, string Status, string RequiredEvidence);
 public sealed record HoldTile(string ShortId, string ReasonCode, string Description, string RaisedUtc);
+public sealed record ProductStationTile(
+    string StationId, string Channels, string BrightThreshold, string MinimumBrightFraction);
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -75,6 +77,9 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<PlcSignalTile> PlcSignals { get; } = new();
     public ObservableCollection<FieldGateTile> PlcGates { get; } = new();
     public ObservableCollection<HoldTile> HeldWorkpieces { get; } = new();
+    public ObservableCollection<ProductStationTile> ProductStations { get; } = new();
+    [ObservableProperty] private string activeProductLabel = "SIM_LIGHT 默认仿真产品 · 无已发布 A6 方案";
+    [ObservableProperty] private string activeProductRelease = "无独立方案发布 / 未通过双机换型";
     [ObservableProperty] private string holdNotice = "等待 Core 的持久化异常记录";
     [ObservableProperty] private string engineeringRegistryState = "待接收 Core 工程映射 · REAL 写入禁止";
     [ObservableProperty] private PlcSignalTile? selectedPlcSignal;
@@ -196,6 +201,23 @@ public partial class MainWindowViewModel : ObservableObject
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
                         RequestPreview(projection);
+                        if (projection.ActiveProduct is { } product)
+                        {
+                            ActiveProductLabel = $"SIM_ONLY · {product.SolutionId} · Epoch {product.Epoch}";
+                            ActiveProductRelease = $"双机离线已提交 / 持续安全 HOLD · {product.ReleaseId} · SHA256 {product.ContentSha256[..12]}…";
+                            ProductStations.Clear();
+                            foreach (var station in product.Stations.OrderBy(s => s.StationId, StringComparer.Ordinal))
+                                ProductStations.Add(new ProductStationTile(station.StationId,
+                                    string.Join(", ", station.ChannelIds),
+                                    station.BrightThreshold.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                                    station.MinimumBrightFraction.ToString("F3", System.Globalization.CultureInfo.InvariantCulture)));
+                        }
+                        else
+                        {
+                            ActiveProductLabel = "SIM_LIGHT 默认仿真产品 · 无已发布 A6 方案";
+                            ActiveProductRelease = "未执行 A6 双机离线方案准备和安全提交";
+                            ProductStations.Clear();
+                        }
                         if (projection.Holds is { } holds)
                         {
                             HoldNotice = holds.ActiveCount == 0
@@ -261,6 +283,8 @@ public partial class MainWindowViewModel : ObservableObject
                         {
                             if (projection.PlcEngineering is { } catalog)
                                 Console.WriteLine($"UI_PLC_ENGINEERING_OK role={_role} signals={catalog.Signals.Count} gates={catalog.Gates.Count} live={catalog.IsFieldLive}");
+                            if (projection.ActiveProduct is { } published)
+                                Console.WriteLine($"UI_SIM_PRODUCT_OK role={_role} epoch={published.Epoch} release={published.ReleaseId} stations={published.Stations.Count}");
                             Console.WriteLine($"UI_HEADLESS_SNAPSHOT_OK role={_role} channels={projection.Channels.Count} state={projection.MachineState}");
                             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                                 desktop.Shutdown();
@@ -390,6 +414,9 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedPlcSignal = null;
         SelectedFieldGate = null;
         HeldWorkpieces.Clear();
+        ProductStations.Clear();
+        ActiveProductLabel = "产品方案 IPC 离线";
+        ActiveProductRelease = "未知激活状态；禁止自动换型或出料";
         HoldNotice = "HOLD 状态离线 · 不允许基于旧数据放行";
         EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
