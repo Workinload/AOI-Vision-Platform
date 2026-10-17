@@ -463,7 +463,19 @@
                     <StackPanel Grid.Column="1" Spacing="7">
                       <Button Content="核验本件11路PNG" Command="{Binding VerifyCapturePngCommand}"/>
                       <Button Content="回到最新工件" Command="{Binding FollowLiveCommand}"/>
-                      <Button Content="选择历史工件" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="3"/>
+                      <TextBlock Text="直接选择历史工件" FontSize="11"/>
+                      <ComboBox ItemsSource="{Binding RecentWorkpieces}"
+                                SelectedItem="{Binding CaptureDebugPickedWorkpiece, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch" MinWidth="165">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <StackPanel>
+                              <TextBlock Text="{Binding ShortId}" FontWeight="SemiBold"/>
+                              <TextBlock Text="{Binding Barcode}" FontSize="10"/>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
                     </StackPanel>
                   </Grid>
                 </Border>
