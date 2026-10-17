@@ -69,6 +69,13 @@ public sealed class LegacyPlcShadow
     private readonly Dictionary<ushort, CameraState> _cameras = new();
     private readonly List<LegacyWireTransaction> _wire = new();
     private readonly HashSet<ushort> _dropOnce = new();
+    // External end-scanner failure is observable on D2020 AND D2100 for the
+    // specified FIFO token. Never change the existing FIFO barcode fixture.
+    private readonly HashSet<ushort> _unreadableEndScanTokens;
+    // One-shot faults for actual terminal FINS writes, keyed by active exit token
+    // and legacy DM word. They are intentionally distinct from packet-drop faults.
+    private readonly HashSet<(ushort Token, ushort Address)> _loseWriteAckOnce = new();
+    private readonly HashSet<(ushort Token, ushort Address)> _rejectWriteOnce = new();
     private LoadState? _load;
     private EndState? _end;
     private long _sequence;
@@ -88,9 +95,18 @@ public sealed class LegacyPlcShadow
 
     public LegacyPlcShadow(SimFullVirtualPlc existing,
         LegacyFinsNodes? nodes = null, LegacyPlcTiming? timing = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null, IReadOnlyCollection<ushort>? unreadableEndScanTokens = null)
     {
         _existing = existing ?? throw new ArgumentNullException(nameof(existing));
+        // Existing A0 Host constructs the shadow with no new argument. A vPLC-only
+        // environment variable is enough to opt in without changing Host/DTO code.
+        // Explicit tokens make tests independent of process-wide environment.
+        _unreadableEndScanTokens = new HashSet<ushort>(
+            unreadableEndScanTokens ?? ReadEndScanFaultTokensFromEnvironment());
+        if (_unreadableEndScanTokens.Any(token => token is < 1 or > 128))
+            throw new ArgumentOutOfRangeException(nameof(unreadableEndScanTokens));
+        _loseWriteAckOnce.UnionWith(ReadTerminalFaultsFromEnvironment("AOI_SIM_END_LOSE_ACK"));
+        _rejectWriteOnce.UnionWith(ReadTerminalFaultsFromEnvironment("AOI_SIM_END_REJECT_WRITE"));
         _nodes = nodes ?? LegacyFinsNodes.Demo;
         _nodes.Validate();
         _timing = timing ?? LegacyPlcTiming.HistoricalReference;
@@ -98,6 +114,74 @@ public sealed class LegacyPlcShadow
         _clock = clock ?? TimeProvider.System;
         if (DevicesByAddress.Count != 9)
             throw new InvalidOperationException("Legacy camera profile must contain 9 physical devices.");
+    }
+
+    /// <summary>
+    /// Optional SIM_ONLY fixture: AOI_SIM_END_SCAN_FAIL_TOKENS=3 or 3,5.
+    /// Never a real PLC register and never a production scanner control.
+    /// </summary>
+    private static IReadOnlyCollection<ushort> ReadEndScanFaultTokensFromEnvironment()
+    {
+        string? value = Environment.GetEnvironmentVariable("AOI_SIM_END_SCAN_FAIL_TOKENS");
+        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<ushort>();
+        var tokens = new List<ushort>();
+        foreach (string part in value.Split(',', StringSplitOptions.TrimEntries))
+        {
+            if (!ushort.TryParse(part, out var token) || token is < 1 or > 128)
+                throw new InvalidOperationException(
+                    "AOI_SIM_END_SCAN_FAIL_TOKENS must be comma-separated tokens 1..128.");
+            tokens.Add(token);
+        }
+        return tokens;
+    }
+
+    // A0 can configure the vPLC environment without touching Host/Core code.
+    // Example AOI_SIM_END_LOSE_ACK=3:2099 or AOI_SIM_END_REJECT_WRITE=3:1016.
+    private static IReadOnlyCollection<(ushort Token, ushort Address)>
+        ReadTerminalFaultsFromEnvironment(string key)
+    {
+        string? value = Environment.GetEnvironmentVariable(key);
+        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<(ushort, ushort)>();
+        var result = new List<(ushort Token, ushort Address)>();
+        foreach (string part in value.Split(',', StringSplitOptions.TrimEntries))
+        {
+            string[] pair = part.Split(':', StringSplitOptions.TrimEntries);
+            if (pair.Length != 2 || !ushort.TryParse(pair[0], out ushort token) ||
+                !ushort.TryParse(pair[1], out ushort address))
+                throw new InvalidOperationException(key + " requires token:address pairs.");
+            CheckTerminalFaultAddress(token, address);
+            result.Add((token, address));
+        }
+        return result;
+    }
+
+    private static void CheckTerminalFaultAddress(ushort token, ushort address)
+    {
+        if (token is < 1 or > 128 || address is not
+            (FinalQualityAddress or EndRequestAddress))
+            throw new ArgumentOutOfRangeException(nameof(address),
+                "Only SIM_ONLY terminal D1016/D2099 writes for tokens 1..128 can be faulted.");
+    }
+
+    /// <summary>
+    /// For one matching token/word, APPLY a real FINS write but drop its reply.
+    /// After a timeout the Core must treat the write as UNKNOWN, never retry it
+    /// automatically. The later diagnostic FINS READ may see the new value.
+    /// </summary>
+    public void LoseNextTerminalWriteAck(ushort token, ushort address)
+    {
+        CheckTerminalFaultAddress(token, address);
+        lock (_gate) _loseWriteAckOnce.Add((token, address));
+    }
+
+    /// <summary>
+    /// Refuse one matching terminal write with a nonzero simulation FINS end-code
+    /// BEFORE any register/sequence mutation, then consume the one-shot fault.
+    /// </summary>
+    public void RejectNextTerminalWrite(ushort token, ushort address)
+    {
+        CheckTerminalFaultAddress(token, address);
+        lock (_gate) _rejectWriteOnce.Add((token, address));
     }
 
     public LegacyFinsNodes Nodes => _nodes;
@@ -202,6 +286,22 @@ public sealed class LegacyPlcShadow
                 response = [];
                 outcome = "INJECTED_UDP_TIMEOUT";
             }
+            else if (op.IsWrite && op.Count == 1 &&
+                     _rejectWriteOnce.Remove((token, op.Address)))
+            {
+                // A real FINS negative end-code was sent. No write was executed.
+                // 0x0005 is simulator-defined, NOT claimed as an OEM status code.
+                errorCode = 5;
+                outcome = "INJECTED_TERMINAL_WRITE_REJECTED";
+                response = LegacyFinsWire.MakeResponse(frame, errorCode, []);
+            }
+            else if (IsUnreadableEndBarcodeRead(op))
+            {
+                // A real FINS/UDP READ sees zero-filled scanner words at D2020
+                // for exactly the configured FIFO head. Later tokens are intact.
+                response = LegacyFinsWire.MakeResponse(frame, 0, new ushort[op.Count]);
+                outcome = "INJECTED_END_SCAN_UNREADABLE";
+            }
             else if (!IsOwnedRange(op.Address, op.Count))
             {
                 var queueReply = _existing.Handle(frame);
@@ -232,9 +332,20 @@ public sealed class LegacyPlcShadow
                 {
                     if (op.IsWrite)
                         ApplyWriteLocked(op);
-                    var payload = op.IsWrite ? Array.Empty<ushort>() :
-                        _dm.AsSpan(op.Address, op.Count).ToArray();
-                    response = LegacyFinsWire.MakeResponse(frame, 0, payload);
+                    if (op.IsWrite && op.Count == 1 &&
+                        _loseWriteAckOnce.Remove((token, op.Address)))
+                    {
+                        // The write HAS changed the PLC/sequence state but no UDP
+                        // answer exists on the wire. This is not a safe retry case.
+                        response = [];
+                        outcome = "INJECTED_TERMINAL_ACK_LOST_AFTER_APPLY";
+                    }
+                    else
+                    {
+                        var payload = op.IsWrite ? Array.Empty<ushort>() :
+                            _dm.AsSpan(op.Address, op.Count).ToArray();
+                        response = LegacyFinsWire.MakeResponse(frame, 0, payload);
+                    }
                 }
                 catch (Exception ex) when (ex is InvalidOperationException or ArgumentException)
                 {
@@ -251,6 +362,13 @@ public sealed class LegacyPlcShadow
             return response;
         }
     }
+
+    private bool IsUnreadableEndBarcodeRead(LegacyDmRequest request) =>
+        !request.IsWrite &&
+        request.Address >= SimFullVirtualPlc.EndBarcodeAddress &&
+        request.Address + request.Count <= SimFullVirtualPlc.EndBarcodeAddress + 10 &&
+        _unreadableEndScanTokens.Contains(
+            _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress));
 
     private static bool IsOwnedWord(int word) =>
         word is >= 1006 and <= 1014 or 1016 or 1999 or 2099
@@ -273,6 +391,8 @@ public sealed class LegacyPlcShadow
             return camera.Offer.Token;
         if (op.Address is >= 2000 and <= 2009 or LoadRequestAddress)
             return _load?.Token ?? (ushort)0;
+        if (op.Address is >= 2020 and <= 2029)
+            return _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress);
         if (op.Address is >= 2100 and <= 2109 or FinalQualityAddress or EndRequestAddress)
             return _end?.Token ?? (ushort)0;
         return 0;
@@ -296,11 +416,19 @@ public sealed class LegacyPlcShadow
         if (op.Address == SimOfferExitAddress && op.Count == 2)
         {
             if (op.Values[1] > 2) throw new InvalidOperationException("UNKNOWN_END_CASE");
+            // Scanner failure belongs to the active FIFO head, not just a
+            // caller-supplied token. This is the external SIM-only observation.
+            ushort exitToken = _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress);
+            if (exitToken != op.Values[0])
+                throw new InvalidOperationException("END_SCAN_TOKEN_NOT_FIFO_HEAD");
+            bool unreadable = _unreadableEndScanTokens.Contains(exitToken);
+            if (unreadable && op.Values[1] != (ushort)LegacyExitScenario.BarcodeFailure)
+                throw new InvalidOperationException("UNREADABLE_END_SCAN_REQUIRES_FAILURE_BRANCH");
             var fixture = new ushort[10];
             for (int i = 0; i < fixture.Length; i++)
                 fixture[i] = _existing.ReadForTest((ushort)(2020 + i));
             IssueEndScanLocked(op.Values[0], (LegacyExitScenario)op.Values[1],
-                A2FinsProtocol.DecodeBaAscii(fixture));
+                unreadable ? "" : A2FinsProtocol.DecodeBaAscii(fixture));
             return;
         }
 
