@@ -61,6 +61,15 @@ public sealed class ProductionStore
             CREATE TABLE IF NOT EXISTS flight_events (
               event_id TEXT PRIMARY KEY, utc TEXT NOT NULL, kind TEXT NOT NULL,
               workpiece_id TEXT, message_id TEXT, details TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS capture_triggers (
+              capture_id TEXT PRIMARY KEY,
+              workpiece_id TEXT NOT NULL REFERENCES workpieces(workpiece_id),
+              physical_device_id TEXT NOT NULL,
+              attempt_no INTEGER NOT NULL,
+              trigger_json TEXT NOT NULL, processed_utc TEXT,
+              UNIQUE(workpiece_id,physical_device_id,attempt_no));
+            CREATE INDEX IF NOT EXISTS ix_pending_capture_triggers
+              ON capture_triggers(processed_utc,workpiece_id);
             CREATE TABLE IF NOT EXISTS workpiece_holds (
               workpiece_id TEXT PRIMARY KEY REFERENCES workpieces(workpiece_id),
               reason_code TEXT NOT NULL, detail TEXT NOT NULL,
@@ -208,6 +217,106 @@ public sealed class ProductionStore
         tx.Commit();
     }
 
+
+    /// <summary>
+    /// Add a Slave-owned sensor event to Master's existing durable PeerLink
+    /// outbox. The immutable identity is persisted before it can be sent.
+    /// </summary>
+    public void QueueCaptureTrigger(PhysicalCaptureTrigger trigger, PeerEnvelope outbound)
+    {
+        ArgumentNullException.ThrowIfNull(trigger);
+        trigger.Validate();
+        outbound.Validate();
+        if (trigger.OwnerRole != MachineRole.Slave ||
+            outbound.SenderNodeId != "master" || outbound.ReceiverNodeId != "slave" ||
+            outbound.PayloadType != "capture_trigger" ||
+            outbound.WorkpieceId != trigger.Workpiece.WorkpieceId ||
+            outbound.Epoch != trigger.Workpiece.Epoch ||
+            outbound.TraceId != trigger.Workpiece.TraceId ||
+            outbound.SolutionReleaseId != trigger.Workpiece.ReleaseId ||
+            outbound.ChannelId != trigger.Channels[0].ChannelId ||
+            outbound.StationId != trigger.StationId ||
+            outbound.PayloadJson != WireFormat.Serialize(trigger))
+            throw new InvalidDataException("Unowned, forged or mismatched slave capture trigger.");
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        if (RequireWorkpiece(db, tx, trigger.Workpiece.WorkpieceId) != trigger.Workpiece)
+            throw new InvalidDataException("Capture trigger immutable identity changed.");
+        Queue(db, tx, outbound);
+        Event(db, tx, "CAPTURE_TRIGGER_MASTER_QUEUED", trigger.Workpiece.WorkpieceId,
+            outbound.MessageId, trigger.PhysicalDeviceId + ":" + trigger.CaptureId);
+        tx.Commit();
+    }
+
+    /// <summary>Slave consumption queue, populated in the SAME transaction as the peer ACK.</summary>
+    public IReadOnlyList<PhysicalCaptureTrigger> PendingCaptureTriggers(int limit = 32)
+    {
+        if (limit is < 1 or > 256) throw new ArgumentOutOfRangeException(nameof(limit));
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT trigger_json FROM capture_triggers WHERE processed_utc IS NULL ORDER BY rowid LIMIT $limit";
+        cmd.Parameters.AddWithValue("$limit", limit);
+        using var reader = cmd.ExecuteReader();
+        var rows = new List<PhysicalCaptureTrigger>();
+        while (reader.Read())
+        {
+            var trigger = WireFormat.Parse<PhysicalCaptureTrigger>(reader.GetString(0));
+            trigger.Validate();
+            rows.Add(trigger);
+        }
+        return rows;
+    }
+
+    /// <summary>Mark handled only after ALL owned channel results or a persistent HOLD.</summary>
+    public void CompleteCaptureTrigger(PhysicalCaptureTrigger trigger)
+    {
+        ArgumentNullException.ThrowIfNull(trigger);
+        trigger.Validate();
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        using var cmd = Cmd(db, tx,
+            "SELECT trigger_json,processed_utc FROM capture_triggers WHERE capture_id=$id",
+            ("$id", trigger.CaptureId.ToString("D")));
+        using (var reader = cmd.ExecuteReader())
+        {
+            if (!reader.Read() || reader.GetString(0) != WireFormat.Serialize(trigger))
+                throw new InvalidDataException("Unknown or changed durable capture trigger.");
+            if (!reader.IsDBNull(1)) return;
+        }
+
+        using var proof = Cmd(db, tx,
+            "SELECT result_json FROM channel_results WHERE workpiece_id=$id",
+            ("$id", trigger.Workpiece.WorkpieceId.ToString("D")));
+        var completed = new Dictionary<string, ChannelResult>(StringComparer.Ordinal);
+        using (var reader = proof.ExecuteReader())
+            while (reader.Read())
+            {
+                var result = WireFormat.Parse<ChannelResult>(reader.GetString(0));
+                if (result.CaptureId == trigger.CaptureId)
+                    completed[result.ChannelId] = result;
+            }
+        bool valid = trigger.Channels.All(ch =>
+            completed.TryGetValue(ch.ChannelId, out var result) &&
+            result.WorkpieceId == trigger.Workpiece.WorkpieceId &&
+            result.Epoch == trigger.Workpiece.Epoch &&
+            result.ReleaseId == trigger.Workpiece.ReleaseId);
+        using var hold = Cmd(db, tx,
+            "SELECT COUNT(*) FROM workpiece_holds WHERE workpiece_id=$id",
+            ("$id", trigger.Workpiece.WorkpieceId.ToString("D")));
+        bool held = Convert.ToInt64(hold.ExecuteScalar()) > 0;
+        if (!valid && !held)
+            throw new InvalidOperationException("Cannot acknowledge capture without real results or durable HOLD.");
+        using var update = Cmd(db, tx,
+            "UPDATE capture_triggers SET processed_utc=$utc WHERE capture_id=$id AND processed_utc IS NULL",
+            ("$utc", DateTimeOffset.UtcNow.ToString("O")),
+            ("$id", trigger.CaptureId.ToString("D")));
+        if (update.ExecuteNonQuery() != 1)
+            throw new InvalidOperationException("Duplicate capture trigger completion.");
+        Event(db, tx, held && !valid ? "CAPTURE_TRIGGER_HELD" : "CAPTURE_TRIGGER_COMPLETED",
+            trigger.Workpiece.WorkpieceId, null, trigger.CaptureId.ToString("D"));
+        tx.Commit();
+    }
+
     /// <summary>Post-commit ACK is permitted only for exact persisted wire identity.</summary>
     public bool AcceptIncoming(PeerEnvelope inbound, string expectedReceiver)
     {
@@ -219,6 +328,7 @@ public sealed class ProductionStore
         // Master sends workpiece registration, Slave returns its own inspection frames.
         WorkpieceIdentity? registration = null;
         ChannelResult? inspection = null;
+        PhysicalCaptureTrigger? captureTrigger = null;
         if (inbound.PayloadType == "workpiece_registered")
         {
             if (inbound.SenderNodeId != "master" || expectedReceiver != "slave" ||
@@ -244,6 +354,23 @@ public sealed class ProductionStore
                 inspection.StationId != inbound.StationId)
                 throw new InvalidDataException("Envelope/payload result lineage mismatch.");
         }
+
+        else if (inbound.PayloadType == "capture_trigger")
+        {
+            if (inbound.SenderNodeId != "master" || expectedReceiver != "slave" ||
+                string.IsNullOrWhiteSpace(inbound.ChannelId))
+                throw new InvalidDataException("Capture trigger may only travel Master -> Slave.");
+            captureTrigger = WireFormat.Parse<PhysicalCaptureTrigger>(inbound.PayloadJson);
+            captureTrigger.Validate();
+            if (captureTrigger.OwnerRole != MachineRole.Slave ||
+                captureTrigger.Workpiece.WorkpieceId != inbound.WorkpieceId ||
+                captureTrigger.Workpiece.TraceId != inbound.TraceId ||
+                captureTrigger.Workpiece.Epoch != inbound.Epoch ||
+                captureTrigger.Workpiece.ReleaseId != inbound.SolutionReleaseId ||
+                captureTrigger.Channels[0].ChannelId != inbound.ChannelId ||
+                captureTrigger.StationId != inbound.StationId)
+                throw new InvalidDataException("Capture event identity, station or channel is forged.");
+        }
         else throw new InvalidDataException($"Unrecognized packet type {inbound.PayloadType}");
 
         // A payload digest alone cannot prove workpiece, station, epoch, sender,
@@ -267,6 +394,22 @@ public sealed class ProductionStore
 
         if (registration is not null) InsertWorkpiece(db, tx, registration);
         else if (inspection is not null) InsertResult(db, tx, inspection);
+        else if (captureTrigger is not null)
+        {
+            if (RequireWorkpiece(db, tx, captureTrigger.Workpiece.WorkpieceId) != captureTrigger.Workpiece)
+                throw new InvalidDataException("Capture trigger arrived before its exact registration.");
+            using var triggerInsert = Cmd(db, tx, """
+                INSERT INTO capture_triggers(capture_id,workpiece_id,physical_device_id,
+                                             attempt_no,trigger_json)
+                VALUES($capture,$item,$device,$attempt,$body)
+                """,
+                ("$capture", captureTrigger.CaptureId.ToString("D")),
+                ("$item", captureTrigger.Workpiece.WorkpieceId.ToString("D")),
+                ("$device", captureTrigger.PhysicalDeviceId),
+                ("$attempt", captureTrigger.AttemptNo),
+                ("$body", WireFormat.Serialize(captureTrigger)));
+            triggerInsert.ExecuteNonQuery();
+        }
 
         using var commitInbox = Cmd(db, tx, """
             INSERT INTO inbox(sender_node_id,message_id,payload_hash,envelope_hash,received_utc)
