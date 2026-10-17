@@ -80,10 +80,48 @@ public sealed record ProductionOverview(
     }
 }
 
+/// <summary>Engineering evidence, NOT live field-read PLC data or a write API.</summary>
+public sealed record PlcEngineeringSignal(
+    string SignalId, string DmAddress, string StationId, string HostRole,
+    string Direction, string DataType, string Description, string ValueLegend,
+    string ValidationState, string ConflictGroup, bool ProductionWriteEnabled);
+
+/// <summary>Field sign-off candidates; 'OPEN' never implies production authorization.</summary>
+public sealed record PlcFieldGate(
+    string GateId, string Topic, string Status, string RequiredEvidence,
+    bool ProductionWriteAllowed);
+
+/// <summary>Immutable engineering mapping supplied by A2; no live PLC claims.</summary>
+public sealed record PlcEngineeringSnapshot(
+    IReadOnlyList<PlcEngineeringSignal> Signals, IReadOnlyList<PlcFieldGate> Gates,
+    bool IsFieldLive, DateTimeOffset CatalogCapturedUtc)
+{
+    public void Validate()
+    {
+        if (Signals is null || Signals.Count != 45 || Gates is null || Gates.Count != 14 ||
+            IsFieldLive || CatalogCapturedUtc == default ||
+            Signals.Select(s => s.SignalId).Distinct(StringComparer.Ordinal).Count() != 45 ||
+            Gates.Select(g => g.GateId).Distinct(StringComparer.Ordinal).Count() != 14 ||
+            Gates.Count(g => g.Status == "BLOCKED") != 7 ||
+            Gates.Count(g => g.Status == "OPEN") != 7 ||
+            Signals.Any(s => s.ProductionWriteEnabled ||
+                string.IsNullOrWhiteSpace(s.SignalId) ||
+                string.IsNullOrWhiteSpace(s.DmAddress) ||
+                string.IsNullOrWhiteSpace(s.ValidationState) ||
+                string.IsNullOrWhiteSpace(s.Description)) ||
+            Gates.Any(g => g.ProductionWriteAllowed ||
+                string.IsNullOrWhiteSpace(g.Topic) ||
+                string.IsNullOrWhiteSpace(g.RequiredEvidence)))
+            throw new InvalidDataException(
+                "Unsafe or incomplete static PLC engineering registry. Field verification is required.");
+    }
+}
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
     bool RealHardwareWritesEnabled, string SimulationMode)
 {
     public ProductionOverview? Production { get; init; }
+    public PlcEngineeringSnapshot? PlcEngineering { get; init; }
 }
