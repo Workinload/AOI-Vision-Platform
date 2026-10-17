@@ -168,7 +168,8 @@ internal static class HostReadOnlyRecovery
             // final, register end values, or an A1 audit-only output projection.
             list.Add(new(itemId, position.Token, position.Phase, inspected,
                 holds.GetValueOrDefault(itemId), state, acknowledgements, readbacks,
-                position.Phase != "exited" || unknown ||
+                position.Phase != "exited" || !inspected ||
+                holds.ContainsKey(itemId) || unknown ||
                 state != "A1_TWO_FINS_STEPS_ACK_AND_READBACK_RECORDED"));
         }
 
