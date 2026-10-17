@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'csharp/qa/e2e_terminal_ack_fault.py'
+      - 'csharp/qa/p0_after_apply_wire_reconcile.py'
+      - 'csharp/qa/test_p0_after_apply_wire_reconcile.py'
       - 'csharp/qa/p0_terminal_wire_audit.py'
       - 'csharp/qa/test_p0_terminal_wire_audit.py'
       - 'csharp/qa/p0_peer_interlock_audit.py'
@@ -54,6 +56,11 @@ jobs:
         run: |
           python -m unittest discover -s qa -p 'test_p0_terminal_wire_audit.py' -v
 
+      - name: Agent05 applied ACK loss reconciliation 14 negative unit tests
+        shell: bash
+        run: |
+          python -m unittest discover -s qa -p 'test_p0_after_apply_wire_reconcile.py' -v
+
       - name: Real five OS processes, nine physical FINS cameras, mismatched end barcode
         shell: bash
         run: |
@@ -84,6 +91,24 @@ jobs:
         shell: bash
         run: |
           python qa/e2e_terminal_ack_fault.py --scenario unreadable --fault reject-first \
+            --evidence-root .artifacts/a5-scanner-unreadable-reject
+
+      - name: A5 independent first lost ACK raw FINS and persisted restart reconciliation
+        shell: bash
+        run: |
+          python qa/p0_after_apply_wire_reconcile.py --fault ack-first --scenario mismatch \
+            --evidence-root .artifacts/a5-ack-first-mismatch
+
+      - name: A5 independent second lost ACK raw FINS and persisted restart reconciliation
+        shell: bash
+        run: |
+          python qa/p0_after_apply_wire_reconcile.py --fault ack-second --scenario mismatch \
+            --evidence-root .artifacts/a5-ack-second-mismatch
+
+      - name: A5 independent rejected FINS and unreadable scanner reconciliation
+        shell: bash
+        run: |
+          python qa/p0_after_apply_wire_reconcile.py --fault reject-first --scenario unreadable \
             --evidence-root .artifacts/a5-scanner-unreadable-reject
 
       - name: Preserve actual five-process raw FINS and SQLite logs

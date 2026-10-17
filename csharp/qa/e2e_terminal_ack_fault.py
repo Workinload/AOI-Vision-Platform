@@ -20,6 +20,8 @@ import sys
 import tempfile
 import time
 
+# Canonical five-process helpers live in scripts/; qa/ is a separate directory.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
 from e2e_sim_full import fins_read, make_png
 from p0_fins_timeline_audit import AuditFailure, demand, load_records, parse_trace
 from p0_terminal_wire_audit import decode_scan, sql
