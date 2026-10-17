@@ -203,11 +203,15 @@ def main():
     parser.add_argument('--with-product', action='store_true',
                         help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
     parser.add_argument('--legacy-shadow', action='store_true',
-                        help='Exercise real FINS D1999/D1016/D2099 through opt-in PLC shadow')
+                        help='Exercise real FINS D1999/D1011/D1016/D2099 in station-triggered PLC shadow')
+    parser.add_argument('--st05-order', choices=['REQUEST_FIRST', 'FRAME_FIRST'],
+                        default='REQUEST_FIRST')
     parser.add_argument('--timeout', type=float, default=70.0)
     args = parser.parse_args()
     if args.count < 3 or args.count > 60 or args.flip_token not in (0, 3) or args.count < args.flip_token:
         parser.error('CI supports 3..60 virtual items and optional deterministic fault token=3')
+    if args.legacy_shadow and not args.with_images:
+        parser.error('P0 ST05 shadow requires --with-images so there is no synthetic frame fallback')
     source = Path(__file__).resolve().parent.parent
     evidence = Path(args.evidence_root).resolve() if args.evidence_root else Path(tempfile.mkdtemp(prefix='aoi-simfull-'))
     if evidence.exists() and any(evidence.iterdir()):
@@ -233,6 +237,7 @@ def main():
                 'AOI_SIM_END_BARCODE_FLIP_TOKEN': str(args.flip_token),
                 'AOI_SIM_REPEAT_BARCODE': '1' if args.repeat_barcode else '0',
                 'AOI_SIM_PLC_PROFILE': 'LEGACY_PLC_SHADOW' if args.legacy_shadow else 'FIFO_DEMO',
+                'AOI_SIM_ST05_ORDER': args.st05_order,
                 'DOTNET_CLI_TELEMETRY_OPTOUT': '1',
                 'AOI_SIM_CONFIG_TOKEN': 'SIM_ONLY_E2E_ROI_OPERATOR_TOKEN_2026'})
     if args.with_product:
@@ -303,6 +308,16 @@ def main():
                         and p['ResponseHex'].startswith('C0')]
             for token in range(1, target + 1):
                 assert len(written(token, 1999, 2)) == 1, ('missing D1999 actual FINS ACK', token)
+                offers = [p for p in packets if p['Token'] == token and
+                          p['Address'] == 4300 and p['IsWrite'] and
+                          p['Values'] == [token, 1011] and p['Outcome'] == 'OK']
+                assert len(offers) == 1, ('ST05 did not issue one physical PLC offer', token)
+                cam_ack = written(token, 1011, 2)
+                assert len(cam_ack) == 1, ('no D1011=2 actual FINS CamDone', token)
+                assert offers[0]['Sequence'] < cam_ack[0]['Sequence']
+                assert any(p['Token'] == token and p['Address'] == 1011 and
+                           not p['IsWrite'] and p['Sequence'] > cam_ack[0]['Sequence']
+                           for p in packets), ('D1011 readback missing', token)
                 desired = 2 if args.with_images else 1
                 first = written(token, 1016, desired)
                 second = written(token, 2099, 2)
@@ -317,8 +332,13 @@ def main():
                 assert any(p['Token'] == token and p['Address'] == 2099 and not p['IsWrite']
                            and p['Sequence'] > second[0]['Sequence'] and
                            p['ResponseHex'].startswith('C0') for p in packets)
+            assert scalar(evidence / 'master/timing-events.sqlite',
+                          "SELECT COUNT(*) FROM timing_events WHERE stage='FrameReady'") == args.count
+            assert scalar(evidence / 'master/timing-events.sqlite',
+                          "SELECT COUNT(*) FROM timing_events WHERE stage='PlcCaptureRequestObserved'") == args.count
             print('A0_LEGACY_SHADOW_FINS_NORMAL_PASS items=' + str(target) +
-                  ' d1999=1 d1016_then_d2099=1 actual_udp=1 real_writes=0', flush=True)
+                  ' D1011_FrameReady_CamDone=1 D1999=1 D1016_then_D2099=1 actual_udp=1 ' +
+                  'ordering=' + args.st05_order + ' real_writes=0', flush=True)
         master_log = (evidence / 'master.log').read_text(encoding='utf-8')
         virtual_log = (evidence / 'vplc.log').read_text(encoding='utf-8')
         # Different OS scheduling can finish item #1 before slot #3 fills.
@@ -496,7 +516,11 @@ def main():
             assert master_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
             slave_log = (evidence / 'slave.log').read_text(encoding='utf-8')
             assert slave_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
-            assert 'defective=1' in master_log
+            if args.legacy_shadow:
+                assert master_log.count('SIM_ST05_TRIGGERED_CAPTURE_PASS') == args.count
+                assert master_log.count('SIM_ST05_REAL_FINS_CAM_DONE_PASS') == args.count
+            else:
+                assert 'defective=1' in master_log
             assert 'defective=0' in slave_log
             print('SIM_REAL_IMAGE_E2E_PASS actual_png=9 per_item_channels=11 '
                   'line_parity=2 contour_ng=1 per_item_REJECT=1', flush=True)
