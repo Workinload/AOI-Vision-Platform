@@ -183,7 +183,8 @@ public sealed class VisionAssetLedger
 
     /// <summary>Commit the actual pixels with a result computed by the A3 OpenCV detector.</summary>
     public ChannelResult CaptureAreaDetected(WorkpieceIdentity item, string channelId,
-        Mat pixels, ChannelOutcome outcome, int attemptNo = 1)
+        Mat pixels, ChannelOutcome outcome, int attemptNo = 1,
+        Guid? captureId = null, Guid? frameId = null)
     {
         item.Validate();
         var channel = ChannelCatalog.Require(channelId);
@@ -191,9 +192,10 @@ public sealed class VisionAssetLedger
             throw new ArgumentException("Line-scan channel requires shared parent.", nameof(channelId));
         ValidateCapture(pixels, attemptNo, rule: null, lineScan: false);
         RequireDetectedOutcome(outcome);
-        var captureId = Guid.NewGuid();
-        var frame = NewAsset(item, channel.PhysicalDeviceId, channelId, captureId,
-            Guid.NewGuid(), null, attemptNo, pixels, null);
+        if (captureId == Guid.Empty || frameId == Guid.Empty)
+            throw new ArgumentException("Acquisition identity cannot be empty.");
+        var frame = NewAsset(item, channel.PhysicalDeviceId, channelId, captureId ?? Guid.NewGuid(),
+            frameId ?? Guid.NewGuid(), null, attemptNo, pixels, null);
         return Persist(item, [(frame, pixels)], null,
             new Dictionary<string, ChannelOutcome>(StringComparer.Ordinal) { [channelId] = outcome })[0];
     }
@@ -240,7 +242,8 @@ public sealed class VisionAssetLedger
     /// </summary>
     public IReadOnlyList<ChannelResult> CaptureLineInterleaved(WorkpieceIdentity item,
         string sharedFrameGroup, Mat parent, int attemptNo = 1,
-        IReadOnlyDictionary<string, ChannelOutcome>? detectedOutcomes = null)
+        IReadOnlyDictionary<string, ChannelOutcome>? detectedOutcomes = null,
+        Guid? captureId = null, Guid? parentFrameId = null)
     {
         item.Validate();
         ArgumentException.ThrowIfNullOrWhiteSpace(sharedFrameGroup);
@@ -261,14 +264,16 @@ public sealed class VisionAssetLedger
         }
         using var even = VisionPixelOps.ExtractInterleavedRows(parent, 0);
         using var odd = VisionPixelOps.ExtractInterleavedRows(parent, 1);
-        var captureId = Guid.NewGuid();
-        var parentId = Guid.NewGuid();
+        if (captureId == Guid.Empty || parentFrameId == Guid.Empty)
+            throw new ArgumentException("Acquisition identity cannot be empty.");
+        var sharedCapture = captureId ?? Guid.NewGuid();
+        var parentId = parentFrameId ?? Guid.NewGuid();
         var asset = NewAsset(item, channels[0].PhysicalDeviceId, null,
-            captureId, parentId, null, attemptNo, parent, null);
+            sharedCapture, parentId, null, attemptNo, parent, null);
         var first = NewAsset(item, channels[0].PhysicalDeviceId, channels[0].ChannelId,
-            captureId, Guid.NewGuid(), parentId, attemptNo, even, null, "interleaved-even-rows");
+            sharedCapture, Guid.NewGuid(), parentId, attemptNo, even, null, "interleaved-even-rows");
         var second = NewAsset(item, channels[1].PhysicalDeviceId, channels[1].ChannelId,
-            captureId, Guid.NewGuid(), parentId, attemptNo, odd, null, "interleaved-odd-rows");
+            sharedCapture, Guid.NewGuid(), parentId, attemptNo, odd, null, "interleaved-odd-rows");
         return Persist(item, [(asset, parent), (first, even), (second, odd)], null, detectedOutcomes);
     }
 
