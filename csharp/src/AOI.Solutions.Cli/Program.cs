@@ -19,7 +19,7 @@ if (args.Length < 2 || args[0] is not
           import-roi <root> <solutionId> <channelId> <expectedRoiRevision> <expectedStationRevision> <actor>
           roi-preview <root> <solutionId> <channelId> <sourcePng> <baselineReleaseId>
           roi-diff <root> <releaseA> <releaseB> <channelId> <sourcePng>
-          camera-target <root> <solutionId> <physicalDeviceId> <expectedStationRevision> <adapterId> <triggerMode> <timeoutMs|-> <exposureUs|-> <gainDb|-> <actor>
+          camera-target <root> <solutionId> <physicalDeviceId> <expectedStationRevision> <adapterId> <triggerMode> <triggerInput|-> <timeoutMs|-> <exposureUs|-> <gainDb|-> <actor>
           algorithm-param <root> <solutionId> <channelId> <expectedStationRevision> <algorithmId> <numericKey> <numericValue> <actor>
           params-draft <root> <solutionId> <channelId>
           params-release <root> <releaseId> <epoch> <channelId>
@@ -130,17 +130,17 @@ try
     }
     else if (mode == "camera-target")
     {
-        if (args.Length != 11) throw new ArgumentException(
-            "camera-target requires solutionId physicalDeviceId stationRevision adapterId triggerMode timeoutMs|- exposureUs|- gainDb|- actor");
+        if (args.Length != 12) throw new ArgumentException(
+            "camera-target requires solutionId physicalDeviceId stationRevision adapterId triggerMode triggerInput|- timeoutMs|- exposureUs|- gainDb|- actor");
         static int? OptionalInteger(string text) => text == "-" ? null : int.Parse(text, CultureInfo.InvariantCulture);
         static double? OptionalDouble(string text) => text == "-" ? null : double.Parse(text, CultureInfo.InvariantCulture);
         if (!Enum.TryParse<CaptureTriggerMode>(args[6], ignoreCase: true, out var trigger))
             throw new ArgumentException("Invalid trigger mode (ExternalHardwareEdge/ExternalHardwareLevel/SoftwareCommand).");
-        var camera = new CameraCaptureTarget(args[3], args[5], trigger, null,
-            OptionalInteger(args[7]), OptionalDouble(args[8]), OptionalDouble(args[9]),
+        var camera = new CameraCaptureTarget(args[3], args[5], trigger, args[7] == "-" ? null : args[7],
+            OptionalInteger(args[8]), OptionalDouble(args[9]), OptionalDouble(args[10]),
             new Dictionary<string, double>());
         var edited = SolutionParameterEditor.SetCaptureTarget(repository, args[2], camera,
-            long.Parse(args[4], CultureInfo.InvariantCulture), args[10]);
+            long.Parse(args[4], CultureInfo.InvariantCulture), args[11]);
         Console.WriteLine($"SIM_CAMERA_TARGET_DRAFT_SAVED station={edited.StationId} revision={edited.Revision} device={camera.PhysicalDeviceId} trigger={camera.TriggerMode} NOT_APPLIED_TO_DEVICE");
     }
     else if (mode == "algorithm-param")
