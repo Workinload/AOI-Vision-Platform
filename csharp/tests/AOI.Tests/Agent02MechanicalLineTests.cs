@@ -45,6 +45,8 @@ public sealed class Agent02MechanicalLineTests
 
         line.AdvanceTicks(100);
         var view = line.Snapshot();
+        TestContext.Progress.WriteLine("SIM_MECHANICAL_FIVE_IN_FLIGHT tick=" + view.Tick + " positions=" +
+            string.Join(", ", view.Active.Select(x => $"{x.Token}:{x.StationId}:{x.ProgressFraction:P0}")));
         Assert.Multiple(() =>
         {
             Assert.That(view.Active, Has.Count.EqualTo(5));
@@ -57,10 +59,10 @@ public sealed class Agent02MechanicalLineTests
         var trace = RunUntilEmpty(line);
         Assert.That(line.Snapshot().ExitedCount, Is.EqualTo(5));
         Assert.That(line.Snapshot().LoadedCount, Is.EqualTo(5));
-        Assert.That(trace.Where(e => e.Kind == SimMechanicalEventKind.EndScanRequested),
-            Has.Count.EqualTo(5));
-        Assert.That(trace.Where(e => e.Kind == SimMechanicalEventKind.Ejected),
-            Has.Count.EqualTo(5));
+        Assert.That(trace.Count(e => e.Kind == SimMechanicalEventKind.EndScanRequested),
+            Is.EqualTo(5));
+        Assert.That(trace.Count(e => e.Kind == SimMechanicalEventKind.Ejected),
+            Is.EqualTo(5));
 
         foreach (var identity in identities)
         {
@@ -98,6 +100,8 @@ public sealed class Agent02MechanicalLineTests
         Assert.That(atSt05?.SensorTriggered, Is.False);
         Assert.That(line.TryEject(10, FinalDisposition.Good), Is.False);
         var before = line.DrainEvents();
+        TestContext.Progress.WriteLine("SIM_ST05_STUCK token=10 station=" + atSt05!.StationId +
+            " sensorStuck=" + atSt05.SensorStuck + " exited=" + line.Snapshot().ExitedCount);
         Assert.That(before.Any(x => x.Kind == SimMechanicalEventKind.CaptureRequested &&
                                      x.ChannelIds.Contains("CH06")), Is.False);
         Assert.That(before.Any(x => x.Kind == SimMechanicalEventKind.EndScanRequested), Is.False);
@@ -116,6 +120,7 @@ public sealed class Agent02MechanicalLineTests
                                      x.ChannelIds.Contains("CH06")), Is.EqualTo(1));
         Assert.That(after.Any(x => x.Kind == SimMechanicalEventKind.EndScanRequested), Is.True);
         Assert.That(line.TryEject(10, FinalDisposition.Good), Is.True);
+        TestContext.Progress.WriteLine("SIM_ST05_RECOVERED token=10 exited=" + line.Snapshot().ExitedCount);
     }
 
     [Test]
