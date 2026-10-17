@@ -16,7 +16,7 @@ import sys
 import tempfile
 import time
 
-from p0_fins_timeline_audit import AuditFailure, demand, load_records, value, verify_evidence
+from p0_fins_timeline_audit import AuditFailure, demand, load_records, value, stage_name, verify_evidence
 
 
 def from_ledger(root: Path, count: int):
@@ -125,7 +125,7 @@ def main(argv=None):
             events = export_timeline(diagnostics, a.dotnet, root, item, path, a.timeout)
             all_events.extend(events)
             station = [e for e in events
-                       if value(e, "stage") == "PlcCaptureRequestObserved"
+                       if stage_name(e) == "PlcCaptureRequestObserved"
                        and value(e, "plcDmAddress") == "D1011"
                        and value(e, "physicalDeviceId") == "HIK-M-2"]
             demand(len(station) == 1, "NOT_VERIFIED",
