@@ -229,7 +229,8 @@ class FinsCausalAuditTests(unittest.TestCase):
 
     def test_late_frame_does_not_satisfy_frame_first_contract(self):
         wire, events, cases = fixture("FRAME_FIRST")
-        events[0]["monotonicTick"] = 22
+        frame = next(e for e in events if e["stage"] == "FrameArrived")
+        frame["monotonicTick"] = 22  # PLC request already observed at tick=20.
         self.check_failure(wire, events, cases, "CAUSAL_ORDER")
 
     def test_missing_raw_packet_cannot_claim_pass(self):
