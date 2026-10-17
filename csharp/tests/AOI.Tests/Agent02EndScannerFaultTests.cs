@@ -52,8 +52,8 @@ public sealed class Agent02EndScannerFaultTests
             Assert.That(A2FinsProtocol.DecodeBaAscii(observed), Is.Empty);
             var raw = shadow.WireHistory.Last(t =>
                 t.Address == SimFullVirtualPlc.EndBarcodeAddress && !t.IsWrite);
-            Assert.That(raw.Token, Is.EqualTo(0),
-                "D2020 has no previously defined token-binding wire field; Host uses D4002.");
+            Assert.That(raw.Token, Is.EqualTo(3),
+                "D2020 FINS evidence must identify the active workpiece token.");
             Assert.That(raw.Outcome, Is.EqualTo("INJECTED_END_SCAN_UNREADABLE"));
             Assert.That(raw.RequestHex, Does.StartWith("800002"));
             Assert.That(raw.ResponseHex, Does.StartWith("C00002"));
