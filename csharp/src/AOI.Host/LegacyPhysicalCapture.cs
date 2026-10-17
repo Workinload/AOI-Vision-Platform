@@ -56,13 +56,15 @@ internal sealed class LegacyPhysicalCapture
         };
         var missingToken = Environment.GetEnvironmentVariable("AOI_SIM_MISSING_FRAME_TOKEN");
         _missingDevice = Environment.GetEnvironmentVariable("AOI_SIM_MISSING_FRAME_DEVICE");
-        if (!string.IsNullOrWhiteSpace(missingToken) &&
-            (!ushort.TryParse(missingToken, out _missingToken) || _missingToken == 0 ||
-             string.IsNullOrWhiteSpace(_missingDevice) ||
-             !ChannelCatalog.All.Any(c => c.PhysicalDeviceId == _missingDevice &&
-                 c.OwnerRole == _owner)))
-            throw new InvalidOperationException(
-                "SIM_ONLY missing-frame injection requires valid Token and camera owned by this Core.");
+        if (!string.IsNullOrWhiteSpace(missingToken))
+        {
+            if (!ushort.TryParse(missingToken, out ushort parsed) || parsed == 0 ||
+                string.IsNullOrWhiteSpace(_missingDevice) ||
+                !ChannelCatalog.All.Any(c => c.PhysicalDeviceId == _missingDevice))
+                throw new InvalidOperationException(
+                    "SIM_ONLY missing-frame injection requires valid Token and physical device.");
+            _missingToken = parsed;
+        }
         _lineRowMapping = Environment.GetEnvironmentVariable("AOI_SIM_LINE_ROW_MAPPING") switch
         {
             null or "" or "DEMO_EVEN_ODD" => LineScanRowMapping.DemoEvenOdd,
