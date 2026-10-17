@@ -60,7 +60,7 @@ public sealed class SimChangeoverNode : ISimChangeoverNode
         using var db = _db.Open();
         using var tx = db.BeginTransaction();
         var now = Read(db, tx);
-        if (!now.SafeHold || now.Phase != NodeChangeoverPhase.Idle ||
+        if (!now.SafeHold || now.Phase is not (NodeChangeoverPhase.Idle or NodeChangeoverPhase.CommittedHold) ||
             now.ActiveEpoch != request.ExpectedEpoch || now.ActiveReleaseId != request.ExpectedReleaseId)
             throw new InvalidOperationException("NODE_BUSY_OR_EPOCH_MISMATCH");
         var content = WireFormat.Serialize(request.Target.Manifest.Canonical());
