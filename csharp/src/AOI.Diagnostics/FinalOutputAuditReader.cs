@@ -107,7 +107,6 @@ public sealed class FinalOutputAuditReader
             var readOk = First(FinalOutputAuditPhase.ReadbackVerified);
             var readWrong = First(FinalOutputAuditPhase.ReadbackMismatch);
             var unsent = First(FinalOutputAuditPhase.ExplicitlyNotSent);
-            var unknown = First(FinalOutputAuditPhase.AckUnknown);
             var readUnknown = First(FinalOutputAuditPhase.ReadbackUnknown);
             var sent = First(FinalOutputAuditPhase.WireSent);
             var state =
@@ -116,17 +115,12 @@ public sealed class FinalOutputAuditReader
                 readUnknown is not null ? FinalOutputAuditStepState.ReadbackUnknown :
                 refused is not null ? FinalOutputAuditStepState.AckRejected :
                 unsent is not null ? FinalOutputAuditStepState.ExplicitlyNotSent :
-                unknown is not null || sent is not null ?
-                    FinalOutputAuditStepState.SentAckUnknown :
                 acknowledged is not null ?
                     FinalOutputAuditStepState.AckAcceptedReadbackPending :
+                sent is not null ?
+                    FinalOutputAuditStepState.SentAckUnknown :
                 prepared is not null ? FinalOutputAuditStepState.PreparedSendUncertain :
                 FinalOutputAuditStepState.NotStarted;
-            // AckAccepted without readback takes precedence over WireSent.
-            if (acknowledged is not null && readOk is null && readWrong is null &&
-                readUnknown is null)
-                state = FinalOutputAuditStepState.AckAcceptedReadbackPending;
-
             var last = rows.LastOrDefault();
             string? detail = last?.Detail;
             steps[i - 1] = new FinalOutputAuditStep(
