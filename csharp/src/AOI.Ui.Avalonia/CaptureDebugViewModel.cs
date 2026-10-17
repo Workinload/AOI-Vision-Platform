@@ -21,6 +21,21 @@ public partial class MainWindowViewModel
     private CancellationTokenSource? _debugProofCancellation;
     private int _debugProofGeneration;
     private bool _changingDebugSelection;
+    private bool _changingDebugWorkpiece;
+    [ObservableProperty] private WorkpieceHistoryTile? captureDebugPickedWorkpiece;
+
+    partial void OnCaptureDebugPickedWorkpieceChanged(WorkpieceHistoryTile? value)
+    {
+        if (_changingDebugWorkpiece) return;
+        _suppressHistoryGalleryNavigation = true;
+        try
+        {
+            if (value is null) FollowLiveCommand.Execute(null);
+            else SelectedHistoryItem = value;
+        }
+        finally { _suppressHistoryGalleryNavigation = false; }
+        SelectedWorkspaceIndex = 4; // stay in the diagnostic PLC page
+    }
 
     public ObservableCollection<CaptureDebugRow> CaptureDebugChannels { get; } = new();
     public ObservableCollection<CaptureDebugEvent> CaptureDebugTimeline { get; } = new();
@@ -78,6 +93,14 @@ public partial class MainWindowViewModel
             CaptureDebugNotice = "点击“核验本件PNG”从 Core 逐通道读回 SHA256 校验图像；不等于实际硬触发/ACK 证据";
         }
         var latest = snapshot.Workpiece?.WorkpieceId == selected;
+        var historyRow = selected is null ? null : RecentWorkpieces.FirstOrDefault(
+            x => x.WorkpieceId == selected.Value);
+        if (!ReferenceEquals(CaptureDebugPickedWorkpiece, historyRow))
+        {
+            _changingDebugWorkpiece = true;
+            try { CaptureDebugPickedWorkpiece = historyRow; }
+            finally { _changingDebugWorkpiece = false; }
+        }
         CaptureDebugIdentity = selected is null
             ? "等待上料工件（无 WorkpieceId）"
             : (latest ? "实时工件： " : "历史工件： ") + selected.Value.ToString("D") +
