@@ -60,6 +60,9 @@ public partial class GalleryChannelTile : ObservableObject, IDisposable
     public void Dispose() => Show(null, "已清理");
 }
 
+public sealed record LiveConveyorTile(string Workpiece, string Stage,
+    string Progress, string State, string Sensor);
+
 public partial class MainWindowViewModel
 {
     private Guid? _pinnedWorkpieceId;
@@ -86,6 +89,8 @@ public partial class MainWindowViewModel
     [ObservableProperty] private string selectedMapStation = "LOADING";
     [ObservableProperty] private string mapSelectionSummary = "选择机台工位，跳转对应通道、图像和 ROI";
     [ObservableProperty] private string gallerySummary = "选择最近工件或实时跟随，加载由 Core 校验的 11 路 PNG";
+    [ObservableProperty] private string conveyorSummary = "等待 Master SIM_FULL 逐件运动状态";
+    public ObservableCollection<LiveConveyorTile> LiveConveyor { get; } = new();
 
     public IReadOnlyList<string> WorkspacePages { get; } =
         ["生产总览", "整机设备地图", "11 路图集", "历史与报警", "PLC 工程", "方案与 ROI"];
@@ -218,13 +223,41 @@ public partial class MainWindowViewModel
     /// <summary>Called after a new trusted Core snapshot has updated Channels and history.</summary>
     private void UpdateOperatorWorkspace(MonitorProjection projection)
     {
+        var conveyor = projection.Conveyor;
+        LiveConveyor.Clear();
+        if (conveyor is not null)
+        {
+            ConveyorSummary = $"逐料运动 Tick {conveyor.Tick} · 上料 {conveyor.LoadedCount} · " +
+                $"已出料 {conveyor.ExitedCount} · 在途 {conveyor.Active.Count}" +
+                (conveyor.StuckSensors.Count == 0 ? "" :
+                    " · 卡料模拟 " + string.Join(",", conveyor.StuckSensors));
+            foreach (var part in conveyor.Active.OrderBy(p => p.Token))
+                LiveConveyor.Add(new LiveConveyorTile(
+                    part.WorkpieceId.ToString("N")[..8] + " · #" + part.Token,
+                    part.StationId, part.CompletedStations + "/7 站 · " +
+                        part.CapturedChannels + "/11 通道",
+                    part.Phase, part.SensorTriggered ? "传感器已触发" : "等待传感器"));
+        }
+        else
+            ConveyorSummary = "Master SIM_FULL 的机械在途数据尚未接入本机 Core";
         foreach (var station in MapStations)
         {
-            var relevant = station.Channels.Split(" · ", StringSplitOptions.RemoveEmptyEntries)
-                .Select(id => Channels.First(c => c.ChannelId == id)).ToArray();
-            var captured = relevant.Count(c => c.State.StartsWith("SIM_OK", StringComparison.Ordinal) ||
-                c.State.StartsWith("SIM_NG", StringComparison.Ordinal));
-            station.Status = captured == 0 ? "等待采集" : captured + "/" + relevant.Length + " 已检测";
+            var parts = conveyor?.Active.Where(p => p.StationId == station.Id).ToArray();
+            if (parts is { Length: > 0 })
+                station.Status = "工件 #" + parts[0].Token +
+                    " · " + parts[0].CapturedChannels + "/11";
+            else if (conveyor is not null)
+                station.Status = "空闲 · 机械实时仿真";
+            else
+            {
+                var relevant = station.Channels.Split(" · ", StringSplitOptions.RemoveEmptyEntries)
+                    .Select(id => Channels.First(c => c.ChannelId == id)).ToArray();
+                var captured = relevant.Count(c =>
+                    c.State.StartsWith("SIM_OK", StringComparison.Ordinal) ||
+                    c.State.StartsWith("SIM_NG", StringComparison.Ordinal));
+                station.Status = captured == 0 ? "等待采集" :
+                    captured + "/" + relevant.Length + " 已检测";
+            }
         }
         SyncStationFromChannel(SelectedChannel);
         RefreshViewedWorkpiece();
@@ -243,6 +276,8 @@ public partial class MainWindowViewModel
         _galleryCancellation = null;
         foreach (var tile in GalleryChannels) tile.Show(null, "Core IPC 离线");
         foreach (var station in MapStations) station.Status = "Core 离线";
+        LiveConveyor.Clear();
+        ConveyorSummary = "机械状态 IPC 离线";
         GallerySummary = "Core 已断开，图库不可用";
         ViewedWorkpieceLabel = "无可用工件";
     }
