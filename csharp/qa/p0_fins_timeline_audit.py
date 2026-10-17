@@ -230,6 +230,13 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
     addr = spec.get("cameraAddress", 1011)
     device = spec.get("physicalDeviceId", "HIK-M-2")
     channel = spec.get("channelId", "CH06")
+    channels = spec.get("channelIds", [channel])
+    known = {1011: ("HIK-M-2", ["CH06"]),
+             1013: ("LINE-S-8", ["CH08", "CH09"]),
+             1014: ("LINE-M-2", ["CH10", "CH11"])}
+    demand(addr in known and device == known[addr][0]
+           and channels == known[addr][1],
+           "INVALID_CAMERA_PROFILE", f"Unverified capture mapping D{addr} / {device}: {channels}")
     matching = [e for e in events if event_value(e, "workpieceId") == item
                 and event_value(e, "captureId") == capture]
     demand(bool(matching), "NOT_VERIFIED",
@@ -272,15 +279,33 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
         return
     arrived = one(stage("FrameArrived"), "hard-trigger frame arrival")
     ready = one(stage("FrameReady"), "validated FrameReady")
-    inspected = [e for e in stage("InspectionCompleted")
-                 if event_value(e, "channelId") == channel]
-    result = one(inspected, f"{channel} inspection completion")
+    inspected = stage("InspectionCompleted")
+    demand(len(inspected) == len(channels) and
+           sorted(event_value(e, "channelId") for e in inspected) == sorted(channels),
+           "CHANNEL_FANOUT_MISMATCH",
+           f"One physical D{addr} capture must produce exactly {channels} once each")
     frame = event_value(arrived, "frameId")
-    demand(bool(frame) and frame == event_value(ready, "frameId")
-           and frame == event_value(result, "frameId"),
-           "FRAME_IDENTITY_MISMATCH", "FrameReady/inspection used a different FrameId")
-    demand(event_value(result, "status") in ("OK", "NG"),
-           "ALGORITHM_STATUS_INVALID", "Result must be OK or NG, not synthetic GOOD")
+    demand(bool(frame) and frame == event_value(ready, "frameId"),
+           "FRAME_IDENTITY_MISMATCH", "FrameReady used a different physical FrameId")
+    child_frames = []
+    for result in inspected:
+        child = event_value(result, "frameId")
+        demand(bool(child) and event_value(result, "status") in ("OK", "NG"),
+               "ALGORITHM_STATUS_INVALID", "Inspection must have real FrameId and OK/NG result")
+        if len(channels) == 1:
+            demand(child == frame, "FRAME_IDENTITY_MISMATCH",
+                   "Area inspection must preserve the acquired FrameId")
+        else:
+            # A3 persists each line-scan child with its own FrameId and the
+            # SAME real acquired parent frame in A7 FromResult.Details.
+            details = str(event_value(result, "details", ""))
+            demand(child != frame and f"parentFrame={frame}".lower() in details.lower(),
+                   "LINE_PARENT_FRAME_MISMATCH",
+                   "Interleaved line result must retain real common parentFrame")
+            child_frames.append(child)
+    if len(channels) == 2:
+        demand(len(set(child_frames)) == 2, "DUPLICATE_LINE_CHILD",
+               "Two logical inspection channels cannot reuse one child frame")
     order = spec["ordering"]
     demand(order in ("FRAME_FIRST", "REQUEST_FIRST"), "UNKNOWN_ORDERING", str(order))
     if order == "FRAME_FIRST":
@@ -290,13 +315,30 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
     before(arrived, ready, "FrameReady before FrameArrived")
     before(ready, acknowledged, "CamDone acknowledged before FrameReady")
     before(request, acknowledged, "CamDone acknowledged before PLC request")
-    before(acknowledged, result, "Inspection result preceded confirmed CamDone")
+    for result in inspected:
+        before(acknowledged, result, "Inspection result preceded confirmed CamDone")
 
 
 def verify_evidence(wire_records: list[dict], events: list[dict], cases: list[dict]) -> dict:
     wire = parse_trace(wire_records)
     demand(bool(cases), "NOT_VERIFIED", "No workpieces specified for independent audit")
-    seen_items, seen_capture, seen_tokens, seen_frames = set(), set(), set(), set()
+    seen_items, seen_capture, seen_tokens = set(), set(), set()
+    # Independent of case iteration: a frame (area, line parent or child)
+    # can be consumed only by the capture that originally acquired it.
+    frame_owner = {}
+    for e in events:
+        if event_value(e, "stage") not in ("FrameArrived", "FrameReady", "InspectionCompleted"):
+            continue
+        frame = event_value(e, "frameId")
+        if not frame:
+            continue
+        owner = (event_value(e, "workpieceId"), event_value(e, "captureId"))
+        demand(owner[0] and owner[1], "FRAME_IDENTITY_MISMATCH",
+               "Real FrameId lacking immutable WorkpieceId/CaptureId")
+        demand(frame not in frame_owner or frame_owner[frame] == owner,
+               "CROSS_WORKPIECE_FRAME_REUSE",
+               f"FrameId={frame} observed in two distinct captures")
+        frame_owner[frame] = owner
     for spec in cases:
         token = spec["token"]
         item = spec["workpieceId"]
@@ -310,13 +352,6 @@ def verify_evidence(wire_records: list[dict], events: list[dict], cases: list[di
         ack = verify_station_wire(wire, spec)
         verify_timeline(events, spec, ack)
         verify_final_wire(wire, spec)
-        for e in events:
-            if event_value(e, "workpieceId") == item and event_value(e, "stage") == "FrameArrived":
-                frame = event_value(e, "frameId")
-                if frame:
-                    demand(frame not in seen_frames, "CROSS_WORKPIECE_FRAME_REUSE",
-                           "A frame was attached to two workpieces")
-                    seen_frames.add(frame)
     return {"status": "PASS_REAL_FINS_AND_CAUSAL_EVENTS", "workpieces": len(cases),
             "wire_exchanges": len(wire), "physical_capture_ack": len(cases),
             "end_sequences": sum(bool(x.get("scenario")) for x in cases),
