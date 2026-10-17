@@ -33,8 +33,8 @@ def from_ledger(root: Path, count: int):
         workpiece = value(ident, "workpieceId")
         demand(isinstance(token, int) and token > 0 and workpiece,
                "MISSING_IDENTITY", f"Token {token} lacks immutable WorkpieceId")
-        items.append((token, workpiece))
-    demand(len({item for _, item in items}) == count,
+        items.append((token, ident))
+    demand(len({value(identity, "workpieceId") for _, identity in items}) == count,
            "CROSS_WORKPIECE_IDENTITY", "Duplicate WorkpieceId across SIM_FULL pieces")
     return items
 
@@ -119,7 +119,8 @@ def main(argv=None):
         wire = load_records(wire_path, "transactions")
         diagnostics = source / "src/AOI.Diagnostics.Cli/bin/Debug/net10.0/AOI.Diagnostics.Cli.dll"
         all_events, cases = [], []
-        for token, item in items:
+        for token, identity in items:
+            item = value(identity, "workpieceId")
             path = root / f"p0-a7-timeline-{token:03}.json"
             events = export_timeline(diagnostics, a.dotnet, root, item, path, a.timeout)
             all_events.extend(events)
@@ -133,6 +134,9 @@ def main(argv=None):
             demand(bool(capture), "NOT_VERIFIED", "A1 assigned no capture ID")
             expected = "MISSING" if token == a.missing_token else a.expected_status
             spec = {"token": token, "workpieceId": item, "captureId": capture,
+                    "epoch": value(identity, "epoch"),
+                    "releaseId": value(identity, "releaseId"),
+                    "traceId": value(identity, "traceId"),
                     "ordering": a.ordering, "result": expected,
                     "cameraAddress": 1011, "physicalDeviceId": "HIK-M-2",
                     "channelId": "CH06", "attemptNo": 1}
