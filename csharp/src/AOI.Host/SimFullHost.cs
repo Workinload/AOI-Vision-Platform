@@ -369,10 +369,45 @@ public static class SimFullHost
                     {
                         // Persist the actual failure reason BEFORE marking the FIFO blocked.
                         // Never accept this workpiece for a subsequent GOOD/NG final.
+                        bool scanFailure = string.IsNullOrWhiteSpace(scanned);
+                        bool scanMismatch = !scanFailure &&
+                            !string.Equals(scanned, item.Barcode, StringComparison.Ordinal);
+                        var abnormal = scanFailure ? LegacyExitScenario.BarcodeFailure
+                            : LegacyExitScenario.BarcodeMismatch;
                         store.RecordWorkpieceHold(item,
-                            scanned == item.Barcode ? "UNVERIFIED_FINAL_PROOF" : "END_BARCODE_MISMATCH",
+                            scanFailure ? "END_BARCODE_SCAN_FAILED"
+                            : scanMismatch ? "END_BARCODE_MISMATCH" : "UNVERIFIED_FINAL_PROOF",
                             $"SIM_FULL virtual exit token {exit}: final proof rejected; manual reconciliation required");
+                        // The durable HOLD precedes any external PLC write. A valid
+                        // abnormal scanner reply needs the historic *reverse* FINS
+                        // sequence; it does NOT authorize FIFO D4003 ejection.
                         held.Add(exit);
+                        if (legacyFins is not null && (scanFailure || scanMismatch))
+                        {
+                            try
+                            {
+                                await LegacyShadowHostBridge.WriteAbnormalFinalAsync(
+                                    legacyFins, exit, abnormal, item.Barcode, ct);
+                            }
+                            catch (LegacyOutputIncompleteException ex) when (!ct.IsCancellationRequested)
+                            {
+                                // The packet MAY have been applied even if its ACK
+                                // was lost. Never retry either legacy output word.
+                                // Core stays alive; persisted workpiece HOLD blocks
+                                // normal final/ejection and all future automatic writes.
+                                Console.Error.WriteLine("SIM_LEGACY_ABNORMAL_OUTPUT_UNCERTAIN token=" +
+                                    exit + " workpiece=" + item.WorkpieceId +
+                                    " confirmed_steps=" + ex.ConfirmedSteps.Count +
+                                    " no_automatic_retry=1 " + ex);
+                            }
+                            catch (Exception ex) when (!ct.IsCancellationRequested &&
+                                ex is IOException or InvalidDataException or SocketException)
+                            {
+                                Console.Error.WriteLine("SIM_LEGACY_ABNORMAL_OUTPUT_HOLD token=" +
+                                    exit + " workpiece=" + item.WorkpieceId +
+                                    " no_automatic_retry=1 " + ex);
+                            }
+                        }
                         Console.WriteLine($"SIM_FULL_HOLD token={exit} id={item.WorkpieceId} " +
                             $"why={decision.Proof} expected_barcode={item.Barcode} end_barcode={scanned}");
                     }
