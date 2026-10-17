@@ -215,6 +215,60 @@ def verify(root, count, flip, real_images=False, legacy_shadow=False,
     return True
 
 
+def verify_missing_slave_frame(root, missed_token=3, device='HIK-S-2'):
+    """Check true five-process fail-closed behavior without pretending all images exist."""
+    assert missed_token == 3 and device == 'HIK-S-2'
+    master = root / 'master/production.db'
+    slave = root / 'slave/production.db'
+    for path in (master, slave):
+        assert scalar(path, 'PRAGMA integrity_check') == 'ok', path
+    items = query(root / 'master/sim-full-cycle.db',
+                  'SELECT token,identity_json,phase FROM sim_full_tokens ORDER BY token')
+    assert len(items) == 3 and [x[0] for x in items] == [1, 2, 3], items
+    faulty = json.loads(items[2][1])['workpieceId']
+    assert items[2][2] == 'registered', 'Missing physical frame must not be ejected'
+    assert scalar(master, "SELECT COUNT(*) FROM workpieces WHERE final_json IS NOT NULL") == 2
+    assert scalar(master, "SELECT COUNT(*) FROM workpieces WHERE final_json LIKE '%good%'") == 0
+    assert scalar(master, "SELECT COUNT(*) FROM workpieces WHERE final_json LIKE '%reject%'") == 2
+    for node in (master, slave):
+        holds = query(node, "SELECT workpiece_id,reason_code,detail FROM workpiece_holds")
+        assert len(holds) == 1 and holds[0][0] == faulty and holds[0][1] == 'PHYSICAL_FRAME_MISSING', holds
+        assert device in holds[0][2]
+    assert scalar(master, "SELECT COUNT(*) FROM flight_events WHERE kind='REMOTE_CAPTURE_HOLD'") == 1
+    assert scalar(slave, "SELECT COUNT(*) FROM flight_events WHERE kind='CAPTURE_FAULT_OUTBOX_QUEUED'") == 1
+    assert scalar(slave, """SELECT COUNT(*) FROM outbox
+            WHERE envelope_json LIKE '%capture_fault%' AND acknowledged_utc IS NOT NULL""") == 1
+    assert scalar(master, """SELECT COUNT(*) FROM inbox
+            WHERE sender_node_id='slave'""") >= 13, 'Slave fault was not persisted before ACK'
+    faulty_channels = query(master, """SELECT result_json FROM channel_results
+                                      WHERE workpiece_id='""" + faulty + "'")
+    assert not any(json.loads(row[0])['channelId'] == 'CH02' for row in faulty_channels), (
+        'Missing camera CH02 must not fabricate a result')
+    wire_path = root / 'p0-fins-wire.jsonl'
+    assert wire_path.is_file()
+    packets = [json.loads(line) for line in wire_path.read_text(encoding='utf-8').splitlines()
+               if line.strip()]
+    acks = [p for p in packets if p['Token'] == missed_token and
+            p['Address'] == 1008 and p['IsWrite'] and p['Values'] == [3] and
+            p['Outcome'] == 'OK' and p['ResponseHex'].startswith('C0')]
+    assert len(acks) == 1, 'Missing Slave image must write one real D1008=3 FINS'
+    assert not any(p['Token'] == missed_token and p['IsWrite'] and
+                   p['Address'] in (1016, 2099) for p in packets), (
+        'Faulty workpiece must not receive any normal final PLC write')
+    assert fins_read(4005) == 2, 'Only healthy predecessors may leave the virtual PLC'
+    assert fins_read(4002) == 3, 'Fault token must remain physically held'
+    master_log = (root / 'master.log').read_text(encoding='utf-8')
+    slave_log = (root / 'slave.log').read_text(encoding='utf-8')
+    assert 'SIM_MASTER_REMOTE_CAPTURE_HOLD token=3' in master_log
+    assert 'SIM_FULL_HOLD token=3' in master_log
+    assert 'SIM_SLAVE_FAULT_QUEUED token=3' in slave_log
+    assert 'SIM_SLAVE_TRIGGER_COMPLETED' in slave_log
+    print('A0_SLAVE_MISSING_FRAME_E2E_PASS token=3 device=HIK-S-2 ' +
+          'actual_fins_D1008_3=1 slave_wal_hold=1 master_wal_hold=1 ' +
+          'peer_ack=1 physical_exit_blocked=1 unaffected_predecessors=2 ' +
+          'master_core_alive=1 slave_core_alive=1 false_good=0', flush=True)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--evidence-root')
@@ -233,6 +287,10 @@ def main():
     parser.add_argument('--line-row-mapping',
                         choices=['DEMO_EVEN_ODD', 'LEGACY_DROP_ROW0'],
                         default='DEMO_EVEN_ODD')
+    parser.add_argument('--missing-frame-token', type=int, default=0,
+                        help='SIM_ONLY inject one missing physical camera frame')
+    parser.add_argument('--missing-frame-device', default='HIK-S-2',
+                        help='Exact physical camera for an injected hard-frame absence')
     parser.add_argument('--timeout', type=float, default=70.0)
     args = parser.parse_args()
     if args.count < 3 or args.count > 60 or args.flip_token not in (0, 3) or args.count < args.flip_token:
@@ -241,6 +299,11 @@ def main():
         parser.error('P0 physical shadow requires --with-images so there is no synthetic frame fallback')
     if args.line_row_mapping != 'DEMO_EVEN_ODD' and not args.legacy_shadow:
         parser.error('Legacy row layout requires opt-in external PLC shadow mode')
+    if args.missing_frame_token and not (args.legacy_shadow and args.with_images and
+                                        args.count == 3 and args.missing_frame_token == 3 and
+                                        args.flip_token == 0 and
+                                        args.missing_frame_device == 'HIK-S-2'):
+        parser.error('First P0 fault run must be 3 PNG items, token3/HIK-S-2, legacy shadow')
     source = Path(__file__).resolve().parent.parent
     evidence = Path(args.evidence_root).resolve() if args.evidence_root else Path(tempfile.mkdtemp(prefix='aoi-simfull-'))
     if evidence.exists() and any(evidence.iterdir()):
@@ -268,6 +331,8 @@ def main():
                 'AOI_SIM_PLC_PROFILE': 'LEGACY_PLC_SHADOW' if args.legacy_shadow else 'FIFO_DEMO',
                 'AOI_SIM_ST05_ORDER': args.st05_order,
                 'AOI_SIM_LINE_ROW_MAPPING': args.line_row_mapping,
+                'AOI_SIM_MISSING_FRAME_TOKEN': str(args.missing_frame_token) if args.missing_frame_token else '',
+                'AOI_SIM_MISSING_FRAME_DEVICE': args.missing_frame_device,
                 'DOTNET_CLI_TELEMETRY_OPTOUT': '1',
                 'AOI_SIM_CONFIG_TOKEN': 'SIM_ONLY_E2E_ROI_OPERATOR_TOKEN_2026'})
     if args.with_product:
@@ -304,7 +369,8 @@ def main():
         start('master-ui', ui, '--master', '--headless', '--once')
         start('slave-ui', ui, '--slave', '--headless', '--once')
         print('SIM_FULL_FIVE_PROCESSES_LAUNCHED', flush=True)
-        target = args.flip_token - 1 if args.flip_token else args.count
+        target = (args.missing_frame_token - 1 if args.missing_frame_token else
+                  args.flip_token - 1 if args.flip_token else args.count)
         deadline = time.monotonic() + args.timeout
         while time.monotonic() < deadline:
             for name, proc in processes[:3]:
@@ -318,7 +384,15 @@ def main():
                        'SELECT COUNT(*) FROM channel_results')
             acknowledgements = scalar(evidence / 'slave/production.db',
                        'SELECT COUNT(*) FROM outbox WHERE acknowledged_utc IS NOT NULL')
-            if n == args.count and m == target and s == args.count * 6 and acknowledgements == args.count * 6:
+            if args.missing_frame_token:
+                if (n == args.count and m == target and
+                    scalar(evidence / 'master/production.db',
+                           'SELECT COUNT(*) FROM workpiece_holds') == 1 and
+                    scalar(evidence / 'slave/production.db',
+                           'SELECT COUNT(*) FROM workpiece_holds') == 1 and
+                    acknowledgements >= 13 and fins_read(4005) == target):
+                    break
+            elif n == args.count and m == target and s == args.count * 6 and acknowledgements == args.count * 6:
                 if fins_read(4005) == target:
                     break
             time.sleep(0.15)
@@ -326,6 +400,12 @@ def main():
             raise TimeoutError('SIM_FULL timed out without complete concurrent production evidence')
         # A matched set must remain stable, especially when the front item is held.
         time.sleep(0.55)
+        if args.missing_frame_token:
+            verify_missing_slave_frame(evidence, args.missing_frame_token,
+                                       args.missing_frame_device)
+            for name, proc in processes[:3]:
+                assert proc.poll() is None, name + ' Core quit during missing frame'
+            return 0
         verify(evidence, args.count, args.flip_token, args.with_images,
                args.legacy_shadow, args.line_row_mapping)
         if args.legacy_shadow:
