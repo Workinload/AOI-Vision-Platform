@@ -1,10 +1,10 @@
 name: A0 PeerLink Interlock Real Five-Process Gate
 on:
   pull_request:
-    paths: ['csharp/src/AOI.Host/**', 'csharp/scripts/e2e_peer_loss_interlock.py', '.github/workflows/a0-peerlink-interlock.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_peer_loss_interlock.py', 'csharp/scripts/e2e_external_scanner_failure.py', '.github/workflows/a0-peerlink-interlock.yml']
   push:
     branches: ['migration/csharp-avalonia-20261016']
-    paths: ['csharp/src/AOI.Host/**', 'csharp/scripts/e2e_peer_loss_interlock.py', '.github/workflows/a0-peerlink-interlock.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_peer_loss_interlock.py', 'csharp/scripts/e2e_external_scanner_failure.py', '.github/workflows/a0-peerlink-interlock.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -39,10 +39,14 @@ jobs:
           dotnet build AOI.slnx --no-restore -c Debug
       - name: A0 real five OS process TCP peer break and durable dual-Core output interlock
         run: python scripts/e2e_peer_loss_interlock.py --evidence-root .artifacts/a0-peer-loss
+      - name: A0 real unreadable PLC end barcode and reverse-order FINS HOLD
+        run: python scripts/e2e_external_scanner_failure.py --evidence-root .artifacts/a0-end-scan-unreadable
       - name: Preserve operator evidence if fail
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: a0-peer-loss-${{ matrix.os }}-${{ github.run_id }}
-          path: csharp/.artifacts/a0-peer-loss/
+          path: |
+            csharp/.artifacts/a0-peer-loss/
+            csharp/.artifacts/a0-end-scan-unreadable/
           retention-days: 14
