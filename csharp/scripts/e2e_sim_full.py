@@ -106,6 +106,13 @@ def verify(root, count, flip):
     if flip:
         assert rows[flip - 1][2] == 'registered', 'flipped exit token was released'
         assert all(x[2] != 'exited' for x in rows[flip - 1:]), 'later pieces overtook HOLD'
+        holds = query(master, "SELECT workpiece_id,reason_code,detail FROM workpiece_holds")
+        expected_held_id = json.loads(rows[flip - 1][1])['workpieceId']
+        assert holds and len(holds) == 1 and holds[0][0] == expected_held_id, holds
+        assert holds[0][1] == 'END_BARCODE_MISMATCH' and 'manual reconciliation' in holds[0][2]
+        assert scalar(master, "SELECT COUNT(*) FROM flight_events WHERE kind='WORKPIECE_HOLD'") == 1
+    else:
+        assert scalar(master, "SELECT COUNT(*) FROM workpiece_holds") == 0
 
     for node, c, asset_count in [('master', 5, 6), ('slave', 6, 7)]:
         path = root / node / 'vision/vision-assets.sqlite'
@@ -218,6 +225,17 @@ def main():
                 snapshot = json.loads(view.readline())
         assert snapshot['simulationMode'] == 'SIM_FULL', snapshot['simulationMode']
         assert snapshot['realHardwareWritesEnabled'] is False
+        hold_overview = snapshot.get('holds')
+        assert hold_overview and hold_overview['activeCount'] == (1 if args.flip_token else 0), hold_overview
+        assert len(hold_overview['recent']) == (1 if args.flip_token else 0), hold_overview
+        if args.flip_token:
+            held = hold_overview['recent'][0]
+            assert held['reasonCode'] == 'END_BARCODE_MISMATCH'
+            assert held['workpieceId'] == json.loads(
+                query(evidence / 'master/sim-full-cycle.db',
+                      'SELECT identity_json FROM sim_full_tokens WHERE token=3')[0][0]
+            )['workpieceId']
+        print(f"SIM_FULL_HOLD_IPC_PASS active={hold_overview['activeCount']} fail_closed=1", flush=True)
         plc_registry = snapshot.get('plcEngineering')
         assert plc_registry and plc_registry['isFieldLive'] is False, plc_registry
         assert len(plc_registry['signals']) == 45 and len(plc_registry['gates']) == 14
