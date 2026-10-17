@@ -430,7 +430,8 @@ public static class AoiWin {
         } catch { Record-Check ('click_tab_'+$page) 'FAIL' $_.Exception.Message }
     }
     try {
-        Click-Tab $masterWindow '11 路通道监控'
+        # Equipment map is independent of the separate PLC tab; verify ROI even if
+        # current Avalonia TabControl has inaccessible/collapsed headers.
         Click-LocalChannel $masterWindow 'CH06'
         Start-Sleep -Milliseconds 900
         Screenshot $masterWindow 'master-selected-CH06'
@@ -455,7 +456,6 @@ public static class AoiWin {
         } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
     }
     try {
-        Click-Tab $slaveWindow '11 路通道监控'
         Click-LocalChannel $slaveWindow 'CH02'
         Start-Sleep -Milliseconds 900
         Screenshot $slaveWindow 'slave-selected-CH02'
