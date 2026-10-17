@@ -168,7 +168,9 @@ public sealed class Agent01FinalPlcOutputJournalTests
             Is.EqualTo(new ushort[] { 2099, 1016 }));
         Assert.That(intent.Steps.Select(s => s.Value),
             Is.EqualTo(new ushort[] { firstValue, 2 }));
-        Assert.Throws<InvalidOperationException>(() =>
+        // An existing immutable intent with different branch/value is an identity
+        // conflict (InvalidDataException), not a second permissible write plan.
+        Assert.Throws<InvalidDataException>(() =>
             journal.Prepare(store, item, 3, LegacyExitScenario.Normal, FinalDisposition.Good));
 
         var first = journal.ClaimNextWrite(intent.Intent.IntentId)!;
