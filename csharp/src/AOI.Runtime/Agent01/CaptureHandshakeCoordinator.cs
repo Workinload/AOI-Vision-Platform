@@ -453,6 +453,25 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
         }
     }
 
+    /// <summary>
+    /// Returns only fully collected, FINS-confirmed results, in logical channel order.
+    /// ERROR/MISSING outcomes remain visible to the caller and must never be mapped to
+    /// GOOD. Persist these in ProductionStore and publish to ProductionFlowCoordinator;
+    /// the journal permits a restart to repeat the idempotent downstream step.
+    /// </summary>
+    public IReadOnlyList<ChannelResult> CompletedResults(Guid captureId)
+    {
+        lock (_sync)
+        {
+            var state = Require(captureId);
+            if (!IsLatest(state) || state.CamDoneSent != 2 ||
+                !state.HasAllResults || state.Failure is not null)
+                return Array.Empty<ChannelResult>();
+            return Array.AsReadOnly(state.Ticket.ChannelIds
+                .Select(channel => state.Results[channel]).ToArray());
+        }
+    }
+
     public IReadOnlyList<CaptureHandshakeEvent> EventsFor(Guid captureId)
     {
         lock (_sync)
