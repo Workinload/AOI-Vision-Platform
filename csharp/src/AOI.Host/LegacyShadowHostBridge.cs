@@ -79,11 +79,17 @@ internal static class LegacyShadowHostBridge
     /// It must precede D4001 so the original FIFO still presents this token's
     /// D2000 barcode; D1999 itself is acknowledged through actual UDP writes.
     /// </summary>
+    public static Task OfferLoadAsync(LegacyFinsLoopbackClient client,
+        ushort token, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        return client.WriteAsync(LegacyPlcShadow.SimOfferLoadAddress, [token], ct);
+    }
+
     public static async Task ConfirmLoadAsync(LegacyFinsLoopbackClient client,
         ushort token, string expectedBarcode, CancellationToken ct)
     {
         ArgumentNullException.ThrowIfNull(client);
-        await client.WriteAsync(LegacyPlcShadow.SimOfferLoadAddress, [token], ct);
         var request = await client.ReadAsync(LegacyPlcShadow.LoadRequestAddress, 1, ct);
         if (request.Length != 1 || request[0] != 1)
             throw new InvalidDataException("SIM_LEGACY_LOAD_REQUEST_MISSING");
