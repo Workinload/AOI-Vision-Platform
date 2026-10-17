@@ -3,5 +3,6 @@
   <ItemGroup>
     <ProjectReference Include="../AOI.Runtime/AOI.Runtime.csproj" />
     <ProjectReference Include="../AOI.Solutions/AOI.Solutions.csproj" />
+    <ProjectReference Include="../AOI.Diagnostics/AOI.Diagnostics.csproj" />
   </ItemGroup>
 </Project>

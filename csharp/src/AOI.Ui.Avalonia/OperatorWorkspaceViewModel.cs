@@ -93,7 +93,7 @@ public partial class MainWindowViewModel
     public ObservableCollection<LiveConveyorTile> LiveConveyor { get; } = new();
 
     public IReadOnlyList<string> WorkspacePages { get; } =
-        ["生产总览", "整机设备地图", "11 路图集", "历史与报警", "PLC 工程", "方案与 ROI"];
+        ["生产总览", "整机设备地图", "11 路图集", "历史与报警", "PLC 工程", "方案与 ROI", "生产报表"];
 
     public ObservableCollection<MapStationTile> MapStations { get; } =
         new(OperatorWorkspaceTopology.Stations.Select(s => new MapStationTile(s)));
@@ -170,6 +170,7 @@ public partial class MainWindowViewModel
     partial void OnSelectedWorkspaceIndexChanged(int value)
     {
         if (value == 2) RefreshGallery();
+        if (value == 6) _ = RefreshReportsAsync();
     }
 
     private Guid? ViewedWorkpieceId =>

@@ -230,6 +230,60 @@ public sealed record SimConveyorOverview(
     }
 }
 
+/// <summary>Read-only operator report over actual Master/Slave SQLite WAL, SIM_ONLY.</summary>
+public sealed record SimReportPeriod(
+    string Label, DateTimeOffset FromUtc, DateTimeOffset UntilUtc,
+    long Total, long Good, long Ng, long Hold, long InProgress,
+    double? GoodRate)
+{
+    public void Validate()
+    {
+        if (string.IsNullOrWhiteSpace(Label) || FromUtc >= UntilUtc ||
+            Total < 0 || Good < 0 || Ng < 0 || Hold < 0 || InProgress < 0 ||
+            Total != Good + Ng + Hold + InProgress)
+            throw new InvalidDataException("Invalid production period totals.");
+        double? expected = Good + Ng == 0 ? null : (double)Good / (Good + Ng);
+        if (GoodRate.HasValue != expected.HasValue ||
+            (GoodRate.HasValue && (!double.IsFinite(GoodRate.Value) ||
+                Math.Abs(GoodRate.Value - expected!.Value) > 1e-9)))
+            throw new InvalidDataException("Invalid report quality rate.");
+    }
+}
+
+public sealed record SimReportWorkpiece(
+    Guid WorkpieceId, string Barcode, string ReleaseId,
+    DateTimeOffset RegisteredUtc, string Disposition,
+    int CapturedChannels, string? HoldReason)
+{
+    public void Validate()
+    {
+        if (WorkpieceId == Guid.Empty || string.IsNullOrWhiteSpace(ReleaseId) ||
+            Disposition is not ("Good" or "Ng" or "Hold" or "InProgress") ||
+            CapturedChannels is < 0 or > 11 || RegisteredUtc == default)
+            throw new InvalidDataException("Invalid report trace identity or verdict.");
+    }
+}
+
+public sealed record SimProductionReports(
+    bool IsSimulation, DateTimeOffset UpdatedUtc,
+    SimReportPeriod Today, SimReportPeriod ThisWeek,
+    long AllTimeMatches, IReadOnlyList<SimReportWorkpiece> Recent)
+{
+    public void Validate()
+    {
+        if (!IsSimulation || UpdatedUtc == default || Today is null ||
+            ThisWeek is null || Recent is null || Recent.Count > 20 ||
+            AllTimeMatches < Recent.Count ||
+            Recent.Select(r => r.WorkpieceId).Distinct().Count() != Recent.Count)
+            throw new InvalidDataException("Invalid SIM_ONLY report snapshot.");
+        Today.Validate();
+        ThisWeek.Validate();
+        foreach (var item in Recent) item.Validate();
+    }
+}
+
+public sealed record SimProductionReportReply(bool Accepted, string Message, SimProductionReports? Reports);
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
