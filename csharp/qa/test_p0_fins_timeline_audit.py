@@ -58,14 +58,14 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False
                 "SCAN_FAILED": 1, "BARCODE_MISMATCH": 2}[scenario]
         tx(4303, True, (token, mode))
         tx(2099, reply=(1,))
-        for address, value in {
+        for final_address, value in {
             "NORMAL_GOOD": [(1016, 1), (2099, 2)],
             "NORMAL_NG": [(1016, 2), (2099, 2)],
             "SCAN_FAILED": [(2099, 3), (1016, 2)],
             "BARCODE_MISMATCH": [(2099, 4), (1016, 2)]
         }[scenario]:
-            tx(address, True, (value,))
-            tx(address, reply=(value,))
+            tx(final_address, True, (value,))
+            tx(final_address, reply=(value,))
     workpiece = str(uuid.uuid4())
     capture = str(uuid.uuid4())
     frame = str(uuid.uuid4())
