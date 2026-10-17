@@ -5,6 +5,7 @@ static int Usage()
 {
     Console.Error.WriteLine("""
         SIM_ONLY / READ_ONLY
+        AOI.Diagnostics.Cli timeline ROOT --workpiece UUID [--capture UUID] [--device ID] [--channel CH06] [--attempt 1] [--limit 2000] [--csv FILE] [--json FILE] [--expect EXPECTATIONS.json] [--comparison-json FILE]
         AOI.Diagnostics.Cli history ROOT [--workpiece UUID] [--barcode TEXT] [--station ST03] [--from UTC] [--until UTC] [--limit 100] [--offset 0] [--csv FILE] [--json FILE]
         AOI.Diagnostics.Cli report ROOT day|week YYYY-MM-DD [--timezone Asia/Singapore] [--csv FILE] [--json FILE]
         AOI.Diagnostics.Cli report ROOT range --from UTC --until UTC [--station ST03] [--csv FILE] [--json FILE]
@@ -53,6 +54,34 @@ try
     const int staleSeconds = 30;
     switch (args[0])
     {
+        case "timeline" when args.Length >= 4:
+        {
+            var options = Options(args, 2);
+            var id = Id(options, "--workpiece")
+                ?? throw new ArgumentException("timeline requires --workpiece UUID");
+            var query = new TimingFilter(id,
+                CaptureId: Id(options, "--capture"),
+                PhysicalDeviceId: Get(options, "--device"),
+                ChannelId: Get(options, "--channel"),
+                AttemptNo: Get(options, "--attempt") is null ? null : Number(options, "--attempt", 1),
+                Limit: Number(options, "--limit", 2000));
+            var timeline = new ProductionTimelineReader(args[1]).Query(query);
+            Console.WriteLine(DiagnosticsFormat.Serialize(timeline));
+            if (Get(options, "--csv") is string csv)
+                ProductionTimelineExports.SaveCsv(timeline, csv);
+            if (Get(options, "--json") is string json)
+                ProductionTimelineExports.SaveJson(timeline, json);
+            if (Get(options, "--expect") is string expectedFile)
+            {
+                var expected = DiagnosticsFormat.Parse<TimingExpectation[]>(File.ReadAllText(expectedFile));
+                var comparison = ProductionTimingAnalyzer.Compare(id, expected, timeline.Events);
+                if (Get(options, "--comparison-json") is string output)
+                    ProductionTimelineExports.SaveComparisonJson(comparison, output);
+                Console.Error.WriteLine(DiagnosticsFormat.Serialize(comparison));
+                return comparison.IsMatch && !timeline.Truncated ? 0 : 3;
+            }
+            return timeline.DiagnosticDifferences.Any(d => d.Severity == "ERROR") ? 3 : 0;
+        }
         case "history" when args.Length >= 2:
         {
             var options = Options(args, 2);
