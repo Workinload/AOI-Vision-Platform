@@ -202,6 +202,8 @@ def main():
                         help='Replay actual 8-bit disk PNG inputs; CH06 deliberately NG')
     parser.add_argument('--with-product', action='store_true',
                         help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
+    parser.add_argument('--legacy-shadow', action='store_true',
+                        help='Exercise real FINS D1999/D1016/D2099 through opt-in PLC shadow')
     parser.add_argument('--timeout', type=float, default=70.0)
     args = parser.parse_args()
     if args.count < 3 or args.count > 60 or args.flip_token not in (0, 3) or args.count < args.flip_token:
@@ -230,6 +232,7 @@ def main():
                 'AOI_SIM_ITEM_COUNT': str(args.count), 'AOI_SIM_MAX_IN_FLIGHT': '3',
                 'AOI_SIM_END_BARCODE_FLIP_TOKEN': str(args.flip_token),
                 'AOI_SIM_REPEAT_BARCODE': '1' if args.repeat_barcode else '0',
+                'AOI_SIM_PLC_PROFILE': 'LEGACY_PLC_SHADOW' if args.legacy_shadow else 'FIFO_DEMO',
                 'DOTNET_CLI_TELEMETRY_OPTOUT': '1',
                 'AOI_SIM_CONFIG_TOKEN': 'SIM_ONLY_E2E_ROI_OPERATOR_TOKEN_2026'})
     if args.with_product:
@@ -289,6 +292,33 @@ def main():
         # A matched set must remain stable, especially when the front item is held.
         time.sleep(0.55)
         verify(evidence, args.count, args.flip_token, args.with_images)
+        if args.legacy_shadow:
+            wire_path = evidence / 'p0-fins-wire.jsonl'
+            assert wire_path.is_file(), 'Shadow did not export real UDP request/response evidence'
+            packets = [json.loads(line) for line in wire_path.read_text(encoding='utf-8').splitlines()
+                       if line.strip()]
+            def written(token, address, value):
+                return [p for p in packets if p['Token'] == token and p['Address'] == address
+                        and p['IsWrite'] and p['Values'] == [value] and p['Outcome'] == 'OK'
+                        and p['ResponseHex'].startswith('C0')]
+            for token in range(1, target + 1):
+                assert len(written(token, 1999, 2)) == 1, ('missing D1999 actual FINS ACK', token)
+                desired = 2 if args.with_images else 1
+                first = written(token, 1016, desired)
+                second = written(token, 2099, 2)
+                assert len(first) == len(second) == 1, ('missing actual dual final FINS write', token)
+                assert first[0]['Sequence'] < second[0]['Sequence'], (
+                    'PLC final FINS datagrams were sent in the wrong order', token)
+                # Both old-address FINS writes require independent observed readback.
+                assert any(p['Token'] == token and p['Address'] == 1016 and not p['IsWrite']
+                           and p['Sequence'] > first[0]['Sequence'] and
+                           p['Sequence'] < second[0]['Sequence'] and
+                           p['ResponseHex'].startswith('C0') for p in packets)
+                assert any(p['Token'] == token and p['Address'] == 2099 and not p['IsWrite']
+                           and p['Sequence'] > second[0]['Sequence'] and
+                           p['ResponseHex'].startswith('C0') for p in packets)
+            print('A0_LEGACY_SHADOW_FINS_NORMAL_PASS items=' + str(target) +
+                  ' d1999=1 d1016_then_d2099=1 actual_udp=1 real_writes=0', flush=True)
         master_log = (evidence / 'master.log').read_text(encoding='utf-8')
         virtual_log = (evidence / 'vplc.log').read_text(encoding='utf-8')
         # Different OS scheduling can finish item #1 before slot #3 fills.
