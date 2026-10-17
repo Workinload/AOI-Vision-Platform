@@ -54,6 +54,13 @@ public partial class ChannelTile : ObservableObject
 public sealed record WorkpieceHistoryTile(
     string ShortId, string Barcode, string Epoch, string Channels, string Decision, string LocalTime);
 
+/// <summary>Engineering mapping only; no claim of live PLC signal reads.</summary>
+public sealed record PlcSignalTile(
+    string Id, string DmAddress, string Station, string Host, string Direction,
+    string DataType, string Purpose, string Validation, string Conflict);
+
+public sealed record FieldGateTile(string GateId, string Topic, string Status, string RequiredEvidence);
+
 public partial class MainWindowViewModel : ObservableObject
 {
     private readonly CancellationTokenSource _shutdown = new();
@@ -64,6 +71,11 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<ChannelTile> Channels { get; } =
         new(ChannelCatalog.All.Select(x => new ChannelTile(x)));
     public ObservableCollection<WorkpieceHistoryTile> RecentWorkpieces { get; } = new();
+    public ObservableCollection<PlcSignalTile> PlcSignals { get; } = new();
+    public ObservableCollection<FieldGateTile> PlcGates { get; } = new();
+    [ObservableProperty] private string engineeringRegistryState = "待接收 Core 工程映射 · REAL 写入禁止";
+    [ObservableProperty] private PlcSignalTile? selectedPlcSignal;
+    [ObservableProperty] private FieldGateTile? selectedFieldGate;
     [ObservableProperty] private string productionCounters = "生产统计：等待 Core IPC";
     [ObservableProperty] private string historyNote = "暂无可核验的生产历史";
 
@@ -107,6 +119,18 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedChannelName));
         RoiFeedback = "ROI 仅会话草稿，不会保存或下发";
         if (_lastProjection is not null) RequestPreview(_lastProjection);
+    }
+
+    partial void OnSelectedPlcSignalChanged(PlcSignalTile? value)
+    {
+        if (value is null) return;
+        // Exact DM mapping, never fuzzy match by barcode, name or station.
+        var channel = Channels.FirstOrDefault(c =>
+            string.Equals(c.PlcAddress, value.DmAddress, StringComparison.Ordinal));
+        if (channel is not null && !ReferenceEquals(SelectedChannel, channel))
+            SelectedChannel = channel;
+        SelectedDescription = $"{value.Id}: {value.Purpose} | {value.DmAddress} | " +
+            $"工位 {value.Station} | {value.Validation} | {value.Conflict} | 工程声明，非现场实时值";
     }
 
     private void SelectChannel(ChannelTile? value) => SelectedChannel = value;
@@ -169,6 +193,28 @@ public partial class MainWindowViewModel : ObservableObject
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
                         RequestPreview(projection);
+                        if (projection.PlcEngineering is { } engineering)
+                        {
+                            EngineeringRegistryState =
+                                $"静态工程台账 · {engineering.Signals.Count} 条信号 / {engineering.Gates.Count} 项 FG · 非现场读值";
+                            if (PlcSignals.Count == 0)
+                            {
+                                foreach (var signal in engineering.Signals)
+                                    PlcSignals.Add(new PlcSignalTile(
+                                        signal.SignalId, signal.DmAddress, signal.StationId,
+                                        signal.HostRole, signal.Direction, signal.DataType,
+                                        signal.Description, signal.ValidationState, signal.ConflictGroup));
+                                foreach (var gate in engineering.Gates)
+                                    PlcGates.Add(new FieldGateTile(
+                                        gate.GateId, gate.Topic, gate.Status, gate.RequiredEvidence));
+                            }
+                        }
+                        else
+                        {
+                            EngineeringRegistryState = "Core 未提供 PLC 工程台账（不推断为现场有效）";
+                            PlcSignals.Clear();
+                            PlcGates.Clear();
+                        }
                         if (projection.Production is { } history)
                         {
                             ProductionCounters =
@@ -191,6 +237,8 @@ public partial class MainWindowViewModel : ObservableObject
                         }
                         if (_once)
                         {
+                            if (projection.PlcEngineering is { } catalog)
+                                Console.WriteLine($"UI_PLC_ENGINEERING_OK role={_role} signals={catalog.Signals.Count} gates={catalog.Gates.Count} live={catalog.IsFieldLive}");
                             Console.WriteLine($"UI_HEADLESS_SNAPSHOT_OK role={_role} channels={projection.Channels.Count} state={projection.MachineState}");
                             if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
                                 desktop.Shutdown();
@@ -315,6 +363,11 @@ public partial class MainWindowViewModel : ObservableObject
         ProductionCounters = "生产统计：IPC 离线，数据已失效";
         HistoryNote = "仅可查看在线 Core 的真实持久化数据";
         RecentWorkpieces.Clear();
+        PlcSignals.Clear();
+        PlcGates.Clear();
+        SelectedPlcSignal = null;
+        SelectedFieldGate = null;
+        EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
         ClearPreview("IPC 中断，图像已失效");
         _lastAcceptedUtc = DateTimeOffset.MinValue;

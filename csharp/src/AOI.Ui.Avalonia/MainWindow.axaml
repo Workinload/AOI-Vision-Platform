@@ -108,32 +108,100 @@
         </Border>
       </Grid>
       <Grid Grid.Column="1" RowDefinitions="1.35*,Auto" RowSpacing="10">
-        <Border Background="White" CornerRadius="10" Padding="14">
-          <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
-            <TextBlock Text="PLC / 通道映射 · 只读" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
-            <Grid Grid.Row="1" ColumnDefinitions="64,80,95,*,88" Margin="9,0">
-              <TextBlock Text="通道" FontSize="11" FontWeight="SemiBold"/>
-              <TextBlock Grid.Column="1" Text="站点/设备" FontSize="11" FontWeight="SemiBold"/>
-              <TextBlock Grid.Column="2" Text="PLC 地址" FontSize="11" FontWeight="SemiBold"/>
-              <TextBlock Grid.Column="3" Text="监控状态" FontSize="11" FontWeight="SemiBold"/>
-              <TextBlock Grid.Column="4" Text="机台" FontSize="11" FontWeight="SemiBold"/>
+        <TabControl Grid.Row="0" Background="White">
+          <TabItem Header="11 路通道监控">
+  <Border Background="White" CornerRadius="10" Padding="14">
+            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
+              <TextBlock Text="PLC / 通道映射 · 只读" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
+              <Grid Grid.Row="1" ColumnDefinitions="64,80,95,*,88" Margin="9,0">
+                <TextBlock Text="通道" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="1" Text="站点/设备" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="2" Text="PLC 地址" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="3" Text="监控状态" FontSize="11" FontWeight="SemiBold"/>
+                <TextBlock Grid.Column="4" Text="机台" FontSize="11" FontWeight="SemiBold"/>
+              </Grid>
+              <ListBox Grid.Row="2" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                       BorderThickness="0" Background="#F5F8FB">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="64,80,95,*,88" Margin="5,8">
+                      <TextBlock Text="{Binding ChannelId}" FontWeight="SemiBold" FontSize="12"/>
+                      <TextBlock Grid.Column="1" Text="{Binding Device}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Column="2" Text="{Binding PlcAddress}" FontSize="12"/>
+                      <TextBlock Grid.Column="3" Text="{Binding State}" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Column="4" Text="{Binding Owner}" FontSize="10"/>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
             </Grid>
-            <ListBox Grid.Row="2" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                     BorderThickness="0" Background="#F5F8FB">
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Grid ColumnDefinitions="64,80,95,*,88" Margin="5,8">
-                    <TextBlock Text="{Binding ChannelId}" FontWeight="SemiBold" FontSize="12"/>
-                    <TextBlock Grid.Column="1" Text="{Binding Device}" FontSize="10" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Grid.Column="2" Text="{Binding PlcAddress}" FontSize="12"/>
-                    <TextBlock Grid.Column="3" Text="{Binding State}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Grid.Column="4" Text="{Binding Owner}" FontSize="10"/>
-                  </Grid>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </Grid>
-        </Border>
+          </Border>
+          </TabItem>
+          <TabItem Header="45 条 PLC 工程映射">
+            <Grid RowDefinitions="Auto,Auto,*" Margin="10" RowSpacing="8">
+              <TextBlock Text="{Binding EngineeringRegistryState}" TextWrapping="Wrap"
+                         FontSize="11" Foreground="#986033"/>
+              <Grid Grid.Row="1" ColumnDefinitions="170,100,80,90,90,*" Margin="8,2">
+                <TextBlock Text="信号 ID" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="1" Text="PLC 地址" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="2" Text="工位" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="3" Text="主从" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="4" Text="方向" FontWeight="SemiBold" FontSize="11"/>
+                <TextBlock Grid.Column="5" Text="状态 / 功能" FontWeight="SemiBold" FontSize="11"/>
+              </Grid>
+              <ListBox Grid.Row="2" ItemsSource="{Binding PlcSignals}"
+                       SelectedItem="{Binding SelectedPlcSignal, Mode=TwoWay}"
+                       Background="#F5F8FB" BorderThickness="0">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Grid ColumnDefinitions="170,100,80,90,90,*" Margin="6,7">
+                      <TextBlock Text="{Binding Id}" FontSize="11" FontWeight="SemiBold"
+                                 Foreground="#254B6E" TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Column="1" Text="{Binding DmAddress}" FontSize="11"/>
+                      <TextBlock Grid.Column="2" Text="{Binding Station}" FontSize="10"/>
+                      <TextBlock Grid.Column="3" Text="{Binding Host}" FontSize="10"/>
+                      <TextBlock Grid.Column="4" Text="{Binding Direction}" FontSize="10"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <StackPanel Grid.Column="5" Spacing="2">
+                        <TextBlock Text="{Binding Validation}" FontSize="10" Foreground="#A05B2D"/>
+                        <TextBlock Text="{Binding Purpose}" FontSize="11"
+                                   TextWrapping="Wrap" Foreground="#4C647D"/>
+                      </StackPanel>
+                    </Grid>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </TabItem>
+          <TabItem Header="14 项现场验证门禁">
+            <Grid RowDefinitions="Auto,*" Margin="10" RowSpacing="8">
+              <TextBlock Text="工程证据：7 项 BLOCKED / 7 项 OPEN。全部禁止真实 PLC 写入；OPEN 不代表通过。"
+                         Foreground="#923D31" FontSize="11" TextWrapping="Wrap"/>
+              <ListBox Grid.Row="1" ItemsSource="{Binding PlcGates}"
+                       SelectedItem="{Binding SelectedFieldGate, Mode=TwoWay}"
+                       BorderThickness="0" Background="#F6F8FB">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="3" Padding="9" CornerRadius="7"
+                            Background="White" BorderBrush="#DAE2EB" BorderThickness="1">
+                      <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="80,*,85">
+                          <TextBlock Text="{Binding GateId}" FontWeight="Bold" FontSize="12"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Topic}" FontSize="12"
+                                     TextWrapping="Wrap"/>
+                          <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11"
+                                     Foreground="#A44532" FontWeight="SemiBold"/>
+                        </Grid>
+                        <TextBlock Text="{Binding RequiredEvidence}" FontSize="11"
+                                   Foreground="#516B85" TextWrapping="Wrap"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </TabItem>
+        </TabControl>
         <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
           <StackPanel Spacing="9">
             <TextBlock Text="通道图像预览 / ROI 归一化草稿" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>

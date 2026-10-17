@@ -33,7 +33,8 @@ public static class SnapshotIpc
                             {
                                 MachineSnapshot snapshot = store.Snapshot(nodeId, role) with
                                 {
-                                    SimulationMode = simulationMode
+                                    SimulationMode = simulationMode,
+                                    PlcEngineering = PlcEngineeringProjection.Snapshot
                                 };
                                 await writer.WriteLineAsync(WireFormat.Serialize(snapshot));
                                 await Task.Delay(350, ct);

@@ -210,12 +210,23 @@ def main():
             assert f'SIM_FULL_HOLD token={args.flip_token}' in master_log
         for name, proc in processes[3:]:
             assert proc.wait(timeout=10) == 0, name + ' UI failed'
-            assert 'UI_HEADLESS_SNAPSHOT_OK' in (evidence / (name + '.log')).read_text(encoding='utf-8'), name
+            ui_log = (evidence / (name + '.log')).read_text(encoding='utf-8')
+            assert 'UI_HEADLESS_SNAPSHOT_OK' in ui_log, name
+            assert 'UI_PLC_ENGINEERING_OK' in ui_log and 'signals=45 gates=14 live=False' in ui_log, name
         with socket.create_connection(('127.0.0.1', 19621), timeout=3) as sock:
             with sock.makefile('r', encoding='utf-8') as view:
                 snapshot = json.loads(view.readline())
         assert snapshot['simulationMode'] == 'SIM_FULL', snapshot['simulationMode']
         assert snapshot['realHardwareWritesEnabled'] is False
+        plc_registry = snapshot.get('plcEngineering')
+        assert plc_registry and plc_registry['isFieldLive'] is False, plc_registry
+        assert len(plc_registry['signals']) == 45 and len(plc_registry['gates']) == 14
+        assert sum(g['status'] == 'BLOCKED' for g in plc_registry['gates']) == 7
+        assert sum(g['status'] == 'OPEN' for g in plc_registry['gates']) == 7
+        assert not any(x['productionWriteEnabled'] for x in plc_registry['signals'])
+        assert not any(x['productionWriteAllowed'] for x in plc_registry['gates'])
+        assert next(x for x in plc_registry['signals'] if x['signalId'] == 'SIG_FINAL_QUALITY')['dmAddress'] == 'D1016'
+        print('SIM_FULL_PLC_ENGINEERING_IPC_PASS signals=45 fg=14 field_live=0 real_writes=0', flush=True)
         overview = snapshot.get('production')
         assert overview and overview['total'] == args.count, overview
         assert overview['good'] == target and overview['reject'] == 0, overview
