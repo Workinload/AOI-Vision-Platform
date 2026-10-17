@@ -61,7 +61,10 @@ public static class SimFullHost
         var product = SimProductRuntime.Load(root);
         Console.WriteLine($"SIM_FULL_SLAVE_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
-        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL", product.Overview);
+        var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Slave);
+        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL", product.Overview, simConfig);
+        _ = RoiDraftIpc.ServeAsync(simConfig, 19642,
+            Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN"), ct);
         _ = FramePreviewIpc.ServeAsync(store, MachineRole.Slave, folder, 19632, ct);
         var listener = new TcpListener(IPAddress.Loopback, 19610);
         listener.Start();
@@ -138,7 +141,10 @@ public static class SimFullHost
         if (bootNonce == 0) throw new InvalidDataException("Invalid virtual PLC boot proof.");
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
-        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL", product.Overview);
+        var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
+        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL", product.Overview, simConfig);
+        _ = RoiDraftIpc.ServeAsync(simConfig, 19641,
+            Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN"), ct);
         _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
         while (!ct.IsCancellationRequested)
         {

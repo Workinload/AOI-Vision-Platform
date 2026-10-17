@@ -105,6 +105,9 @@ public partial class MainWindowViewModel : ObservableObject
     private MonitorProjection? _lastProjection;
     private string? _lastPreviewKey;
     private int _previewGeneration;
+    private long _roiRevision;
+    private bool _roiSnapshotLoaded;
+    private readonly Dictionary<string, RoiDraftState> _savedRoiDrafts = new(StringComparer.Ordinal);
     public string SelectedChannelName => SelectedChannel?.ChannelId ?? "未选择通道";
 
     public MainWindowViewModel(string role, bool once)
@@ -125,7 +128,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectedDescription = value is null ? "未选择通道" :
             $"{value.ChannelId} · {value.StationDetails} · {value.Owner} · PLC {value.PlcAddress} · {value.Group}";
         OnPropertyChanged(nameof(SelectedChannelName));
-        RoiFeedback = "ROI 仅会话草稿，不会保存或下发";
+        LoadRoiForSelection();
         if (_lastProjection is not null) RequestPreview(_lastProjection);
     }
 
@@ -143,29 +146,95 @@ public partial class MainWindowViewModel : ObservableObject
 
     private void SelectChannel(ChannelTile? value) => SelectedChannel = value;
 
+    private void LoadRoiForSelection()
+    {
+        if (SelectedChannel is null) return;
+        var id = SelectedChannel.ChannelId;
+        if (_savedRoiDrafts.TryGetValue(id, out var draft))
+        {
+            _roiRevision = draft.Revision;
+            var format = System.Globalization.CultureInfo.InvariantCulture;
+            RoiX = draft.X.ToString(format);
+            RoiY = draft.Y.ToString(format);
+            RoiWidth = draft.Width.ToString(format);
+            RoiHeight = draft.Height.ToString(format);
+            RoiFeedback = $"已加载 Core WAL 草稿 rev{draft.Revision} · {id} · 仍未发布或生效";
+        }
+        else
+        {
+            _roiRevision = 0;
+            RoiX = "0.1"; RoiY = "0.1"; RoiWidth = "0.8"; RoiHeight = "0.8";
+            RoiFeedback = $"无已保存草稿 · {id} · rev0";
+        }
+    }
+
     private void ValidateRoi()
     {
-        if (SelectedChannel is null) { RoiFeedback = "请先选择通道"; return; }
-        if (!double.TryParse(RoiX, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var x) ||
-            !double.TryParse(RoiY, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var y) ||
-            !double.TryParse(RoiWidth, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var width) ||
-            !double.TryParse(RoiHeight, System.Globalization.NumberStyles.Float,
-                System.Globalization.CultureInfo.InvariantCulture, out var height))
+        var selected = SelectedChannel;
+        if (selected is null) { RoiFeedback = "请先选择通道"; return; }
+        var culture = System.Globalization.CultureInfo.InvariantCulture;
+        if (!double.TryParse(RoiX, System.Globalization.NumberStyles.Float, culture, out var x) ||
+            !double.TryParse(RoiY, System.Globalization.NumberStyles.Float, culture, out var y) ||
+            !double.TryParse(RoiWidth, System.Globalization.NumberStyles.Float, culture, out var width) ||
+            !double.TryParse(RoiHeight, System.Globalization.NumberStyles.Float, culture, out var height))
         {
             RoiFeedback = "ROI 坐标必须是小数（英文小数点）"; return;
         }
         try
         {
-            new RoiDraft(SelectedChannel.ChannelId, x, y, width, height).Validate();
-            RoiFeedback = $"本地草稿验证通过 · {SelectedChannel.ChannelId} · 未下发";
+            var role = _role == "slave" ? MachineRole.Slave : MachineRole.Master;
+            if (ChannelCatalog.Require(selected.ChannelId).OwnerRole != role)
+            {
+                RoiFeedback = "禁止保存：此通道属于对端 Core"; return;
+            }
+            new RoiDraft(selected.ChannelId, x, y, width, height).Validate();
+            var edit = new RoiDraftEdit(selected.ChannelId, x, y, width, height,
+                _roiRevision, "sim_operator");
+            edit.Validate();
+            var token = Environment.GetEnvironmentVariable("AOI_SIM_CONFIG_TOKEN");
+            if (string.IsNullOrWhiteSpace(token) || token.Length < 16)
+            {
+                RoiFeedback = "本地 ROI 校验通过，但未配置 SIM_ONLY 编辑会话；没有保存。";
+                return;
+            }
+            RoiFeedback = $"正在保存 ROI 草稿 · {selected.ChannelId} rev{_roiRevision}...";
+            _ = SaveRoiAsync(edit, token, role);
         }
-        catch (ArgumentOutOfRangeException)
+        catch (Exception ex) when (ex is ArgumentException or InvalidDataException)
         {
-            RoiFeedback = "无效 ROI：坐标应在 0~1 内且宽高大于 0"; 
+            RoiFeedback = "ROI 无效：" + ex.Message;
         }
+    }
+
+    private async Task SaveRoiAsync(RoiDraftEdit edit, string token, MachineRole role)
+    {
+        RoiDraftSaveReply? reply = null;
+        string? error = null;
+        try
+        {
+            reply = await new RoiDraftConfigClient(role == MachineRole.Master ? 19641 : 19642)
+                .SaveAsync(edit, token, _shutdown.Token);
+        }
+        catch (Exception ex) when (ex is IOException or SocketException or InvalidDataException
+            or InvalidOperationException or OperationCanceledException or ArgumentException)
+        {
+            error = ex.Message;
+        }
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (_shutdown.IsCancellationRequested) return;
+            if (reply is { Accepted: true, Saved: not null })
+            {
+                _savedRoiDrafts[edit.ChannelId] = reply.Saved;
+                if (SelectedChannel?.ChannelId == edit.ChannelId)
+                {
+                    _roiRevision = reply.Saved.Revision;
+                    RoiFeedback = $"SIM_ONLY ROI 草稿已持久保存 · rev{_roiRevision} · 尚未发布、不会改变当前检测";
+                }
+            }
+            else if (SelectedChannel?.ChannelId == edit.ChannelId)
+                RoiFeedback = "草稿未保存：" + (reply?.Error ?? error ?? "Core IPC 拒绝");
+        });
     }
 
     public void Start()
@@ -201,6 +270,18 @@ public partial class MainWindowViewModel : ObservableObject
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
                         RequestPreview(projection);
+                        if (projection.RoiDrafts is { } saved)
+                        {
+                            foreach (var roi in saved)
+                                if (!_savedRoiDrafts.TryGetValue(roi.ChannelId, out var oldRoi) ||
+                                    oldRoi.Revision < roi.Revision)
+                                    _savedRoiDrafts[roi.ChannelId] = roi;
+                            if (!_roiSnapshotLoaded)
+                            {
+                                _roiSnapshotLoaded = true;
+                                LoadRoiForSelection();
+                            }
+                        }
                         if (projection.ActiveProduct is { } product)
                         {
                             ActiveProductLabel = $"SIM_ONLY · {product.SolutionId} · Epoch {product.Epoch}";
@@ -420,6 +501,10 @@ public partial class MainWindowViewModel : ObservableObject
         HoldNotice = "HOLD 状态离线 · 不允许基于旧数据放行";
         EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
+        _roiSnapshotLoaded = false;
+        _savedRoiDrafts.Clear();
+        _roiRevision = 0;
+        RoiFeedback = "IPC 离线，SIM_ONLY ROI 草稿保存状态未知；禁止复用旧版号";
         ClearPreview("IPC 中断，图像已失效");
         _lastAcceptedUtc = DateTimeOffset.MinValue;
     }

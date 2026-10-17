@@ -65,3 +65,23 @@ Never activate after any production.db/sim-full-cycle.db appears. A6's
 COMMITTED_HOLD state does NOT unhold a physical line, enable any real I/O, or
 certify production changeover. For a new test archive the old root and start
 with a NEW EMPTY sim-full-data root. No silent restart or rollback.
+
+
+ROI PARAMETER DRAFTS (SIM_ONLY CORE IPC)
+
+Both desktop windows now have a "校验并保存本机 ROI 草稿" button in
+channel detail. The Windows launch script generates an ephemeral local edit
+session token, inherited by only the five SIM_ONLY child processes.
+Core saves each channel's normalized ROI to its OWN sim-config.sqlite WAL,
+using strict revision checks and camera ownership: Master CH01/06/07/10/11,
+Slave CH02/03/04/05/08/09.
+An existing draft loads after IPC reconnect; an outdated revision or wrong
+machine is rejected. A lost IPC session must never imply save succeeded.
+
+ROI edits are unactivated DRAFTS ONLY. They do NOT alter native image crops,
+do NOT mutate immutable A6 published station recipes, do NOT send PLC commands,
+do NOT change already-finished workpieces and do NOT bypass REAL interlocks.
+Keep the sim-config.sqlite evidence if archiving a simulated run.
+Configuration endpoints 127.0.0.1:19641 and :19642 use a short-lived session
+token, are not an industrial authentication mechanism and must not be exposed
+over a network.
