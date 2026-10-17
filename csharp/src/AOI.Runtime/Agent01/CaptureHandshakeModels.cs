@@ -78,7 +78,8 @@ public enum CaptureHandshakeEventKind
     FrameValidated,
     CamDoneConfirmed,
     InspectionCompleted,
-    CaptureFailed
+    CaptureFailed,
+    FrameRejected
 }
 
 public sealed record CaptureHandshakeEvent(
@@ -114,6 +115,9 @@ public sealed record CaptureHandshakeProgress(
     public IReadOnlyDictionary<string, ChannelOutcome> Outcomes { get; init; } =
         new Dictionary<string, ChannelOutcome>(StringComparer.Ordinal);
 
+    public int RejectedFrameCount { get; init; }
+    public string? LastRejectedFrameReason { get; init; }
+
     public bool HasAllInspections =>
         Ticket.ChannelIds.All(ch => InspectionChannels.Contains(ch, StringComparer.Ordinal));
     public bool ReadyForProductionResult =>
@@ -126,6 +130,7 @@ public interface ICaptureHandshakeCoordinator
     bool ExpectCapture(CaptureTicket ticket);
     bool ObservePlcRequest(Guid captureId, string requestAddress);
     bool FrameAcquired(CaptureFrameEvidence frame);
+    bool TryFrameAcquired(CaptureFrameEvidence frame);
     bool FrameValidated(Guid captureId, Guid frameId);
     bool CamDoneConfirmed(Guid captureId, ushort value);
     bool InspectionCompleted(ChannelResult result);
