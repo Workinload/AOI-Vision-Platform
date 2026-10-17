@@ -67,6 +67,18 @@ public partial class MainWindowViewModel
     private int _galleryGeneration;
     private CancellationTokenSource? _galleryCancellation;
     private bool _synchronizingHistory;
+    private bool _synchronizingPlcSelection;
+
+    private void SyncPlcSignalFromChannel(ChannelTile? channel)
+    {
+        if (channel is null || PlcSignals.Count == 0) return;
+        var row = PlcSignals.FirstOrDefault(signal =>
+            string.Equals(signal.DmAddress, channel.PlcAddress, StringComparison.Ordinal));
+        if (row is null || ReferenceEquals(row, SelectedPlcSignal)) return;
+        _synchronizingPlcSelection = true;
+        try { SelectedPlcSignal = row; }
+        finally { _synchronizingPlcSelection = false; }
+    }
 
     [ObservableProperty] private int selectedWorkspaceIndex;
     [ObservableProperty] private WorkpieceHistoryTile? selectedHistoryItem;
