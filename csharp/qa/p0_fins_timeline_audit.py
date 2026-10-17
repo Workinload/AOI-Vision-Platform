@@ -255,10 +255,17 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
                 and event_value(e, "captureId") == capture]
     demand(bool(matching), "NOT_VERIFIED",
            f"token {token}: no actual Core event for WorkpieceId/CaptureId")
+    demand(spec.get("epoch") is not None and bool(spec.get("releaseId"))
+           and bool(spec.get("traceId")),
+           "NOT_VERIFIED", "Expected immutable Epoch/ReleaseId/TraceId must come from Core WAL")
     for e in matching:
         demand(event_value(e, "physicalDeviceId") == device
-               and event_value(e, "attemptNo") == spec.get("attemptNo", 1),
-               "FRAME_IDENTITY_MISMATCH", "CaptureId reused for another camera or attempt")
+               and event_value(e, "attemptNo") == spec.get("attemptNo", 1)
+               and event_value(e, "epoch") == spec["epoch"]
+               and event_value(e, "releaseId") == spec["releaseId"]
+               and event_value(e, "traceId") == spec["traceId"],
+               "FRAME_IDENTITY_MISMATCH",
+               "Capture/Trace/Epoch/Release identity differs from Core's immutable WorkpieceIdentity")
     def stage(name):
         return [x for x in matching if event_value(x, "stage") == name]
     request = one(stage("PlcCaptureRequestObserved"), "actual PLC capture request")
@@ -284,14 +291,17 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
         q, u = tick(b)
         demand(p == q, "NOT_VERIFIED", "Cross-process monotonic order is not comparable")
         demand(t < u, "CAUSAL_ORDER", message)
+    trigger = one(stage("HardwareTriggerObserved"), "actual external camera trigger")
     if spec["result"] == "MISSING":
         timeout = one(stage("CaptureTimedOut"), "single-workpiece frame timeout")
         demand(not stage("FrameReady") and not stage("InspectionCompleted"),
                "FALSE_GOOD_ON_MISSING", "Missing image must not be inspected or treated as OK")
+        before(trigger, timeout, "Missing frame timeout was recorded before hard trigger")
         before(request, timeout, "Timeout occurred before PLC request")
         before(timeout, acknowledged, "CamDone=3 before documented timeout")
         return
     arrived = one(stage("FrameArrived"), "hard-trigger frame arrival")
+    before(trigger, arrived, "Frame arrived before the actual hardware trigger")
     ready = one(stage("FrameReady"), "validated FrameReady")
     inspected = stage("InspectionCompleted")
     demand(len(inspected) == len(channels) and
