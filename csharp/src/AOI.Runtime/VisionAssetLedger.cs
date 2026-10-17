@@ -33,6 +33,9 @@ public sealed record SimPixelRule(byte BrightThreshold, double MinimumBrightFrac
     }
 }
 
+/// <summary>Only a SIM_ONLY pixel layout profile; not a real camera calibration.</summary>
+public enum LineScanRowMapping { DemoEvenOdd, LegacySkipFirstRow }
+
 public static class VisionPixelOps
 {
     public static void RequireSupported(Mat pixels, bool lineScan)
@@ -61,22 +64,36 @@ public static class VisionPixelOps
             Cv2.CountNonZero(mask) / ((double)gray.Rows * gray.Cols), gray.Cols, gray.Rows);
     }
 
-    /// <summary>Extract one logical line-camera channel by row parity, never by rectangle crop.</summary>
-    public static Mat ExtractInterleavedRows(Mat parent, int parity)
+    /// <summary>
+    /// Number of rows in one of two physical line-scan child images.
+    /// The legacy profile reproduces source[1::2] and source[2::2], NOT [0::2]/[1::2].
+    /// This is a historical software compatibility mode; field orientation is still unverified.
+    /// </summary>
+    public static int InterleavedChildRows(int parentRows, int parity,
+        LineScanRowMapping mapping = LineScanRowMapping.DemoEvenOdd)
+    {
+        if (parity is not (0 or 1) || !Enum.IsDefined(mapping))
+            throw new ArgumentOutOfRangeException(nameof(parity));
+        int first = parity + (mapping == LineScanRowMapping.LegacySkipFirstRow ? 1 : 0);
+        if (parentRows <= first)
+            throw new ArgumentOutOfRangeException(nameof(parentRows));
+        return (parentRows - first + 1) / 2;
+    }
+
+    /// <summary>Extract a logical line channel with explicit pixel-exact row origin.</summary>
+    public static Mat ExtractInterleavedRows(Mat parent, int parity,
+        LineScanRowMapping mapping = LineScanRowMapping.DemoEvenOdd)
     {
         RequireSupported(parent, lineScan: true);
-        if (parity is not (0 or 1) || parent.Rows < 2)
-            throw new ArgumentOutOfRangeException(nameof(parity),
-                "Interleaved line camera requires at least two rows and parity 0 or 1.");
-        int height = (parent.Rows + 1 - parity) / 2;
+        int height = InterleavedChildRows(parent.Rows, parity, mapping);
+        int first = parity + (mapping == LineScanRowMapping.LegacySkipFirstRow ? 1 : 0);
         var child = new Mat(height, parent.Cols, MatType.CV_8UC1);
         try
         {
-            int sourceHeight = parent.Rows;
             var sourceRows = parent.AsRows<byte>();
             var destinationRows = child.AsRows<byte>();
-            for (int y = parity; y < sourceHeight; y += 2)
-                sourceRows[y].CopyTo(destinationRows[y / 2]);
+            for (int y = first; y < parent.Rows; y += 2)
+                sourceRows[y].CopyTo(destinationRows[(y - first) / 2]);
             return child;
         }
         catch
