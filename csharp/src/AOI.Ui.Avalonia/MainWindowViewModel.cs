@@ -117,6 +117,7 @@ public partial class MainWindowViewModel : ObservableObject
         SelectChannelCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<ChannelTile?>(SelectChannel);
         ValidateRoiCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ValidateRoi);
         InitializeOperatorWorkspace();
+        InitializeCaptureDebug();
     }
 
     public CommunityToolkit.Mvvm.Input.IRelayCommand<ChannelTile?> SelectChannelCommand { get; }
@@ -362,6 +363,7 @@ public partial class MainWindowViewModel : ObservableObject
                             UpdateHistorySelection(history);
                         }
                         UpdateOperatorWorkspace(projection);
+                        ObserveCaptureDebug(projection);
                         if (_once)
                         {
                             if (projection.PlcEngineering is { } catalog)
@@ -509,6 +511,7 @@ public partial class MainWindowViewModel : ObservableObject
         EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
         ClearOperatorWorkspace();
+        ClearCaptureDebug();
         _roiSnapshotLoaded = false;
         _savedRoiDrafts.Clear();
         _roiRevision = 0;
@@ -521,6 +524,7 @@ public partial class MainWindowViewModel : ObservableObject
     {
         _shutdown.Cancel();
         StopOperatorWorkspace();
+        ClearCaptureDebug();
         ClearPreview("窗口已关闭");
     }
 }

@@ -70,6 +70,7 @@ public partial class MainWindowViewModel
     private int _galleryGeneration;
     private CancellationTokenSource? _galleryCancellation;
     private bool _synchronizingHistory;
+    private bool _suppressHistoryGalleryNavigation;
     private bool _synchronizingPlcSelection;
 
     private void SyncPlcSignalFromChannel(ChannelTile? channel)
@@ -164,7 +165,7 @@ public partial class MainWindowViewModel
         if (_synchronizingHistory) return;
         _pinnedWorkpieceId = value?.WorkpieceId;
         RefreshViewedWorkpiece();
-        if (value is not null) SelectedWorkspaceIndex = 2;
+        if (value is not null && !_suppressHistoryGalleryNavigation) SelectedWorkspaceIndex = 2;
     }
 
     partial void OnSelectedWorkspaceIndexChanged(int value)
@@ -186,6 +187,7 @@ public partial class MainWindowViewModel
         if (_lastProjection is { } projection)
             RequestPreview(projection);
         RefreshGallery();
+        RefreshCaptureDebugSelection();
     }
 
     /// <summary>

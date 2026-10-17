@@ -448,6 +448,114 @@
           </Grid>
         </TabItem>
         <TabItem Header="PLC">
+          <TabControl Margin="4">
+            <TabItem Header="逐件采集诊断">
+              <Grid RowDefinitions="Auto,1.3*,1*" RowSpacing="9" Margin="6">
+                <Border Grid.Row="0" Background="White" CornerRadius="8" Padding="13">
+                  <Grid ColumnDefinitions="*,180" ColumnSpacing="14">
+                    <StackPanel Spacing="5">
+                      <TextBlock Text="真实 Core IPC · 逐件采集 / 检测调试" FontSize="17" FontWeight="SemiBold"/>
+                      <TextBlock Text="{Binding CaptureDebugIdentity}" FontSize="12" Foreground="#275B80" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding CaptureDebugLastSnapshot}" FontSize="11" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding CaptureDebugError}" FontSize="11" Foreground="#A14837" TextWrapping="Wrap"/>
+                      <TextBlock Text="{Binding CaptureDebugNotice}" FontSize="11" Foreground="#94713B" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="7">
+                      <Button Content="核验本件11路PNG" Command="{Binding VerifyCapturePngCommand}"/>
+                      <Button Content="回到最新工件" Command="{Binding FollowLiveCommand}"/>
+                      <TextBlock Text="直接选择历史工件" FontSize="11"/>
+                      <ComboBox ItemsSource="{Binding RecentWorkpieces}"
+                                SelectedItem="{Binding CaptureDebugPickedWorkpiece, Mode=TwoWay}"
+                                HorizontalAlignment="Stretch" MinWidth="165">
+                        <ComboBox.ItemTemplate>
+                          <DataTemplate>
+                            <StackPanel>
+                              <TextBlock Text="{Binding ShortId}" FontWeight="SemiBold"/>
+                              <TextBlock Text="{Binding Barcode}" FontSize="10"/>
+                            </StackPanel>
+                          </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                      </ComboBox>
+                    </StackPanel>
+                  </Grid>
+                </Border>
+                <Grid Grid.Row="1" ColumnDefinitions="1.3*,1*" ColumnSpacing="9">
+                  <Border Background="White" CornerRadius="8" Padding="10">
+                    <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                      <TextBlock Text="11通道 · PLC地址 / 结果 / UTC / PNG；点击选择相机"
+                                 FontSize="13" FontWeight="SemiBold"/>
+                      <ListBox Grid.Row="1" ItemsSource="{Binding CaptureDebugChannels}"
+                               SelectedItem="{Binding SelectedCaptureDebugRow, Mode=TwoWay}"
+                               Background="#F4F8FC" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="60,62,74,*,112" Margin="5,8">
+                              <TextBlock Text="{Binding ChannelId}" FontSize="11" FontWeight="SemiBold"/>
+                              <TextBlock Grid.Column="1" Text="{Binding StationId}" FontSize="10"/>
+                              <TextBlock Grid.Column="2" Text="{Binding PlcAddress}" FontSize="10"/>
+                              <StackPanel Grid.Column="3" Spacing="2">
+                                <TextBlock Text="{Binding InspectionResult}" FontSize="11" Foreground="#247396"/>
+                                <TextBlock Text="{Binding PngEvidence}" FontSize="10" Foreground="#587D95" TextWrapping="Wrap"/>
+                                <TextBlock Text="{Binding Error}" FontSize="10" Foreground="#A64B32" TextWrapping="Wrap"/>
+                              </StackPanel>
+                              <TextBlock Grid.Column="4" Text="{Binding ResultUtc}" FontSize="10"
+                                         TextWrapping="Wrap" Foreground="#647E94"/>
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                  </Border>
+                  <Border Grid.Column="1" Background="White" CornerRadius="8" Padding="12">
+                    <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="7">
+                      <TextBlock Text="采集请求 / FrameReady / CamDone / 图像"
+                                 FontSize="13" FontWeight="SemiBold"/>
+                      <StackPanel Grid.Row="1" Spacing="5">
+                        <TextBlock Text="{Binding SelectedCaptureDebugRow.PhysicalDeviceId}"
+                                   FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Text="{Binding SelectedCaptureDebugRow.RequestEvidence}"
+                                   FontSize="11" Foreground="#9D623E" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedCaptureDebugRow.SensorEvidence}"
+                                   FontSize="11" Foreground="#44708D" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedCaptureDebugRow.FrameReadyEvidence}"
+                                   FontSize="11" Foreground="#9D623E" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding SelectedCaptureDebugRow.CamDoneEvidence}"
+                                   FontSize="11" Foreground="#9D623E" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Border Grid.Row="2" Background="#112E48" Padding="8" CornerRadius="6">
+                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform"/>
+                      </Border>
+                      <TextBlock Grid.Row="3" Text="{Binding PreviewNotice}" FontSize="10"
+                                 Foreground="#5E7890" TextWrapping="Wrap"/>
+                    </Grid>
+                  </Border>
+                </Grid>
+                <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="12">
+                  <Grid RowDefinitions="Auto,*" RowSpacing="6">
+                    <TextBlock Text="快照变化日志（只证明Core已报告的状态，不代替原始FINS写入顺序）"
+                               FontSize="13" FontWeight="SemiBold"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding CaptureDebugTimeline}"
+                             Background="#F4F8FC" BorderThickness="0">
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="100,100,75,100,155,*,155" Margin="6,7">
+                            <TextBlock Text="{Binding ObservedTime}" FontSize="10"/>
+                            <TextBlock Grid.Column="1" Text="{Binding SourceTime}" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="2" Text="{Binding ShortWorkpiece}" FontSize="10"/>
+                            <TextBlock Grid.Column="3" Text="{Binding PlcAddress}" FontSize="10"/>
+                            <TextBlock Grid.Column="4" Text="{Binding Kind}" FontSize="10" TextWrapping="Wrap"/>
+                            <TextBlock Grid.Column="5" Text="{Binding Detail}" FontSize="10"
+                                       TextWrapping="Wrap" Foreground="#39718C"/>
+                            <TextBlock Grid.Column="6" Text="{Binding Source}" FontSize="10" TextWrapping="Wrap"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+              </Grid>
+            </TabItem>
+            <TabItem Header="45条PLC工程台账">
           <Grid Margin="4" ColumnDefinitions="1.45*,1*" ColumnSpacing="12">
             <Border Background="White" CornerRadius="10" Padding="15">
               <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="9">
@@ -508,6 +616,8 @@
               </Grid>
             </Border>
           </Grid>
+            </TabItem>
+          </TabControl>
         </TabItem>
         <TabItem Header="产品ROI">
           <Grid Margin="4" ColumnDefinitions="1*,1*" ColumnSpacing="12">
