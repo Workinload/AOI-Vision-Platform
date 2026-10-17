@@ -358,6 +358,7 @@ public static class AoiWin {
     try {
         Click-Tab $masterWindow '11 路通道监控'
         Click-LocalChannel $masterWindow 'CH06'
+        Start-Sleep -Milliseconds 900
         Screenshot $masterWindow 'master-selected-CH06'
         Record-Check 'click_channel_CH06' 'PASS' 'Real mouse selection of own Master camera channel'
         Click-RoiSave $masterWindow
@@ -372,6 +373,31 @@ public static class AoiWin {
         Screenshot $masterWindow 'master-roi-saved'
         Record-Check 'roi_saved_by_real_click' 'PASS' 'Win32 mouse+ROI field edits -> Core snapshot confirms durable CH06 revision'
     } catch { Record-Check 'roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
+    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
+        try {
+            Click-Tab $slaveWindow $page
+            Screenshot $slaveWindow ('slave-tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
+            Record-Check ('slave_click_tab_'+$page) 'PASS' 'Slave desktop mouse click and UIA selected-state confirmed'
+        } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
+    }
+    try {
+        Click-Tab $slaveWindow '11 路通道监控'
+        Click-LocalChannel $slaveWindow 'CH02'
+        Start-Sleep -Milliseconds 900
+        Screenshot $slaveWindow 'slave-selected-CH02'
+        Record-Check 'click_slave_channel_CH02' 'PASS' 'Real mouse selection of Slave-owned camera'
+        Click-RoiSave $slaveWindow
+        Wait-Until {
+            $fresh=Get-CoreSnapshot 19622
+            return (@($fresh.roiDrafts | Where-Object {
+                $_.channelId -eq 'CH02' -and $_.revision -ge 1 -and
+                [Math]::Abs($_.y-0.15) -lt 0.000001 -and
+                [Math]::Abs($_.height-0.70) -lt 0.000001
+            }).Count -ge 1)
+        } 'Slave ROI saved from real GUI button into its own Core' 15
+        Screenshot $slaveWindow 'slave-roi-saved'
+        Record-Check 'slave_roi_saved_by_real_click' 'PASS' 'Slave GUI editing -> Slave Core persisted CH02 revision'
+    } catch { Record-Check 'slave_roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
     $failed=@($script:checks | Where-Object { $_.status -eq 'FAIL' })
     $exitCode=if($failed.Count -eq 0){0}else{1}
 } catch {
