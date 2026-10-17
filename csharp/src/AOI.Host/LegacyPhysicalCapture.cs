@@ -187,7 +187,11 @@ internal sealed class LegacyPhysicalCapture
                         // processor. Line siblings are half-height child images.
                         int width = read!.Frame!.Pixels.Cols;
                         int height = read.Frame.Pixels.Rows;
-                        if (line) height = (height + 1) / 2;
+                        if (line)
+                        {
+                            int parity = trigger.Channels[0].ChannelId == c.ChannelId ? 0 : 1;
+                            height = (height + 1 - parity) / 2;
+                        }
                         var rect = preset.Bounds.ToPixels(width, height);
                         roi = new ImageRegion(rect.X, rect.Y, rect.Width, rect.Height);
                     }
