@@ -20,7 +20,8 @@ param(
     [string]$EvidenceRoot = (Join-Path $env:TEMP ('AOI_A5_WindowsSmoke_' + [guid]::NewGuid().ToString('N'))),
     [ValidateRange(30,300)][int]$TimeoutSeconds=110,
     [switch]$KeepRunning,
-    [switch]$PauseForInspection
+    [switch]$PauseForInspection,
+    [switch]$TryCi1080p
 )
 
 $ErrorActionPreference='Stop'
@@ -34,6 +35,7 @@ $script:dataRoot=$null
 $script:masterSnapshot=$null
 $script:slaveSnapshot=$null
 $script:lastFailure=$null
+$script:originalDisplay=$null
 $exitCode=1
 
 function Record-Check([string]$Name,[string]$Status,[string]$Detail) {
@@ -347,10 +349,23 @@ try {
 using System;
 using System.Runtime.InteropServices;
 using System.Threading;
+[StructLayout(LayoutKind.Sequential, CharSet=CharSet.Unicode)]
+public struct AoiDisplayMode {
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmDeviceName;
+    public short dmSpecVersion,dmDriverVersion,dmSize,dmDriverExtra;
+    public int dmFields,dmPositionX,dmPositionY,dmDisplayOrientation,dmDisplayFixedOutput;
+    public short dmColor,dmDuplex,dmYResolution,dmTTOption,dmCollate;
+    [MarshalAs(UnmanagedType.ByValTStr, SizeConst=32)] public string dmFormName;
+    public short dmLogPixels;
+    public int dmBitsPerPel,dmPelsWidth,dmPelsHeight,dmDisplayFlags,dmDisplayFrequency;
+    public int dmICMMethod,dmICMIntent,dmMediaType,dmDitherType,dmReserved1,dmReserved2,dmPanningWidth,dmPanningHeight;
+}
 [StructLayout(LayoutKind.Sequential)] public struct AoiRect {
     public int Left,Top,Right,Bottom;
 }
 public static class AoiWin {
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern bool EnumDisplaySettings(string device,int mode,ref AoiDisplayMode value);
+    [DllImport("user32.dll",CharSet=CharSet.Unicode)] public static extern int ChangeDisplaySettings(ref AoiDisplayMode value,int flags);
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out AoiRect r);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
@@ -365,6 +380,55 @@ public static class AoiWin {
     }
 }
 '@
+    if($TryCi1080p) {
+        # Real Windows runner defaults to a tiny 1024x768 virtual screen; AOI's
+        # operator workstation targets 1920x1080. Only attempt to change mode
+        # inside GitHub CI; restore the former mode in the outer finally.
+        if($env:GITHUB_ACTIONS -ne 'true') {
+            throw 'TryCi1080p is restricted to GitHub hosted SIM_ONLY QA'
+        }
+        try {
+            $original=[AoiDisplayMode]::new()
+            $original.dmSize=[Runtime.InteropServices.Marshal]::SizeOf([type][AoiDisplayMode])
+            if(-not [AoiWin]::EnumDisplaySettings($null,-1,[ref]$original)) {
+                throw 'Windows virtual display mode enumeration unavailable'
+            }
+            $modes=0
+            $changed=$false
+            if($original.dmPelsWidth -ge 1920 -and $original.dmPelsHeight -ge 1080) {
+                $changed=$true
+            } else {
+                for($n=0;$n -lt 512;$n++) {
+                    $mode=[AoiDisplayMode]::new()
+                    $mode.dmSize=[Runtime.InteropServices.Marshal]::SizeOf([type][AoiDisplayMode])
+                    if(-not [AoiWin]::EnumDisplaySettings($null,$n,[ref]$mode)) { break }
+                    $modes++
+                    if($mode.dmPelsWidth -eq 1920 -and $mode.dmPelsHeight -eq 1080 -and
+                        $mode.dmBitsPerPel -ge 24) {
+                        $mode.dmFields=0x00180000 # DM_PELSWIDTH | DM_PELSHEIGHT
+                        $result=[AoiWin]::ChangeDisplaySettings([ref]$mode,0)
+                        if($result -eq 0) {
+                            $script:originalDisplay=$original
+                            Start-Sleep -Seconds 2
+                            $changed=$true
+                        } else {
+                            Write-Host ("A5_WINDOWS_1080P_MODE_REJECTED error="+$result)
+                        }
+                        break
+                    }
+                }
+            }
+            $bounds=[Windows.Forms.SystemInformation]::VirtualScreen
+            $screenInfo=("actual={0}x{1} supported_modes={2}" -f $bounds.Width,$bounds.Height,$modes)
+            if($changed -and $bounds.Width -ge 1920 -and $bounds.Height -ge 1080) {
+                Record-Check 'native_desktop_resolution' 'PASS' $screenInfo
+            } else {
+                Record-Check 'native_desktop_resolution' 'WARN' ($screenInfo+'; 1080p operator rendering NOT verified on this runner')
+            }
+        } catch {
+            Record-Check 'native_desktop_resolution' 'WARN' $_.Exception.Message
+        }
+    }
     if($PSCmdlet.ParameterSetName -eq 'Zip') {
         $archive=[IO.Path]::GetFullPath($PackageZip)
         if(-not (Test-Path -LiteralPath $archive -PathType Leaf)) { throw 'PackageZip not found' }
@@ -557,6 +621,15 @@ public static class AoiWin {
         $issue | Set-Content -LiteralPath (Join-Path $script:evidence 'operator-failure-issue.md') -Encoding UTF8
     }
 
+    if($null -ne $script:originalDisplay) {
+        try {
+            $original=$script:originalDisplay
+            $changed=[AoiWin]::ChangeDisplaySettings([ref]$original,0)
+            Write-Host ('A5_WINDOWS_DISPLAY_RESTORE status='+$changed)
+        } catch {
+            Write-Host ('A5_WINDOWS_DISPLAY_RESTORE_FAILED '+$_.Exception.Message)
+        }
+    }
     if($PauseForInspection) {
         Write-Host 'Five SIM_ONLY child processes are still running. Inspect BOTH GUI windows and screenshots.'
         Write-Host 'Press ENTER here after inspection to cleanly stop ONLY these five child processes.'
