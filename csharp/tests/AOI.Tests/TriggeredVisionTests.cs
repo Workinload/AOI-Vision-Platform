@@ -173,6 +173,59 @@ public sealed class TriggeredVisionTests
     }
 
     [Test]
+    public void LegacyLinePhysicalParent_SkipsRowZero_AndAuditsExactRowOneTwoSources()
+    {
+        // Old source-code convention was parent[1::2] and parent[2::2],
+        // NOT the demo's parent[0::2] / parent[1::2].
+        Assert.That(VisionPixelOps.InterleavedChildRows(15000, 0,
+            LineScanRowMapping.LegacySkipFirstRow), Is.EqualTo(7500));
+        Assert.That(VisionPixelOps.InterleavedChildRows(15000, 1,
+            LineScanRowMapping.LegacySkipFirstRow), Is.EqualTo(7499));
+        var ticket = Ticket(device: "LINE-M-2");
+        Guid parentId = Guid.NewGuid();
+        using var parent = new Mat(9, 6, MatType.CV_8UC1, Scalar.Black);
+        int rowCount = parent.Rows;
+        int colCount = parent.Cols;
+        for (int row = 0; row < rowCount; row++)
+            Cv2.Rectangle(parent, new Rect(0, row, colCount, 1),
+                new Scalar(row * 15), -1);
+        using (var first = VisionPixelOps.ExtractInterleavedRows(parent, 0,
+                   LineScanRowMapping.LegacySkipFirstRow))
+        using (var second = VisionPixelOps.ExtractInterleavedRows(parent, 1,
+                   LineScanRowMapping.LegacySkipFirstRow))
+        {
+            Assert.That(first.Rows, Is.EqualTo(4));
+            Assert.That(second.Rows, Is.EqualTo(4));
+            Assert.That(first.At<byte>(0, 0), Is.EqualTo(15)); // source row 1
+            Assert.That(first.At<byte>(3, 0), Is.EqualTo(105)); // source row 7
+            Assert.That(second.At<byte>(0, 0), Is.EqualTo(30)); // source row 2
+            Assert.That(second.At<byte>(3, 0), Is.EqualTo(120)); // source row 8
+        }
+        var output = new TriggeredVisionEngine(_ledger,
+            new OpenCvInspectionProcessor(),
+            lineRowMapping: LineScanRowMapping.LegacySkipFirstRow)
+            .InspectAndPersist(ticket,
+                FrameRead.Ready(CameraFrame.CopyFrom(ticket, parentId, parent)),
+                Settings);
+        Assert.That(output.PersistedResults, Is.EqualTo(2));
+        Assert.That(output.Channels.Select(x => x.ChannelId),
+            Is.EqualTo(new[] { "CH10", "CH11" }));
+        var firstResult = output.Channels[0].Observation!;
+        var secondResult = output.Channels[1].Observation!;
+        Assert.That(firstResult.ParentFrameId, Is.EqualTo(parentId));
+        Assert.That(secondResult.ParentFrameId, Is.EqualTo(parentId));
+        Assert.That(firstResult.CaptureId, Is.EqualTo(secondResult.CaptureId));
+        using var source = _ledger.LoadVerified(parentId);
+        using var channelOne = _ledger.LoadVerified(firstResult.FrameId);
+        using var channelTwo = _ledger.LoadVerified(secondResult.FrameId);
+        Assert.That(source.Rows, Is.EqualTo(9));
+        Assert.That(source.At<byte>(0, 0), Is.Zero); // original is never rewritten
+        Assert.That(channelOne.At<byte>(0, 0), Is.EqualTo(15));
+        Assert.That(channelTwo.At<byte>(0, 0), Is.EqualTo(30));
+        Assert.That(_ledger.Audit().Problems, Is.Empty);
+    }
+
+    [Test]
     public async Task QueueHasFinitePixelBudget_AndDoesNotRetainDisposedVendorMemory()
     {
         var first = Ticket();

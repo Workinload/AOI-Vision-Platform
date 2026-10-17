@@ -116,7 +116,8 @@ def make_png(path, bright_defect=False, line_parent=False):
     path.write_bytes(png)
 
 
-def verify(root, count, flip, real_images=False, legacy_shadow=False):
+def verify(root, count, flip, real_images=False, legacy_shadow=False,
+           line_row_mapping='DEMO_EVEN_ODD'):
     master = root / 'master/production.db'
     slave = root / 'slave/production.db'
     ledger = root / 'master/sim-full-cycle.db'
@@ -173,6 +174,25 @@ def verify(root, count, flip, real_images=False, legacy_shadow=False):
         assert scalar(path, "SELECT COUNT(*) FROM vision_assets WHERE kind='parent'") == count, node
         assert scalar(path, "SELECT COUNT(*) FROM vision_assets WHERE kind='child'") == count * 2, node
 
+    if legacy_shadow and line_row_mapping == 'LEGACY_DROP_ROW0':
+        for node, first_id, second_id in [('master', 'CH10', 'CH11'),
+                                           ('slave', 'CH08', 'CH09')]:
+            db = root / node / 'vision/vision-assets.sqlite'
+            children = [json.loads(row[0]) for row in
+                        query(db, "SELECT asset_json FROM vision_assets WHERE kind='child'")]
+            assert len(children) == count * 2, node
+            for channel, height, label in [
+                (first_id, 16, 'legacy-interleaved-row1-step2'),
+                (second_id, 15, 'legacy-interleaved-row2-step2')
+            ]:
+                matched = [asset for asset in children if asset['channelId'] == channel]
+                assert len(matched) == count, (node, channel)
+                assert all(asset['height'] == height and
+                           asset['pixelTransform'] == label and
+                           asset['parentFrameId'] for asset in matched), (node, channel)
+        print('SIM_LEGACY_LINE_ROW_MAPPING_PASS row0_discarded=1 ' +
+              'parent_height=32 first_child=16 second_child=15 dual_line_parents=1', flush=True)
+
     for sender, expected in [('master', count * (6 if legacy_shadow else 1)),
                              ('slave', count * 6)]:
         path = root / sender / 'production.db'
@@ -210,12 +230,17 @@ def main():
                         help='Exercise real FINS D1999/D1011/D1016/D2099 in station-triggered PLC shadow')
     parser.add_argument('--st05-order', choices=['REQUEST_FIRST', 'FRAME_FIRST'],
                         default='REQUEST_FIRST')
+    parser.add_argument('--line-row-mapping',
+                        choices=['DEMO_EVEN_ODD', 'LEGACY_DROP_ROW0'],
+                        default='DEMO_EVEN_ODD')
     parser.add_argument('--timeout', type=float, default=70.0)
     args = parser.parse_args()
     if args.count < 3 or args.count > 60 or args.flip_token not in (0, 3) or args.count < args.flip_token:
         parser.error('CI supports 3..60 virtual items and optional deterministic fault token=3')
     if args.legacy_shadow and not args.with_images:
-        parser.error('P0 ST05 shadow requires --with-images so there is no synthetic frame fallback')
+        parser.error('P0 physical shadow requires --with-images so there is no synthetic frame fallback')
+    if args.line_row_mapping != 'DEMO_EVEN_ODD' and not args.legacy_shadow:
+        parser.error('Legacy row layout requires opt-in external PLC shadow mode')
     source = Path(__file__).resolve().parent.parent
     evidence = Path(args.evidence_root).resolve() if args.evidence_root else Path(tempfile.mkdtemp(prefix='aoi-simfull-'))
     if evidence.exists() and any(evidence.iterdir()):
@@ -242,6 +267,7 @@ def main():
                 'AOI_SIM_REPEAT_BARCODE': '1' if args.repeat_barcode else '0',
                 'AOI_SIM_PLC_PROFILE': 'LEGACY_PLC_SHADOW' if args.legacy_shadow else 'FIFO_DEMO',
                 'AOI_SIM_ST05_ORDER': args.st05_order,
+                'AOI_SIM_LINE_ROW_MAPPING': args.line_row_mapping,
                 'DOTNET_CLI_TELEMETRY_OPTOUT': '1',
                 'AOI_SIM_CONFIG_TOKEN': 'SIM_ONLY_E2E_ROI_OPERATOR_TOKEN_2026'})
     if args.with_product:
@@ -300,7 +326,8 @@ def main():
             raise TimeoutError('SIM_FULL timed out without complete concurrent production evidence')
         # A matched set must remain stable, especially when the front item is held.
         time.sleep(0.55)
-        verify(evidence, args.count, args.flip_token, args.with_images, args.legacy_shadow)
+        verify(evidence, args.count, args.flip_token, args.with_images,
+               args.legacy_shadow, args.line_row_mapping)
         if args.legacy_shadow:
             wire_path = evidence / 'p0-fins-wire.jsonl'
             assert wire_path.is_file(), 'Shadow did not export real UDP request/response evidence'
