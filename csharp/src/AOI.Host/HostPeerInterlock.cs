@@ -14,6 +14,7 @@ namespace AOI.Host;
 /// </summary>
 internal sealed class HostPeerInterlock
 {
+    private int _latched;
     public string DatabasePath { get; }
 
     public HostPeerInterlock(string nodeFolder)
@@ -32,6 +33,11 @@ internal sealed class HostPeerInterlock
             );
             """;
         cmd.ExecuteNonQuery();
+        using var existing = db.CreateCommand();
+        existing.CommandText =
+            "SELECT COUNT(*) FROM host_peer_interlock WHERE singleton=1";
+        Volatile.Write(ref _latched,
+            Convert.ToInt64(existing.ExecuteScalar()) == 0 ? 0 : 1);
     }
 
     private SqliteConnection Open()
@@ -49,18 +55,17 @@ internal sealed class HostPeerInterlock
         return db;
     }
 
-    public bool IsLatched()
-    {
-        using var db = Open();
-        using var cmd = db.CreateCommand();
-        cmd.CommandText = "SELECT COUNT(*) FROM host_peer_interlock WHERE singleton=1";
-        return Convert.ToInt64(cmd.ExecuteScalar()) != 0;
-    }
+    /// <summary>
+    /// Fast, process-local latch read. The durable WAL is read at construction,
+    /// then an authorized Host can only transition from 0 to 1. No reset API.
+    /// Physical FINS polling never incurs a SQLite open for each 55-ms cycle.
+    /// </summary>
+    public bool IsLatched() => Volatile.Read(ref _latched) != 0;
 
     public void Latch(string reason, string detail)
     {
         if (reason is not ("PEER_LINK_LOST" or "PEER_SEND_FAILED" or
-                          "PEER_INBOUND_FAILED"))
+                          "PEER_INBOUND_FAILED" or "FINAL_FINS_UNCERTAIN"))
             throw new ArgumentException("Unknown interlock reason.", nameof(reason));
         if (string.IsNullOrWhiteSpace(detail))
             throw new ArgumentException("A durable interlock requires a cause.", nameof(detail));
@@ -80,6 +85,7 @@ internal sealed class HostPeerInterlock
         cmd.Parameters.AddWithValue("$detail", bounded);
         cmd.ExecuteNonQuery();
         tx.Commit();
+        Volatile.Write(ref _latched, 1);
         if (!IsLatched())
             throw new InvalidOperationException("Failed to durably persist peer interlock.");
     }

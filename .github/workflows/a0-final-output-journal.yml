@@ -1,0 +1,48 @@
+name: A0 Final FINS WAL Intent Real Five-Process Gate
+on:
+  pull_request:
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', '.github/workflows/a0-final-output-journal.yml']
+  push:
+    branches: ['migration/csharp-avalonia-20261016']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', '.github/workflows/a0-final-output-journal.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  irreversible-fins:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    defaults:
+      run:
+        working-directory: csharp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Restore pinned NuGet dependencies
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet restore AOI.slnx --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+      - name: Compile actual Master Slave vPLC and Avalonia UIs
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet build AOI.slnx --no-restore -c Debug
+      - name: Real five-process A1 final WAL claims versus actual FINS SID and ACK-loss interlock
+        run: python scripts/e2e_a0_final_output_journal.py --evidence-root .artifacts/a0-final-output-journal
+      - name: Upload failure evidence for A0
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a0-final-fins-${{ matrix.os }}-${{ github.run_id }}
+          path: csharp/.artifacts/a0-final-output-journal/
+          retention-days: 14
