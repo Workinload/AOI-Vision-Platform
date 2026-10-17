@@ -126,6 +126,27 @@ public static class ProductionTimingAnalyzer
                 now - request.Utc > frameBudget)
                 Error("FRAME_NOT_ARRIVED_BEFORE_DEADLINE", request,
                     $"Request aged beyond {frameBudget.TotalMilliseconds:F0}ms without an observed frame; UTC-age estimate.");
+            if (request is not null && arrived is not null &&
+                Elapsed(request, arrived) is { } frameLatency &&
+                frameLatency > frameBudget)
+                Error("FRAME_ARRIVED_AFTER_DEADLINE", arrived,
+                    $"Observed frame latency {frameLatency.TotalMilliseconds:F1}ms exceeds " +
+                    $"{frameBudget.TotalMilliseconds:F1}ms on the SAME process clock.");
+            if (sentDone is not null && done.FirstOrDefault(e =>
+                e.OperationId == sentDone.OperationId) is { } camAck &&
+                Elapsed(sentDone, camAck) is { } doneLatency &&
+                doneLatency > doneBudget)
+                Error("CAMDONE_ACK_AFTER_DEADLINE", camAck,
+                    $"Observed ACK latency {doneLatency.TotalMilliseconds:F1}ms exceeds " +
+                    $"{doneBudget.TotalMilliseconds:F1}ms.");
+            var acknowledged = done.FirstOrDefault(e => e.PlcValue == 2);
+            var completed = inspection.FirstOrDefault();
+            if (acknowledged is not null && completed is not null &&
+                Elapsed(acknowledged, completed) is { } algorithmLatency &&
+                algorithmLatency > inspectionBudget)
+                Error("INSPECTION_COMPLETED_AFTER_DEADLINE", completed,
+                    $"Observed algorithm latency {algorithmLatency.TotalMilliseconds:F1}ms exceeds " +
+                    $"{inspectionBudget.TotalMilliseconds:F1}ms.");
             if (ready is not null && done.Length == 0 && !hasFailure &&
                 now - (sentDone?.Utc ?? ready.Utc) > doneBudget)
                 Error(sentDone is null ? "CAMDONE_NOT_SENT_BEFORE_DEADLINE" : "CAMDONE_ACK_TIMEOUT",
