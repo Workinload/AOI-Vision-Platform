@@ -5,6 +5,8 @@ static int Usage()
 {
     Console.Error.WriteLine("""
         SIM_ONLY / READ_ONLY
+        AOI.Diagnostics.Cli final-output ROOT --workpiece UUID [--json FILE]
+        AOI.Diagnostics.Cli final-output ROOT --peer-message UUID [--json FILE]
         AOI.Diagnostics.Cli timeline ROOT --workpiece UUID [--capture UUID] [--device ID] [--channel CH06] [--attempt 1] [--limit 2000] [--csv FILE] [--json FILE] [--expect EXPECTATIONS.json] [--comparison-json FILE]
         AOI.Diagnostics.Cli history ROOT [--workpiece UUID] [--barcode TEXT] [--station ST03] [--from UTC] [--until UTC] [--limit 100] [--offset 0] [--csv FILE] [--json FILE]
         AOI.Diagnostics.Cli report ROOT day|week YYYY-MM-DD [--timezone Asia/Singapore] [--csv FILE] [--json FILE]
@@ -54,6 +56,36 @@ try
     const int staleSeconds = 30;
     switch (args[0])
     {
+        case "final-output" when args.Length >= 4:
+        {
+            var o = Options(args, 2);
+            var reader = new FinalOutputAuditReader(args[1]);
+            var workpiece = Id(o, "--workpiece");
+            var peer = Id(o, "--peer-message");
+            if ((workpiece is null) == (peer is null))
+                throw new ArgumentException("Specify exactly one --workpiece or --peer-message UUID.");
+            if (workpiece is Guid item)
+            {
+                var report = reader.Read(item);
+                if (report is null)
+                {
+                    Console.Error.WriteLine("FINAL_OUTPUT_NOT_OBSERVED (not evidence of a successful PLC write)");
+                    return 3;
+                }
+                Console.WriteLine(DiagnosticsFormat.Serialize(report));
+                if (Get(o, "--json") is string output)
+                    ProductionReportExports.SaveJson(report, output);
+                return report.FullyVerified ? 0 : 3;
+            }
+            else
+            {
+                var reports = reader.SearchByPeerMessageId(peer!.Value);
+                Console.WriteLine(DiagnosticsFormat.Serialize(reports));
+                if (Get(o, "--json") is string output)
+                    ProductionReportExports.SaveJson(reports, output);
+                return reports.Length != 0 && reports.All(x => x.FullyVerified) ? 0 : 3;
+            }
+        }
         case "timeline" when args.Length >= 4:
         {
             var options = Options(args, 2);
