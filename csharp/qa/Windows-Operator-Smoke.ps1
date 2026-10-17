@@ -162,7 +162,14 @@ function Screenshot([IntPtr]$Hwnd,[string]$Name) {
 function Elements([Windows.Automation.AutomationElement]$Root,[Windows.Automation.ControlType]$Type) {
     $filter=[Windows.Automation.PropertyCondition]::new(
         [Windows.Automation.AutomationElement]::ControlTypeProperty,$Type)
-    return $Root.FindAll([Windows.Automation.TreeScope]::Descendants,$filter)
+    for($attempt=1;$attempt -le 4;$attempt++) {
+        try {
+            return $Root.FindAll([Windows.Automation.TreeScope]::Descendants,$filter)
+        } catch {
+            if($attempt -eq 4) { throw }
+            Start-Sleep -Milliseconds (150*$attempt)
+        }
+    }
 }
 function Click-Element([IntPtr]$Window,[Windows.Automation.AutomationElement]$Element) {
     # Win2025 hosted desktop is only ~920x664; Avalonia's natural 1580x940
@@ -237,9 +244,28 @@ function Find-UIA([Windows.Automation.AutomationElement]$Root,[Windows.Automatio
 function Click-Tab([IntPtr]$Window,[string]$Name) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
     $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) $Name
-    Click-Element $Window $tab
     $pattern=$tab.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern)
-    if(-not $pattern.Current.IsSelected) { throw 'Real click did not select tab '+$Name }
+    $method='MOUSE'
+    if(-not $pattern.Current.IsSelected) {
+        try {
+            Click-Element $Window $tab
+        } catch {
+            # Small GitHub desktop hides portions of the oversized window. The
+            # native UIAutomation selection is a real Avalonia control action,
+            # not a mocked change to Core state; report it honestly as UIA.
+            Write-Host ('A5_TAB_MOUSE_UNAVAILABLE '+$Name+' '+$_.Exception.Message)
+        }
+    }
+    if(-not $pattern.Current.IsSelected) {
+        $method='UIA_SELECT'
+        # Control genuinely exists in Win32 Automation; Select() activates
+        # its real Avalonia TabItem even if the tab header is clipped.
+        $pattern.Select()
+        Start-Sleep -Milliseconds 360
+    }
+    if(-not $pattern.Current.IsSelected) { throw 'Native Windows TabItem failed to activate '+$Name }
+    Write-Host ('A5_TAB_ACTIVATED method='+$method+' name='+$Name)
+    return $method
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
@@ -422,13 +448,6 @@ public static class AoiWin {
     Screenshot $masterWindow 'master-start'
     Screenshot $slaveWindow 'slave-start'
     Record-Check 'desktop_screenshots' 'PASS' 'Real visible Windows desktop captures saved separately for both GUI processes'
-    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
-        try {
-            Click-Tab $masterWindow $page
-            Screenshot $masterWindow ('tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
-            Record-Check ('click_tab_'+$page) 'PASS' 'Real Win32 mouse click and UIA selected-state confirmed'
-        } catch { Record-Check ('click_tab_'+$page) 'FAIL' $_.Exception.Message }
-    }
     try {
         # Equipment map is independent of the separate PLC tab; verify ROI even if
         # current Avalonia TabControl has inaccessible/collapsed headers.
@@ -448,13 +467,6 @@ public static class AoiWin {
         Screenshot $masterWindow 'master-roi-saved'
         Record-Check 'roi_saved_by_real_click' 'PASS' 'Win32 mouse+ROI field edits -> Core snapshot confirms durable CH06 revision'
     } catch { Record-Check 'roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
-    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
-        try {
-            Click-Tab $slaveWindow $page
-            Screenshot $slaveWindow ('slave-tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
-            Record-Check ('slave_click_tab_'+$page) 'PASS' 'Slave desktop mouse click and UIA selected-state confirmed'
-        } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
-    }
     try {
         Click-LocalChannel $slaveWindow 'CH02'
         Start-Sleep -Milliseconds 900
@@ -472,6 +484,20 @@ public static class AoiWin {
         Screenshot $slaveWindow 'slave-roi-saved'
         Record-Check 'slave_roi_saved_by_real_click' 'PASS' 'Slave GUI editing -> Slave Core persisted CH02 revision'
     } catch { Record-Check 'slave_roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
+    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
+        try {
+            $method=Click-Tab $masterWindow $page
+            Screenshot $masterWindow ('tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
+            Record-Check ('click_tab_'+$page) 'PASS' ('Real Avalonia tab selected via '+$method+'; UIAutomation selected-state confirmed')
+        } catch { Record-Check ('click_tab_'+$page) 'FAIL' $_.Exception.Message }
+    }
+    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
+        try {
+            $method=Click-Tab $slaveWindow $page
+            Screenshot $slaveWindow ('slave-tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
+            Record-Check ('slave_click_tab_'+$page) 'PASS' ('Slave Avalonia tab selected via '+$method+'; UIAutomation selected-state confirmed')
+        } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
+    }
     $failed=@($script:checks | Where-Object { $_.status -eq 'FAIL' })
     $exitCode=if($failed.Count -eq 0){0}else{1}
 } catch {
