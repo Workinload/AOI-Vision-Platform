@@ -260,7 +260,8 @@ public sealed class VisionAssetLedger
     public IReadOnlyList<ChannelResult> CaptureLineInterleaved(WorkpieceIdentity item,
         string sharedFrameGroup, Mat parent, int attemptNo = 1,
         IReadOnlyDictionary<string, ChannelOutcome>? detectedOutcomes = null,
-        Guid? captureId = null, Guid? parentFrameId = null)
+        Guid? captureId = null, Guid? parentFrameId = null,
+        LineScanRowMapping rowMapping = LineScanRowMapping.DemoEvenOdd)
     {
         item.Validate();
         ArgumentException.ThrowIfNullOrWhiteSpace(sharedFrameGroup);
@@ -279,18 +280,22 @@ public sealed class VisionAssetLedger
                 throw new ArgumentException("Missing or unknown line channel detection outcome.",
                     nameof(detectedOutcomes));
         }
-        using var even = VisionPixelOps.ExtractInterleavedRows(parent, 0);
-        using var odd = VisionPixelOps.ExtractInterleavedRows(parent, 1);
+        using var even = VisionPixelOps.ExtractInterleavedRows(parent, 0, rowMapping);
+        using var odd = VisionPixelOps.ExtractInterleavedRows(parent, 1, rowMapping);
         if (captureId == Guid.Empty || parentFrameId == Guid.Empty)
             throw new ArgumentException("Acquisition identity cannot be empty.");
         var sharedCapture = captureId ?? Guid.NewGuid();
         var parentId = parentFrameId ?? Guid.NewGuid();
         var asset = NewAsset(item, channels[0].PhysicalDeviceId, null,
             sharedCapture, parentId, null, attemptNo, parent, null);
+        var firstTransform = rowMapping == LineScanRowMapping.LegacySkipFirstRow
+            ? "legacy-interleaved-row1-step2" : "interleaved-even-rows";
+        var secondTransform = rowMapping == LineScanRowMapping.LegacySkipFirstRow
+            ? "legacy-interleaved-row2-step2" : "interleaved-odd-rows";
         var first = NewAsset(item, channels[0].PhysicalDeviceId, channels[0].ChannelId,
-            sharedCapture, Guid.NewGuid(), parentId, attemptNo, even, null, "interleaved-even-rows");
+            sharedCapture, Guid.NewGuid(), parentId, attemptNo, even, null, firstTransform);
         var second = NewAsset(item, channels[1].PhysicalDeviceId, channels[1].ChannelId,
-            sharedCapture, Guid.NewGuid(), parentId, attemptNo, odd, null, "interleaved-odd-rows");
+            sharedCapture, Guid.NewGuid(), parentId, attemptNo, odd, null, secondTransform);
         return Persist(item, [(asset, parent), (first, even), (second, odd)], null, detectedOutcomes);
     }
 
@@ -508,6 +513,10 @@ public sealed class VisionAssetLedger
                         => VisionPixelOps.ExtractInterleavedRows(original, 0),
                     "interleaved-odd-rows" when CorrectInterleavedChannel(asset, parity: 1) && asset.ParentRoi is null
                         => VisionPixelOps.ExtractInterleavedRows(original, 1),
+                    "legacy-interleaved-row1-step2" when CorrectInterleavedChannel(asset, parity: 0) && asset.ParentRoi is null
+                        => VisionPixelOps.ExtractInterleavedRows(original, 0, LineScanRowMapping.LegacySkipFirstRow),
+                    "legacy-interleaved-row2-step2" when CorrectInterleavedChannel(asset, parity: 1) && asset.ParentRoi is null
+                        => VisionPixelOps.ExtractInterleavedRows(original, 1, LineScanRowMapping.LegacySkipFirstRow),
                     _ => throw new InvalidDataException("Unsupported or mismatched parent-to-child pixel transform.")
                 };
                 if (expected.Cols != image.Cols || expected.Rows != image.Rows)
