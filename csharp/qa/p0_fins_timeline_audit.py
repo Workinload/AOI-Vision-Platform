@@ -256,6 +256,15 @@ def event_value(ev: dict, key: str, default=None):
     return ev.get(key, ev.get(key[0].upper() + key[1:], default))
 
 
+def stage_name(ev: dict) -> str:
+    # A7 uses A0 WireFormat.Json with JsonStringEnumConverter(CamelCase);
+    # accept exact camelCase wire names and optional PascalCase test exports.
+    raw = event_value(ev, "stage", "")
+    demand(isinstance(raw, str) and bool(raw), "NOT_VERIFIED",
+           "Timing event must supply an actual enum stage string")
+    return raw[0].upper() + raw[1:]
+
+
 def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
     token = spec["token"]
     item = spec["workpieceId"]
@@ -286,7 +295,7 @@ def verify_timeline(events: list[dict], spec: dict, ack_wire: Wire):
                "FRAME_IDENTITY_MISMATCH",
                "Capture/Trace/Epoch/Release identity differs from Core's immutable WorkpieceIdentity")
     def stage(name):
-        return [x for x in matching if event_value(x, "stage") == name]
+        return [x for x in matching if stage_name(x) == name]
     request = one(stage("PlcCaptureRequestObserved"), "actual PLC capture request")
     demand(event_value(request, "plcDmAddress") == f"D{addr}"
            and event_value(request, "plcValue") == 1,
@@ -370,7 +379,7 @@ def verify_evidence(wire_records: list[dict], events: list[dict], cases: list[di
     # can be consumed only by the capture that originally acquired it.
     frame_owner = {}
     for e in events:
-        if event_value(e, "stage") not in ("FrameArrived", "FrameReady", "InspectionCompleted"):
+        if stage_name(e) not in ("FrameArrived", "FrameReady", "InspectionCompleted"):
             continue
         frame = event_value(e, "frameId")
         if not frame:
