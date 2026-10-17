@@ -130,25 +130,31 @@ public partial class MainWindowViewModel : ObservableObject
         OnPropertyChanged(nameof(SelectedChannelName));
         LoadRoiForSelection();
         SyncStationFromChannel(value);
+        if (!_synchronizingPlcSelection) SyncPlcSignalFromChannel(value);
         if (_lastProjection is not null) RequestPreview(_lastProjection);
     }
 
     partial void OnSelectedPlcSignalChanged(PlcSignalTile? value)
     {
-        if (value is null) return;
-        // Exact DM mapping, never fuzzy match by barcode, name or station.
-        var channel = Channels.FirstOrDefault(c =>
-            string.Equals(c.PlcAddress, value.DmAddress, StringComparison.Ordinal));
-        if (channel is not null && !ReferenceEquals(SelectedChannel, channel))
-            SelectedChannel = channel;
+        if (value is null || _synchronizingPlcSelection) return;
+        // The signal -> map direction never maps unrelated machine-level signals to a camera.
+        _synchronizingPlcSelection = true;
+        try
+        {
+            var channel = Channels.FirstOrDefault(c =>
+                string.Equals(c.PlcAddress, value.DmAddress, StringComparison.Ordinal));
+            if (channel is not null) SelectedChannel = channel;
+            string? stationId = OperatorWorkspaceTopology.ResolveSignalStation(
+                value.DmAddress, value.Station);
+            if (stationId is not null)
+            {
+                FocusStationCommand.Execute(stationId);
+                SelectedWorkspaceIndex = 1;
+            }
+        }
+        finally { _synchronizingPlcSelection = false; }
         SelectedDescription = $"{value.Id}: {value.Purpose} | {value.DmAddress} | " +
             $"工位 {value.Station} | {value.Validation} | {value.Conflict} | 工程声明，非现场实时值";
-        // When clicking a PLC row, the operator sees the exact station on the map.
-        var station = OperatorWorkspaceTopology.Stations.FirstOrDefault(x => x.StationId == value.Station)
-            ?? OperatorWorkspaceTopology.Stations.FirstOrDefault(x =>
-                x.ChannelIds.Contains(SelectedChannel?.ChannelId ?? "", StringComparer.Ordinal));
-        if (station is not null) FocusStationCommand.Execute(station.StationId);
-        SelectedWorkspaceIndex = 1;
     }
 
     private void SelectChannel(ChannelTile? value) => SelectedChannel = value;
@@ -339,6 +345,7 @@ public partial class MainWindowViewModel : ObservableObject
                                 foreach (var gate in engineering.Gates)
                                     PlcGates.Add(new FieldGateTile(
                                         gate.GateId, gate.Topic, gate.Status, gate.RequiredEvidence));
+                                SyncPlcSignalFromChannel(SelectedChannel);
                             }
                         }
                         else
