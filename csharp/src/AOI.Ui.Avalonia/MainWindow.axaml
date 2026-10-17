@@ -201,6 +201,36 @@
               </ListBox>
             </Grid>
           </TabItem>
+          <TabItem Header="HOLD / 异常">
+            <Grid Margin="10" RowDefinitions="Auto,*" RowSpacing="8">
+              <Border Background="#FFF2EA" CornerRadius="7" Padding="12">
+                <StackPanel Spacing="4">
+                  <TextBlock Text="工件隔离 / 出料禁止" Foreground="#A44130" FontSize="15" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding HoldNotice}" Foreground="#8C513B" TextWrapping="Wrap" FontSize="12"/>
+                  <TextBlock Text="此记录由 Core SQLite WAL 提供；HOLD 不等于 NG，必须经人工复核。未提供清除或硬件放行按钮。"
+                             Foreground="#6C7783" TextWrapping="Wrap" FontSize="11"/>
+                </StackPanel>
+              </Border>
+              <ListBox Grid.Row="1" ItemsSource="{Binding HeldWorkpieces}"
+                       BorderThickness="0" Background="#F5F7FA">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Margin="3,4" Padding="11" CornerRadius="8" Background="White"
+                            BorderBrush="#F0CABF" BorderThickness="1">
+                      <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,110">
+                          <TextBlock Text="{Binding ReasonCode}" FontWeight="Bold" FontSize="13" Foreground="#A33D30"/>
+                          <TextBlock Grid.Column="1" Text="{Binding ShortId}" FontSize="11" Foreground="#58718B"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="#52667A" FontSize="12"/>
+                        <TextBlock Text="{Binding RaisedUtc}" Foreground="#72869B" FontSize="11"/>
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </Grid>
+          </TabItem>
         </TabControl>
         <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
           <StackPanel Spacing="9">

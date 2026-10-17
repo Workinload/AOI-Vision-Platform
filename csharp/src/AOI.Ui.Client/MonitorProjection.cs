@@ -15,6 +15,7 @@ public sealed record MonitorProjection(
 {
     public ProductionOverview? Production { get; init; }
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
+    public WorkpieceHoldOverview? Holds { get; init; }
 
     public static MonitorProjection Offline(MachineRole role) => new(
         role == MachineRole.Master ? "master" : "slave", role, "IPC_OFFLINE", "SIM_ONLY",
@@ -42,6 +43,7 @@ public sealed record MonitorProjection(
             throw new InvalidDataException("Missing channel list.");
         snapshot.Production?.Validate();
         snapshot.PlcEngineering?.Validate();
+        snapshot.Holds?.Validate();
         var byId = new Dictionary<string, ChannelSnapshot>(StringComparer.Ordinal);
         foreach (var c in snapshot.Channels)
         {
@@ -69,7 +71,8 @@ public sealed record MonitorProjection(
             }).ToArray())
         {
             Production = snapshot.Production,
-            PlcEngineering = snapshot.PlcEngineering
+            PlcEngineering = snapshot.PlcEngineering,
+            Holds = snapshot.Holds
         };
     }
 }

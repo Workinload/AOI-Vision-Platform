@@ -117,6 +117,26 @@ public sealed record PlcEngineeringSnapshot(
     }
 }
 
+/// <summary>Durable SIM_ONLY fail-closed workpiece hold, never an operator clear command.</summary>
+public sealed record WorkpieceHoldRecord(
+    Guid WorkpieceId, string ReasonCode, string Detail, DateTimeOffset RaisedUtc);
+
+public sealed record WorkpieceHoldOverview(long ActiveCount,
+    IReadOnlyList<WorkpieceHoldRecord> Recent)
+{
+    public void Validate()
+    {
+        if (ActiveCount < 0 || Recent is null || Recent.Count > 20 ||
+            ActiveCount < Recent.Count ||
+            Recent.Select(x => x.WorkpieceId).Distinct().Count() != Recent.Count ||
+            Recent.Any(x => x.WorkpieceId == Guid.Empty ||
+                string.IsNullOrWhiteSpace(x.ReasonCode) || x.ReasonCode.Length > 64 ||
+                string.IsNullOrWhiteSpace(x.Detail) || x.Detail.Length > 512 ||
+                x.RaisedUtc == default))
+            throw new InvalidDataException("Invalid durable hold overview.");
+    }
+}
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
@@ -124,4 +144,5 @@ public sealed record MachineSnapshot(string NodeId, MachineRole Role, string Mac
 {
     public ProductionOverview? Production { get; init; }
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
+    public WorkpieceHoldOverview? Holds { get; init; }
 }

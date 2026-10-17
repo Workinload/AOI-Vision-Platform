@@ -61,6 +61,10 @@ public sealed class ProductionStore
             CREATE TABLE IF NOT EXISTS flight_events (
               event_id TEXT PRIMARY KEY, utc TEXT NOT NULL, kind TEXT NOT NULL,
               workpiece_id TEXT, message_id TEXT, details TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS workpiece_holds (
+              workpiece_id TEXT PRIMARY KEY REFERENCES workpieces(workpiece_id),
+              reason_code TEXT NOT NULL, detail TEXT NOT NULL,
+              raised_utc TEXT NOT NULL);
             """;
         init.ExecuteNonQuery();
 
@@ -380,11 +384,94 @@ public sealed class ProductionStore
         _ = RequireWorkpiece(db, tx, identity.WorkpieceId);
         using var cmd = Cmd(db, tx, """
             UPDATE workpieces SET final_json=$json WHERE workpiece_id=$id AND final_json IS NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM workpiece_holds WHERE workpiece_id=$id
+              )
             """,
             ("$json", WireFormat.Serialize(decision)), ("$id", identity.WorkpieceId.ToString("D")));
         if (cmd.ExecuteNonQuery() != 1) throw new InvalidOperationException("Final decision already written.");
         Event(db, tx, "FINAL_DECIDED", identity.WorkpieceId, null, decision.Proof);
         tx.Commit();
+    }
+
+    /// <summary>
+    /// Permanently mark a SIM_ONLY workpiece as held. The identity is immutable;
+    /// duplicate reasons are idempotent, conflicting codes fail closed.
+    /// HOLD is never converted to an output command or a final GOOD/NG.
+    /// </summary>
+    public bool RecordWorkpieceHold(WorkpieceIdentity identity, string reasonCode, string detail)
+    {
+        identity.Validate();
+        if (string.IsNullOrWhiteSpace(reasonCode) || reasonCode.Length > 64 ||
+            reasonCode.Any(c => !(c is >= 'A' and <= 'Z' or >= '0' and <= '9' or '_')) ||
+            string.IsNullOrWhiteSpace(detail) || detail.Length > 512)
+            throw new ArgumentException("HOLD reason must be a bounded, explicit code and description.");
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        var storedIdentity = RequireWorkpiece(db, tx, identity.WorkpieceId);
+        if (storedIdentity != identity)
+            throw new InvalidDataException("HOLD lineage mismatch.");
+        using (var existing = Cmd(db, tx,
+            "SELECT reason_code,detail FROM workpiece_holds WHERE workpiece_id=$id",
+            ("$id", identity.WorkpieceId.ToString("D"))))
+        using (var reader = existing.ExecuteReader())
+        {
+            if (reader.Read())
+            {
+                if (!string.Equals(reader.GetString(0), reasonCode, StringComparison.Ordinal) ||
+                    !string.Equals(reader.GetString(1), detail, StringComparison.Ordinal))
+                    throw new InvalidOperationException("Conflicting reason for an already-held WorkpieceId.");
+                return false;
+            }
+        }
+        using (var outcome = Cmd(db, tx,
+            "SELECT final_json FROM workpieces WHERE workpiece_id=$id",
+            ("$id", identity.WorkpieceId.ToString("D"))))
+            if (outcome.ExecuteScalar() is string)
+                throw new InvalidOperationException("Cannot retroactively HOLD a finalized workpiece.");
+        using (var add = Cmd(db, tx, """
+            INSERT INTO workpiece_holds(workpiece_id,reason_code,detail,raised_utc)
+            VALUES($id,$code,$detail,$utc)
+            """,
+            ("$id", identity.WorkpieceId.ToString("D")),
+            ("$code", reasonCode), ("$detail", detail),
+            ("$utc", DateTimeOffset.UtcNow.ToString("O"))))
+            add.ExecuteNonQuery();
+        Event(db, tx, "WORKPIECE_HOLD", identity.WorkpieceId, null,
+            $"reason={reasonCode} detail={detail}");
+        tx.Commit();
+        return true;
+    }
+
+    /// <summary>Read-only durable active holds for Avalonia and diagnostics.</summary>
+    public WorkpieceHoldOverview ReadWorkpieceHolds(int limit = 12)
+    {
+        if (limit is < 1 or > 20) throw new ArgumentOutOfRangeException(nameof(limit));
+        using var db = Open();
+        long active;
+        using (var count = db.CreateCommand())
+        {
+            count.CommandText = "SELECT COUNT(*) FROM workpiece_holds";
+            active = Convert.ToInt64(count.ExecuteScalar());
+        }
+        var items = new List<WorkpieceHoldRecord>();
+        using (var query = db.CreateCommand())
+        {
+            query.CommandText = """
+                SELECT workpiece_id,reason_code,detail,raised_utc
+                FROM workpiece_holds ORDER BY raised_utc DESC, workpiece_id DESC LIMIT $limit
+                """;
+            query.Parameters.AddWithValue("$limit", limit);
+            using var reader = query.ExecuteReader();
+            while (reader.Read())
+                items.Add(new WorkpieceHoldRecord(
+                    Guid.Parse(reader.GetString(0)), reader.GetString(1),
+                    reader.GetString(2), DateTimeOffset.Parse(reader.GetString(3),
+                        System.Globalization.CultureInfo.InvariantCulture)));
+        }
+        var snapshot = new WorkpieceHoldOverview(active, items);
+        snapshot.Validate();
+        return snapshot;
     }
 
     /// <summary>Read-only bounded live overview for UI; never joins products by barcode.</summary>
@@ -456,7 +543,8 @@ public sealed class ProductionStore
         return new(nodeId, role, latest is null ? "SIM_READY" : final is null ? "SIM_PROCESSING" : "SIM_FINAL",
             latest, final, channels, DateTimeOffset.UtcNow, false, "SIM_LIGHT")
         {
-            Production = ReadProductionOverview()
+            Production = ReadProductionOverview(),
+            Holds = ReadWorkpieceHolds()
         };
     }
 }

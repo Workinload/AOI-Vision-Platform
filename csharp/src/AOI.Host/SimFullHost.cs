@@ -218,6 +218,11 @@ public static class SimFullHost
                         endBarcodeMatches: scanned == item.Barcode);
                     if (decision.Disposition == FinalDisposition.Hold || !decision.IsSimulation)
                     {
+                        // Persist the actual failure reason BEFORE marking the FIFO blocked.
+                        // Never accept this workpiece for a subsequent GOOD/NG final.
+                        store.RecordWorkpieceHold(item,
+                            scanned == item.Barcode ? "UNVERIFIED_FINAL_PROOF" : "END_BARCODE_MISMATCH",
+                            $"SIM_FULL virtual exit token {exit}: final proof rejected; manual reconciliation required");
                         held.Add(exit);
                         Console.WriteLine($"SIM_FULL_HOLD token={exit} id={item.WorkpieceId} " +
                             $"why={decision.Proof} expected_barcode={item.Barcode} end_barcode={scanned}");

@@ -60,6 +60,7 @@ public sealed record PlcSignalTile(
     string DataType, string Purpose, string Validation, string Conflict);
 
 public sealed record FieldGateTile(string GateId, string Topic, string Status, string RequiredEvidence);
+public sealed record HoldTile(string ShortId, string ReasonCode, string Description, string RaisedUtc);
 
 public partial class MainWindowViewModel : ObservableObject
 {
@@ -73,6 +74,8 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<WorkpieceHistoryTile> RecentWorkpieces { get; } = new();
     public ObservableCollection<PlcSignalTile> PlcSignals { get; } = new();
     public ObservableCollection<FieldGateTile> PlcGates { get; } = new();
+    public ObservableCollection<HoldTile> HeldWorkpieces { get; } = new();
+    [ObservableProperty] private string holdNotice = "等待 Core 的持久化异常记录";
     [ObservableProperty] private string engineeringRegistryState = "待接收 Core 工程映射 · REAL 写入禁止";
     [ObservableProperty] private PlcSignalTile? selectedPlcSignal;
     [ObservableProperty] private FieldGateTile? selectedFieldGate;
@@ -193,6 +196,25 @@ public partial class MainWindowViewModel : ObservableObject
                         foreach (var info in projection.Channels)
                             Channels.First(x => x.ChannelId == info.Definition.ChannelId).Update(info);
                         RequestPreview(projection);
+                        if (projection.Holds is { } holds)
+                        {
+                            HoldNotice = holds.ActiveCount == 0
+                                ? "当前无持久化 HOLD（仅 SIM_ONLY 数据）"
+                                : $"持久化 HOLD：{holds.ActiveCount} 件 · 未授权清除 / 不允许自动放行";
+                            HeldWorkpieces.Clear();
+                            foreach (var hold in holds.Recent)
+                                HeldWorkpieces.Add(new HoldTile(
+                                    hold.WorkpieceId.ToString("N")[..8],
+                                    hold.ReasonCode, hold.Detail,
+                                    hold.RaisedUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")));
+                            if (holds.ActiveCount > 0)
+                                ProductionState += $" · HOLD {holds.ActiveCount}";
+                        }
+                        else
+                        {
+                            HoldNotice = "Core 未提供可信异常状态";
+                            HeldWorkpieces.Clear();
+                        }
                         if (projection.PlcEngineering is { } engineering)
                         {
                             EngineeringRegistryState =
@@ -367,6 +389,8 @@ public partial class MainWindowViewModel : ObservableObject
         PlcGates.Clear();
         SelectedPlcSignal = null;
         SelectedFieldGate = null;
+        HeldWorkpieces.Clear();
+        HoldNotice = "HOLD 状态离线 · 不允许基于旧数据放行";
         EngineeringRegistryState = "PLC 工程映射离线 · 无真实现场读值";
         _lastProjection = null;
         ClearPreview("IPC 中断，图像已失效");
