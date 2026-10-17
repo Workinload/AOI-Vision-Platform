@@ -1,298 +1,532 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="AOI.Ui.Avalonia.MainWindow"
-        Title="AOI Vision Platform | SIM_ONLY" Width="1580" Height="940"
-        MinWidth="1150" MinHeight="730" Background="#F2F5FA">
-  <Grid RowDefinitions="Auto,Auto,Auto,*" Margin="20" RowSpacing="12">
-    <Border Grid.Row="0" CornerRadius="14" Background="#152F4B" Padding="22,16">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="4">
-          <TextBlock Text="AOI VISION  /  CONTROL DESK" FontSize="23" FontWeight="Bold" Foreground="White"/>
-          <TextBlock Text="{Binding ChannelCount}" FontSize="13" Foreground="#B6CBDD"/>
+        Title="AOI Vision Platform | SIM_ONLY Operator Workspace"
+        Width="1920" Height="1080" MinWidth="1250" MinHeight="760"
+        WindowStartupLocation="CenterScreen" Background="#EDF2F8">
+  <Window.Styles>
+    <Style Selector="Button.nav">
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+      <Setter Property="Padding" Value="15,11"/>
+      <Setter Property="Margin" Value="0,3"/>
+      <Setter Property="Background" Value="#244561"/>
+      <Setter Property="Foreground" Value="#EAF4FF"/>
+      <Setter Property="BorderThickness" Value="0"/>
+    </Style>
+    <Style Selector="Button.station">
+      <Setter Property="Background" Value="#FFFFFF"/>
+      <Setter Property="Foreground" Value="#183954"/>
+      <Setter Property="BorderBrush" Value="#87ABC8"/>
+      <Setter Property="BorderThickness" Value="2"/>
+      <Setter Property="Padding" Value="9,8"/>
+    </Style>
+  </Window.Styles>
+  <Grid RowDefinitions="Auto,*" Margin="14" RowSpacing="12">
+    <Border Grid.Row="0" Padding="22,14" Background="#142C46" CornerRadius="12">
+      <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="24">
+        <StackPanel Spacing="2">
+          <TextBlock Text="AOI VISION PLATFORM" Foreground="#FFFFFF" FontSize="24" FontWeight="Bold"/>
+          <TextBlock Text="双机检测生产工作台  /  11 逻辑通道 · 9 物理设备 · SIM_ONLY" Foreground="#B4D0E7" FontSize="12"/>
         </StackPanel>
-        <StackPanel Grid.Column="1" Spacing="4" HorizontalAlignment="Right">
-          <TextBlock Text="{Binding NodeLabel}" FontSize="19" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Right"/>
-          <TextBlock Text="{Binding ConnectionState}" FontSize="12" Foreground="#C8E1F6" HorizontalAlignment="Right"/>
+        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+          <TextBlock Text="{Binding NodeLabel}" HorizontalAlignment="Right" Foreground="#FFFFFF" FontSize="16" FontWeight="Bold"/>
+          <TextBlock Text="{Binding ConnectionState}" HorizontalAlignment="Right" Foreground="#B6D2E4" FontSize="12"/>
+        </StackPanel>
+        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2" MaxWidth="320">
+          <TextBlock Text="{Binding ProductionState}" Foreground="#D4E9F8" TextTrimming="CharacterEllipsis" HorizontalAlignment="Right"/>
+          <TextBlock Text="{Binding SafetyStatus}" Foreground="#FFD1A6" FontSize="12" TextWrapping="Wrap" HorizontalAlignment="Right"/>
         </StackPanel>
       </Grid>
     </Border>
-    <Border Grid.Row="1" Background="#E2EAF4" CornerRadius="10" Padding="16,12">
-      <Grid ColumnDefinitions="*,Auto">
-        <StackPanel Spacing="5">
-          <TextBlock Text="{Binding ProductionState}" FontWeight="Bold" Foreground="#24436A" FontSize="15"/>
-          <TextBlock Text="{Binding LatestIdentity}" Foreground="#506683" FontSize="12"/>
-        </StackPanel>
-        <TextBlock Grid.Column="1" Text="{Binding SafetyStatus}" Foreground="#9C392D"
-                   FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center"/>
-      </Grid>
-    </Border>
-    <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="12">
-      <Grid ColumnDefinitions="245,*" ColumnSpacing="16">
-        <StackPanel Spacing="5">
-          <TextBlock Text="生产统计 / 历史" FontSize="15" FontWeight="SemiBold" Foreground="#1E3F61"/>
-          <TextBlock Text="{Binding ProductionCounters}" FontSize="12" Foreground="#1D6895"
-                     FontWeight="SemiBold" TextWrapping="Wrap"/>
-          <TextBlock Text="{Binding HistoryNote}" FontSize="10" Foreground="#75879B" TextWrapping="Wrap"/>
-        </StackPanel>
-        <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled" MaxHeight="105">
-          <ItemsControl ItemsSource="{Binding RecentWorkpieces}">
-            <ItemsControl.ItemsPanel>
-              <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8"/></ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-              <DataTemplate>
-                <Border CornerRadius="7" BorderThickness="1" BorderBrush="#D8E2EE"
-                        Background="#F3F7FC" MinWidth="170" Padding="10">
-                  <StackPanel Spacing="3">
-                    <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding ShortId}" FontSize="13" Foreground="#24466B"
-                                 FontWeight="Bold"/>
-                      <TextBlock Grid.Column="1" Text="{Binding Decision}" Foreground="#2B7390"
-                                 FontWeight="SemiBold" FontSize="11"/>
-                    </Grid>
-                    <TextBlock Text="{Binding Barcode}" Foreground="#576B80" FontSize="11"/>
-                    <Grid ColumnDefinitions="*,Auto">
-                      <TextBlock Text="{Binding Epoch}" Foreground="#8897AA" FontSize="10"/>
-                      <TextBlock Grid.Column="1" Text="{Binding Channels}" Foreground="#526C86" FontSize="10"/>
-                    </Grid>
-                    <TextBlock Text="{Binding LocalTime}" Foreground="#8897AA" FontSize="10"/>
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ItemsControl.ItemTemplate>
-          </ItemsControl>
-        </ScrollViewer>
-      </Grid>
-    </Border>
-    <Grid Grid.Row="3" ColumnDefinitions="1.35*,1*" ColumnSpacing="12">
-      <Grid Grid.Column="0" RowDefinitions="Auto,*,Auto" RowSpacing="10">
-        <Border Background="White" CornerRadius="10" Padding="14">
-          <StackPanel Spacing="4">
-            <TextBlock Text="整机设备地图  /  11 通道实时监视" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
-            <TextBlock Text="设备卡与右侧 PLC 映射表同步选中 · 蓝图坐标/机械动画待数字孪生 IPC 合同"
-                       Foreground="#6F8092" FontSize="11" TextWrapping="Wrap"/>
+    <Grid Grid.Row="1" ColumnDefinitions="206,*" ColumnSpacing="12">
+      <Border Grid.Column="0" Background="#183753" CornerRadius="11" Padding="13">
+        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="15">
+          <StackPanel Spacing="6">
+            <TextBlock Text="操作导航" Foreground="White" FontSize="17" FontWeight="SemiBold" Margin="8,6"/>
+            <Button Classes="nav" Content="01   生产总览" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="0"/>
+            <Button Classes="nav" Content="02   整机设备地图" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="1"/>
+            <Button Classes="nav" Content="03   11 路图集" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="2"/>
+            <Button Classes="nav" Content="04   历史 / HOLD" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="3"/>
+            <Button Classes="nav" Content="05   PLC 工程" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="4"/>
+            <Button Classes="nav" Content="06   产品方案 / ROI" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="5"/>
           </StackPanel>
-        </Border>
-        <Border Grid.Row="1" Background="#EAF0F7" CornerRadius="11" Padding="8">
-          <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                     Background="Transparent" BorderThickness="0">
-              <ListBox.ItemsPanel>
-                <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
-              </ListBox.ItemsPanel>
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <Border BorderBrush="#C6D5E6" BorderThickness="1" CornerRadius="9"
-                          Background="White" Margin="4" Padding="12" MinHeight="133">
-                    <StackPanel Spacing="5">
-                      <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock Text="{Binding ChannelId}" FontSize="21" Foreground="#21496C" FontWeight="Bold"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Owner}" FontSize="10" Foreground="#8393A8"/>
-                      </Grid>
-                      <TextBlock Text="{Binding StationDetails}" FontSize="11" TextWrapping="Wrap" Foreground="#526C86"/>
-                      <TextBlock Text="{Binding State}" FontSize="12" Foreground="#1C7290" FontWeight="SemiBold"/>
-                      <TextBlock Text="{Binding FrameLabel}" FontSize="10" TextWrapping="Wrap" Foreground="#8190A4"/>
-                    </StackPanel>
-                  </Border>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-          </ScrollViewer>
-        </Border>
-        <Border Grid.Row="2" Background="White" CornerRadius="10" Padding="12">
-          <StackPanel Spacing="3">
-            <TextBlock Text="整机状态  /  +1 监控" FontWeight="SemiBold" Foreground="#23486B"/>
-            <TextBlock Text="{Binding ProductionState}" FontSize="12" Foreground="#55708B"/>
-          </StackPanel>
-        </Border>
-      </Grid>
-      <Grid Grid.Column="1" RowDefinitions="1.35*,Auto" RowSpacing="10">
-        <TabControl Grid.Row="0" Background="White">
-          <TabItem Header="11 路通道监控">
-  <Border Background="White" CornerRadius="10" Padding="14">
-            <Grid RowDefinitions="Auto,Auto,*" RowSpacing="8">
-              <TextBlock Text="PLC / 通道映射 · 只读" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
-              <Grid Grid.Row="1" ColumnDefinitions="64,80,95,*,88" Margin="9,0">
-                <TextBlock Text="通道" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="1" Text="站点/设备" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="2" Text="PLC 地址" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="3" Text="监控状态" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="4" Text="机台" FontSize="11" FontWeight="SemiBold"/>
-              </Grid>
-              <ListBox Grid.Row="2" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                       BorderThickness="0" Background="#F5F8FB">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="64,80,95,*,88" Margin="5,8">
-                      <TextBlock Text="{Binding ChannelId}" FontWeight="SemiBold" FontSize="12"/>
-                      <TextBlock Grid.Column="1" Text="{Binding Device}" FontSize="10" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Grid.Column="2" Text="{Binding PlcAddress}" FontSize="12"/>
-                      <TextBlock Grid.Column="3" Text="{Binding State}" FontSize="11" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Grid.Column="4" Text="{Binding Owner}" FontSize="10"/>
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </Grid>
-          </Border>
-          </TabItem>
-          <TabItem Header="45 条 PLC 工程映射">
-            <Grid RowDefinitions="Auto,Auto,*" Margin="10" RowSpacing="8">
-              <TextBlock Text="{Binding EngineeringRegistryState}" TextWrapping="Wrap"
-                         FontSize="11" Foreground="#986033"/>
-              <Grid Grid.Row="1" ColumnDefinitions="170,100,80,90,90,*" Margin="8,2">
-                <TextBlock Text="信号 ID" FontWeight="SemiBold" FontSize="11"/>
-                <TextBlock Grid.Column="1" Text="PLC 地址" FontWeight="SemiBold" FontSize="11"/>
-                <TextBlock Grid.Column="2" Text="工位" FontWeight="SemiBold" FontSize="11"/>
-                <TextBlock Grid.Column="3" Text="主从" FontWeight="SemiBold" FontSize="11"/>
-                <TextBlock Grid.Column="4" Text="方向" FontWeight="SemiBold" FontSize="11"/>
-                <TextBlock Grid.Column="5" Text="状态 / 功能" FontWeight="SemiBold" FontSize="11"/>
-              </Grid>
-              <ListBox Grid.Row="2" ItemsSource="{Binding PlcSignals}"
-                       SelectedItem="{Binding SelectedPlcSignal, Mode=TwoWay}"
-                       Background="#F5F8FB" BorderThickness="0">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="170,100,80,90,90,*" Margin="6,7">
-                      <TextBlock Text="{Binding Id}" FontSize="11" FontWeight="SemiBold"
-                                 Foreground="#254B6E" TextTrimming="CharacterEllipsis"/>
-                      <TextBlock Grid.Column="1" Text="{Binding DmAddress}" FontSize="11"/>
-                      <TextBlock Grid.Column="2" Text="{Binding Station}" FontSize="10"/>
-                      <TextBlock Grid.Column="3" Text="{Binding Host}" FontSize="10"/>
-                      <TextBlock Grid.Column="4" Text="{Binding Direction}" FontSize="10"
-                                 TextTrimming="CharacterEllipsis"/>
-                      <StackPanel Grid.Column="5" Spacing="2">
-                        <TextBlock Text="{Binding Validation}" FontSize="10" Foreground="#A05B2D"/>
-                        <TextBlock Text="{Binding Purpose}" FontSize="11"
-                                   TextWrapping="Wrap" Foreground="#4C647D"/>
-                      </StackPanel>
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </Grid>
-          </TabItem>
-          <TabItem Header="14 项现场验证门禁">
-            <Grid RowDefinitions="Auto,*" Margin="10" RowSpacing="8">
-              <TextBlock Text="工程证据：7 项 BLOCKED / 7 项 OPEN。全部禁止真实 PLC 写入；OPEN 不代表通过。"
-                         Foreground="#923D31" FontSize="11" TextWrapping="Wrap"/>
-              <ListBox Grid.Row="1" ItemsSource="{Binding PlcGates}"
-                       SelectedItem="{Binding SelectedFieldGate, Mode=TwoWay}"
-                       BorderThickness="0" Background="#F6F8FB">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Border Margin="3" Padding="9" CornerRadius="7"
-                            Background="White" BorderBrush="#DAE2EB" BorderThickness="1">
-                      <StackPanel Spacing="4">
-                        <Grid ColumnDefinitions="80,*,85">
-                          <TextBlock Text="{Binding GateId}" FontWeight="Bold" FontSize="12"/>
-                          <TextBlock Grid.Column="1" Text="{Binding Topic}" FontSize="12"
-                                     TextWrapping="Wrap"/>
-                          <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11"
-                                     Foreground="#A44532" FontWeight="SemiBold"/>
-                        </Grid>
-                        <TextBlock Text="{Binding RequiredEvidence}" FontSize="11"
-                                   Foreground="#516B85" TextWrapping="Wrap"/>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </Grid>
-          </TabItem>
-          <TabItem Header="HOLD / 异常">
-            <Grid Margin="10" RowDefinitions="Auto,*" RowSpacing="8">
-              <Border Background="#FFF2EA" CornerRadius="7" Padding="12">
-                <StackPanel Spacing="4">
-                  <TextBlock Text="工件隔离 / 出料禁止" Foreground="#A44130" FontSize="15" FontWeight="SemiBold"/>
-                  <TextBlock Text="{Binding HoldNotice}" Foreground="#8C513B" TextWrapping="Wrap" FontSize="12"/>
-                  <TextBlock Text="此记录由 Core SQLite WAL 提供；HOLD 不等于 NG，必须经人工复核。未提供清除或硬件放行按钮。"
-                             Foreground="#6C7783" TextWrapping="Wrap" FontSize="11"/>
-                </StackPanel>
-              </Border>
-              <ListBox Grid.Row="1" ItemsSource="{Binding HeldWorkpieces}"
-                       BorderThickness="0" Background="#F5F7FA">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Border Margin="3,4" Padding="11" CornerRadius="8" Background="White"
-                            BorderBrush="#F0CABF" BorderThickness="1">
-                      <StackPanel Spacing="4">
-                        <Grid ColumnDefinitions="*,110">
-                          <TextBlock Text="{Binding ReasonCode}" FontWeight="Bold" FontSize="13" Foreground="#A33D30"/>
-                          <TextBlock Grid.Column="1" Text="{Binding ShortId}" FontSize="11" Foreground="#58718B"/>
-                        </Grid>
-                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" Foreground="#52667A" FontSize="12"/>
-                        <TextBlock Text="{Binding RaisedUtc}" Foreground="#72869B" FontSize="11"/>
-                      </StackPanel>
-                    </Border>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </Grid>
-          </TabItem>
-          <TabItem Header="产品方案 / 换型">
-            <Grid Margin="10" RowDefinitions="Auto,Auto,*" RowSpacing="8">
-              <Border Padding="12" Background="#EAF4F7" CornerRadius="8">
-                <StackPanel Spacing="5">
-                  <TextBlock Text="{Binding ActiveProductLabel}" FontSize="14"
-                             FontWeight="SemiBold" Foreground="#1C4D75" TextWrapping="Wrap"/>
-                  <TextBlock Text="{Binding ActiveProductRelease}" FontSize="11"
-                             Foreground="#41708F" TextWrapping="Wrap"/>
-                  <TextBlock Text="方案由 A6 离线版本库发布、双机哈希读回后在 SIM_FULL 中使用；A6 SafeHold 不会自动解除，REAL 硬件不可操作。"
-                             Foreground="#6D768A" FontSize="11" TextWrapping="Wrap"/>
-                </StackPanel>
-              </Border>
-              <Grid Grid.Row="1" ColumnDefinitions="95,*,85,105" Margin="10,2">
-                <TextBlock Text="工位" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="1" Text="逻辑通道" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="2" Text="亮度阈值" FontSize="11" FontWeight="SemiBold"/>
-                <TextBlock Grid.Column="3" Text="最小亮区比例" FontSize="11" FontWeight="SemiBold"/>
-              </Grid>
-              <ListBox Grid.Row="2" ItemsSource="{Binding ProductStations}"
-                       BorderThickness="0" Background="#F5F8FB">
-                <ListBox.ItemTemplate>
-                  <DataTemplate>
-                    <Grid ColumnDefinitions="95,*,85,105" Margin="9,8">
-                      <TextBlock Text="{Binding StationId}" FontWeight="SemiBold"
-                                 FontSize="12" Foreground="#2B557B"/>
-                      <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"
-                                 Foreground="#506983" TextWrapping="Wrap"/>
-                      <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
-                      <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
-                    </Grid>
-                  </DataTemplate>
-                </ListBox.ItemTemplate>
-              </ListBox>
-            </Grid>
-          </TabItem>
-        </TabControl>
-        <Border Grid.Row="1" Background="White" CornerRadius="10" Padding="14">
-          <StackPanel Spacing="9">
-            <TextBlock Text="通道图像预览 / ROI 归一化草稿" FontSize="16" FontWeight="SemiBold" Foreground="#1E3F61"/>
-            <TextBlock Text="{Binding SelectedDescription}" FontSize="12" TextWrapping="Wrap" Foreground="#526C86"/>
-            <Border Background="#EAF0F7" BorderThickness="1" BorderBrush="#CFDBE8"
-                    CornerRadius="7" Padding="8">
-              <StackPanel Spacing="4">
-                <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="125"/>
-                <TextBlock Text="{Binding PreviewNotice}" FontSize="10" Foreground="#58728F"
-                           TextWrapping="Wrap"/>
+          <StackPanel Grid.Row="2" Spacing="10">
+            <Border Background="#29516E" CornerRadius="8" Padding="11">
+              <StackPanel Spacing="6">
+                <TextBlock Text="当前浏览" Foreground="#C2D8EB" FontSize="12"/>
+                <TextBlock Text="{Binding ViewedWorkpieceLabel}" Foreground="White" FontSize="11" TextWrapping="Wrap"/>
+                <Button Command="{Binding FollowLiveCommand}" Content="返回实时工件" HorizontalAlignment="Stretch"/>
               </StackPanel>
             </Border>
-            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
-              <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
-              <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
-              <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
-              <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
-            </Grid>
-            <Button Content="校验并保存本机 ROI 草稿（不影响当前检测）" Command="{Binding ValidateRoiCommand}"
-                    HorizontalAlignment="Stretch"/>
-            <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#7D5C2C" TextWrapping="Wrap"/>
-            <TextBlock Text="本机 ROI 草稿保存到 Core WAL；需正式版本发布后才能影响检测。真实 PLC/相机编辑仍未授权。"
-                       TextWrapping="Wrap" FontSize="11" Foreground="#738497"/>
+            <TextBlock Text="仅使用 Core IPC 状态和已验证 PNG；不连接真实 PLC / 相机。" Foreground="#AEC6D9"
+                       TextWrapping="Wrap" FontSize="11"/>
           </StackPanel>
-        </Border>
-      </Grid>
+        </Grid>
+      </Border>
+      <TabControl Grid.Column="1" SelectedIndex="{Binding SelectedWorkspaceIndex, Mode=TwoWay}"
+                  Background="Transparent" BorderThickness="0" Padding="0">
+        <TabItem Header="生产总览">
+          <Grid RowDefinitions="Auto,*,Auto" RowSpacing="10" Margin="4">
+            <Grid ColumnDefinitions="1.15*,1*" ColumnSpacing="12">
+              <Border Background="White" CornerRadius="10" Padding="16">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="实时生产 / 生产计数" FontSize="18" FontWeight="SemiBold" Foreground="#214460"/>
+                  <TextBlock Text="{Binding ProductionCounters}" FontSize="15" FontWeight="SemiBold" Foreground="#17779B" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding LatestIdentity}" FontSize="11" Foreground="#536D83" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding HistoryNote}" FontSize="11" Foreground="#77879B"/>
+                </StackPanel>
+              </Border>
+              <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="16">
+                <StackPanel Spacing="8">
+                  <TextBlock Text="当前方案 / 生产状态" FontSize="18" FontWeight="SemiBold" Foreground="#214460"/>
+                  <TextBlock Text="{Binding ActiveProductLabel}" Foreground="#1A678E" FontSize="13" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding ActiveProductRelease}" Foreground="#61778B" FontSize="11" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding HoldNotice}" Foreground="#A04A2C" FontSize="11" TextWrapping="Wrap"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+            <Grid Grid.Row="1" ColumnDefinitions="1.25*,1*" ColumnSpacing="12">
+              <Border Background="White" CornerRadius="10" Padding="15">
+                <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                  <TextBlock Text="11 路相机在线状态 · 点击进入地图定位" FontSize="16" FontWeight="SemiBold" Foreground="#1F4260"/>
+                  <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                    <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                             BorderThickness="0" Background="Transparent">
+                      <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Border Margin="4" Padding="13" Background="#F2F7FC" CornerRadius="8"
+                                  BorderBrush="#D9E5F0" BorderThickness="1" MinHeight="122">
+                            <StackPanel Spacing="6">
+                              <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Text="{Binding ChannelId}" FontSize="21" FontWeight="Bold" Foreground="#244966"/>
+                                <TextBlock Grid.Column="1" Text="{Binding Owner}" FontSize="10" Foreground="#7A92A4"/>
+                              </Grid>
+                              <TextBlock Text="{Binding StationDetails}" FontSize="10" Foreground="#506982"
+                                         TextTrimming="CharacterEllipsis"/>
+                              <TextBlock Text="{Binding State}" FontSize="11" FontWeight="SemiBold" Foreground="#247695"/>
+                              <TextBlock Text="{Binding Details}" FontSize="10" Foreground="#8495A7"
+                                         TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                          </Border>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </ScrollViewer>
+                </Grid>
+              </Border>
+              <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="16">
+                <Grid RowDefinitions="Auto,Auto,*,Auto" RowSpacing="10">
+                  <TextBlock Text="当前通道 / 原始 PNG 预览" FontSize="16" FontWeight="SemiBold" Foreground="#1F4260"/>
+                  <TextBlock Grid.Row="1" Text="{Binding SelectedDescription}" FontSize="12" Foreground="#4D6A85" TextWrapping="Wrap"/>
+                  <Border Grid.Row="2" Background="#122C42" CornerRadius="9" Padding="10">
+                    <Image Source="{Binding SelectedPreview}" Stretch="Uniform"/>
+                  </Border>
+                  <StackPanel Grid.Row="3" Spacing="9">
+                    <TextBlock Text="{Binding PreviewNotice}" Foreground="#54758F" FontSize="11" TextWrapping="Wrap"/>
+                    <Grid ColumnDefinitions="*,*" ColumnSpacing="7">
+                      <Button Content="设备地图 / ROI" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="1"/>
+                      <Button Grid.Column="1" Content="打开 11 路图集" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="2"/>
+                    </Grid>
+                  </StackPanel>
+                </Grid>
+              </Border>
+            </Grid>
+            <Border Grid.Row="2" Background="White" CornerRadius="9" Padding="11">
+              <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                <TextBlock Text="最近工件 · 点击打开 11 路图集" VerticalAlignment="Center"
+                           FontWeight="SemiBold" FontSize="12" Foreground="#244765"/>
+                <ScrollViewer Grid.Column="1" HorizontalScrollBarVisibility="Auto"
+                              VerticalScrollBarVisibility="Disabled" MaxHeight="100">
+                  <ListBox ItemsSource="{Binding RecentWorkpieces}"
+                           SelectedItem="{Binding SelectedHistoryItem, Mode=TwoWay}"
+                           BorderThickness="0" Background="Transparent">
+                    <ListBox.ItemsPanel>
+                      <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="6"/></ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                      <DataTemplate>
+                        <StackPanel Spacing="3" Background="#EFF5FB" MinWidth="153" Margin="2" Padding="8">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding ShortId}" FontSize="12" FontWeight="Bold"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Decision}" FontSize="10" Foreground="#267C9A"/>
+                          </Grid>
+                          <TextBlock Text="{Binding Barcode}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                          <TextBlock Text="{Binding Channels}" FontSize="10" Foreground="#6C8499"/>
+                        </StackPanel>
+                      </DataTemplate>
+                    </ListBox.ItemTemplate>
+                  </ListBox>
+                </ScrollViewer>
+                <Button Grid.Column="2" Content="实时跟随" Command="{Binding FollowLiveCommand}" VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="整机设备地图">
+          <ScrollViewer Margin="4">
+            <Grid ColumnDefinitions="1.25*,1*" ColumnSpacing="12">
+              <StackPanel Spacing="12">
+                <Border Background="White" CornerRadius="10" Padding="17">
+                  <StackPanel Spacing="10">
+                    <TextBlock Text="生产线布局 / 虚拟设备分布" Foreground="#1D405F" FontSize="19" FontWeight="SemiBold"/>
+                    <TextBlock Text="点击工位即可定位对应 CH 通道；地图为逻辑示意，不代表设备的实测几何坐标或实时运动。"
+                               FontSize="11" Foreground="#6D8197" TextWrapping="Wrap"/>
+                    <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+                      <Canvas Width="910" Height="425" Background="#E8F1F8">
+                        <Border Canvas.Left="195" Canvas.Top="188" Width="65" Height="5" Background="#80A8C5"/>
+                        <Border Canvas.Left="420" Canvas.Top="115" Width="55" Height="5" Background="#80A8C5"/>
+                        <Border Canvas.Left="635" Canvas.Top="115" Width="55" Height="5" Background="#80A8C5"/>
+                        <Border Canvas.Left="755" Canvas.Top="185" Width="5" Height="75" Background="#80A8C5"/>
+                        <Border Canvas.Left="635" Canvas.Top="305" Width="55" Height="5" Background="#80A8C5"/>
+                        <Border Canvas.Left="420" Canvas.Top="305" Width="55" Height="5" Background="#80A8C5"/>
+                        <TextBlock Canvas.Left="210" Canvas.Top="168" Text="→" FontSize="22" Foreground="#4C8AAE"/>
+                        <TextBlock Canvas.Left="441" Canvas.Top="91" Text="→" FontSize="22" Foreground="#4C8AAE"/>
+                        <TextBlock Canvas.Left="656" Canvas.Top="91" Text="→" FontSize="22" Foreground="#4C8AAE"/>
+                        <TextBlock Canvas.Left="781" Canvas.Top="215" Text="↓" FontSize="22" Foreground="#4C8AAE"/>
+                        <TextBlock Canvas.Left="655" Canvas.Top="283" Text="←" FontSize="22" Foreground="#4C8AAE"/>
+                        <TextBlock Canvas.Left="438" Canvas.Top="283" Text="←" FontSize="22" Foreground="#4C8AAE"/>
+                        <Button Classes="station" Canvas.Left="36" Canvas.Top="145" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="LOADING">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="LOADING / 定位" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[0].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[0].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="260" Canvas.Top="70" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST03">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST03 / 双面" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[1].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[1].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="475" Canvas.Top="70" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST04">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST04 / 双面" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[2].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[2].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="690" Canvas.Top="70" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST05">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST05 / 检测" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[3].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[3].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="690" Canvas.Top="260" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST06">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST06 / 检测" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[4].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[4].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="475" Canvas.Top="260" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST09">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST09 / 线扫" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[5].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[5].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <Button Classes="station" Canvas.Left="260" Canvas.Top="260" Width="160" Height="94"
+                                Command="{Binding FocusStationCommand}" CommandParameter="ST10">
+                          <StackPanel Spacing="4">
+                            <TextBlock Text="ST10 / 线扫" FontWeight="Bold" FontSize="14"/>
+                            <TextBlock Text="{Binding MapStations[6].Channels}" FontSize="11"/>
+                            <TextBlock Text="{Binding MapStations[6].Status}" FontSize="11" Foreground="#247795"/>
+                          </StackPanel>
+                        </Button>
+                        <TextBlock Canvas.Left="35" Canvas.Top="385" Text="● 蓝色连线：逻辑工位顺序     ● 设备图和 PLC 表共享 ChannelCatalog 绑定"
+                                   FontSize="11" Foreground="#587994"/>
+                      </Canvas>
+                    </ScrollViewer>
+                    <TextBlock Text="{Binding MapSelectionSummary}" Foreground="#21698D" FontWeight="SemiBold" FontSize="13"
+                               TextWrapping="Wrap"/>
+                  </StackPanel>
+                </Border>
+                <Border Background="White" CornerRadius="10" Padding="14">
+                  <Grid RowDefinitions="Auto,*" RowSpacing="8">
+                    <TextBlock Text="工位通道列表 · 双向选择" FontSize="16" FontWeight="SemiBold" Foreground="#204662"/>
+                    <ListBox Grid.Row="1" ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                             Height="240" BorderThickness="0" Background="#F6F9FC">
+                      <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate><UniformGrid Columns="3"/></ItemsPanelTemplate>
+                      </ListBox.ItemsPanel>
+                      <ListBox.ItemTemplate>
+                        <DataTemplate>
+                          <Grid ColumnDefinitions="63,*,92" Margin="6,9">
+                            <TextBlock Text="{Binding ChannelId}" FontWeight="SemiBold" FontSize="12"/>
+                            <TextBlock Grid.Column="1" Text="{Binding StationDetails}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Grid.Column="2" Text="{Binding State}" FontSize="10" Foreground="#287595"/>
+                          </Grid>
+                        </DataTemplate>
+                      </ListBox.ItemTemplate>
+                    </ListBox>
+                  </Grid>
+                </Border>
+              </StackPanel>
+              <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
+                <StackPanel Spacing="11">
+                  <TextBlock Text="通道详情 / 图像 / ROI" Foreground="#1D405F" FontSize="19" FontWeight="SemiBold"/>
+                  <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#506982" TextWrapping="Wrap"/>
+                  <Border Background="#132D43" CornerRadius="9" Padding="10">
+                    <Image Source="{Binding SelectedPreview}" Height="250" Stretch="Uniform"/>
+                  </Border>
+                  <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#57748B" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding ViewedWorkpieceLabel}" FontSize="11" Foreground="#207496" TextWrapping="Wrap"/>
+                  <TextBlock Text="归一化 ROI 草稿 (X / Y / 宽 / 高)" FontSize="13" FontWeight="SemiBold" Foreground="#234B67"/>
+                  <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                    <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+                    <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+                    <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+                    <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+                  </Grid>
+                  <Button Content="保存 Core ROI 草稿（不自动发布）" Command="{Binding ValidateRoiCommand}"/>
+                  <TextBlock Text="{Binding RoiFeedback}" Foreground="#8B622F" FontSize="11" TextWrapping="Wrap"/>
+                  <Button Content="浏览当前工件 11 路图集" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="2"/>
+                </StackPanel>
+              </Border>
+            </Grid>
+          </ScrollViewer>
+        </TabItem>
+        <TabItem Header="11 路图集">
+          <Grid Margin="4" RowDefinitions="Auto,Auto,*" RowSpacing="11">
+            <Border Background="White" CornerRadius="10" Padding="15">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Spacing="5">
+                  <TextBlock Text="11 路工件原始图像 / Master + Slave" FontSize="19" FontWeight="SemiBold" Foreground="#204362"/>
+                  <TextBlock Text="{Binding GallerySummary}" FontSize="12" Foreground="#5F7892" TextWrapping="Wrap"/>
+                  <TextBlock Text="{Binding ViewedWorkpieceLabel}" FontSize="11" Foreground="#217595" TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1" Content="返回实时工件" Command="{Binding FollowLiveCommand}"
+                        VerticalAlignment="Center"/>
+              </Grid>
+            </Border>
+            <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled" MaxHeight="120">
+              <ListBox ItemsSource="{Binding RecentWorkpieces}"
+                       SelectedItem="{Binding SelectedHistoryItem, Mode=TwoWay}"
+                       Background="Transparent" BorderThickness="0">
+                <ListBox.ItemsPanel>
+                  <ItemsPanelTemplate><StackPanel Orientation="Horizontal" Spacing="8"/></ItemsPanelTemplate>
+                </ListBox.ItemsPanel>
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Background="White" Spacing="5" Padding="12" MinWidth="175">
+                      <TextBlock Text="{Binding ShortId}" FontWeight="Bold" FontSize="13" Foreground="#235A7B"/>
+                      <TextBlock Text="{Binding Barcode}" FontSize="11" Foreground="#526D84"/>
+                      <TextBlock Text="{Binding Decision}" FontSize="11" Foreground="#987039"/>
+                      <TextBlock Text="{Binding Channels}" FontSize="10" Foreground="#7991A5"/>
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </ScrollViewer>
+            <Border Grid.Row="2" Background="#E7EFF6" CornerRadius="10" Padding="10">
+              <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding GalleryChannels}">
+                  <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="4"/></ItemsPanelTemplate>
+                  </ItemsControl.ItemsPanel>
+                  <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                      <Button Margin="6" Padding="8" Background="White" BorderBrush="#CEDDE9"
+                              BorderThickness="1" Command="{Binding OpenCommand}" MinHeight="222">
+                        <Grid RowDefinitions="Auto,*,Auto" RowSpacing="7">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="{Binding ChannelId}" FontSize="18" FontWeight="Bold" Foreground="#244C6D"/>
+                            <TextBlock Grid.Column="1" Text="{Binding Owner}" FontSize="10" Foreground="#7B94AA"/>
+                          </Grid>
+                          <Border Grid.Row="1" Background="#122D44" CornerRadius="6" Padding="5">
+                            <Image Source="{Binding Preview}" Stretch="Uniform" Height="140"/>
+                          </Border>
+                          <StackPanel Grid.Row="2" Spacing="3">
+                            <TextBlock Text="{Binding Location}" FontSize="11" Foreground="#59728A"/>
+                            <TextBlock Text="{Binding ImageStatus}" FontSize="10" Foreground="#2A7796"
+                                       TextWrapping="Wrap"/>
+                            <TextBlock Text="{Binding ChannelState}" FontSize="10" Foreground="#8A97A8"/>
+                            <TextBlock Text="点击定位设备与 ROI →" FontSize="10" Foreground="#244E75"/>
+                          </StackPanel>
+                        </Grid>
+                      </Button>
+                    </DataTemplate>
+                  </ItemsControl.ItemTemplate>
+                </ItemsControl>
+              </ScrollViewer>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="历史与报警">
+          <Grid Margin="4" ColumnDefinitions="1.05*,1*" ColumnSpacing="12">
+            <Border Background="White" CornerRadius="10" Padding="16">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="9">
+                <TextBlock Text="真实 WAL 工件历史 · 点击查看 11 路原图" FontSize="18" FontWeight="SemiBold" Foreground="#214665"/>
+                <TextBlock Grid.Row="1" Text="{Binding ProductionCounters}" FontSize="12" Foreground="#247797"/>
+                <ListBox Grid.Row="2" ItemsSource="{Binding RecentWorkpieces}"
+                         SelectedItem="{Binding SelectedHistoryItem, Mode=TwoWay}"
+                         Background="#F5F8FB" BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="115,*,80,100,120" Margin="10,12">
+                        <TextBlock Text="{Binding ShortId}" FontSize="12" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Barcode}" FontSize="11" Foreground="#56728A"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Channels}" FontSize="11"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Decision}" FontSize="11" Foreground="#A16B34"/>
+                        <TextBlock Grid.Column="4" Text="{Binding LocalTime}" FontSize="11" Foreground="#7C91A5"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="16">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="9">
+                <TextBlock Text="持久化异常 / HOLD 记录" FontSize="18" FontWeight="SemiBold" Foreground="#903E30"/>
+                <TextBlock Grid.Row="1" Text="{Binding HoldNotice}" FontSize="12" Foreground="#A3553D" TextWrapping="Wrap"/>
+                <ListBox Grid.Row="2" ItemsSource="{Binding HeldWorkpieces}"
+                         Background="#FFF8F4" BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Spacing="7" Margin="9" Padding="10" Background="White">
+                        <Grid ColumnDefinitions="*,110">
+                          <TextBlock Text="{Binding ReasonCode}" FontSize="13" FontWeight="Bold" Foreground="#A23D34"/>
+                          <TextBlock Grid.Column="1" Text="{Binding ShortId}" FontSize="11" Foreground="#607790"/>
+                        </Grid>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" FontSize="12" Foreground="#526B81"/>
+                        <TextBlock Text="{Binding RaisedUtc}" FontSize="11" Foreground="#788FA1"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="PLC 工程">
+          <Grid Margin="4" ColumnDefinitions="1.45*,1*" ColumnSpacing="12">
+            <Border Background="White" CornerRadius="10" Padding="15">
+              <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="9">
+                <TextBlock Text="45 条 PLC 工程信号 · 点击定位设备地图" FontSize="18" FontWeight="SemiBold" Foreground="#1F4665"/>
+                <TextBlock Grid.Row="1" Text="{Binding EngineeringRegistryState}" FontSize="12" Foreground="#8C683E" TextWrapping="Wrap"/>
+                <Grid Grid.Row="2" ColumnDefinitions="160,90,75,85,95,*" Margin="10,4">
+                  <TextBlock Text="信号" FontWeight="SemiBold" FontSize="11"/>
+                  <TextBlock Grid.Column="1" Text="DM 地址" FontWeight="SemiBold" FontSize="11"/>
+                  <TextBlock Grid.Column="2" Text="工位" FontWeight="SemiBold" FontSize="11"/>
+                  <TextBlock Grid.Column="3" Text="主从" FontWeight="SemiBold" FontSize="11"/>
+                  <TextBlock Grid.Column="4" Text="方向" FontWeight="SemiBold" FontSize="11"/>
+                  <TextBlock Grid.Column="5" Text="说明" FontWeight="SemiBold" FontSize="11"/>
+                </Grid>
+                <ListBox Grid.Row="3" ItemsSource="{Binding PlcSignals}"
+                         SelectedItem="{Binding SelectedPlcSignal, Mode=TwoWay}"
+                         Background="#F4F8FC" BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="160,90,75,85,95,*" Margin="9,10">
+                        <TextBlock Text="{Binding Id}" FontSize="11" FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis" Foreground="#275270"/>
+                        <TextBlock Grid.Column="1" Text="{Binding DmAddress}" FontSize="11"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Station}" FontSize="11"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Host}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="4" Text="{Binding Direction}" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="5" Text="{Binding Purpose}" FontSize="11"
+                                   TextWrapping="Wrap" Foreground="#5C7085"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="16">
+              <Grid RowDefinitions="Auto,Auto,*" RowSpacing="9">
+                <TextBlock Text="工程详情 / 14 项现场验证记录" FontSize="17" FontWeight="SemiBold" Foreground="#1F4665"/>
+                <StackPanel Grid.Row="1" Spacing="5" Padding="10" Background="#EDF5FB">
+                  <TextBlock Text="{Binding SelectedDescription}" FontSize="12" TextWrapping="Wrap" Foreground="#426A88"/>
+                  <TextBlock Text="工程地址仅作查阅；尚非 PLC 实时读值，不能从界面发送生产写入。" FontSize="11"
+                             Foreground="#986438" TextWrapping="Wrap"/>
+                </StackPanel>
+                <ListBox Grid.Row="2" ItemsSource="{Binding PlcGates}"
+                         SelectedItem="{Binding SelectedFieldGate, Mode=TwoWay}"
+                         BorderThickness="0" Background="#F6F8FB">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <StackPanel Background="White" Margin="4" Padding="11" Spacing="5">
+                        <Grid ColumnDefinitions="72,*,85">
+                          <TextBlock Text="{Binding GateId}" FontSize="12" FontWeight="Bold"/>
+                          <TextBlock Grid.Column="1" Text="{Binding Topic}" FontSize="12" TextWrapping="Wrap"/>
+                          <TextBlock Grid.Column="2" Text="{Binding Status}" FontSize="11" Foreground="#A24835"/>
+                        </Grid>
+                        <TextBlock Text="{Binding RequiredEvidence}" TextWrapping="Wrap" Foreground="#71859A" FontSize="11"/>
+                      </StackPanel>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="产品方案与 ROI">
+          <Grid Margin="4" ColumnDefinitions="1*,1*" ColumnSpacing="12">
+            <Border Background="White" CornerRadius="10" Padding="18">
+              <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+                <TextBlock Text="当前已发布产品方案" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
+                <TextBlock Grid.Row="1" Text="{Binding ActiveProductLabel}" FontSize="14" Foreground="#277295" TextWrapping="Wrap"/>
+                <TextBlock Grid.Row="2" Text="{Binding ActiveProductRelease}" FontSize="12" Foreground="#6B8195" TextWrapping="Wrap"/>
+                <ListBox Grid.Row="3" ItemsSource="{Binding ProductStations}" Background="#F5F8FB" BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="90,*,95,110" Margin="10,12">
+                        <TextBlock Text="{Binding StationId}" FontWeight="Bold" FontSize="12"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"/>
+                        <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
+                        <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
+            </Border>
+            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
+              <StackPanel Spacing="12">
+                <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
+                <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#587187" TextWrapping="Wrap"/>
+                <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                         Height="95" BorderThickness="0" Background="#F4F8FC">
+                  <ListBox.ItemsPanel>
+                    <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
+                  </ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <TextBlock Text="{Binding ChannelId}" Margin="10" FontWeight="SemiBold"/>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+                <Border Background="#122D44" Padding="8" CornerRadius="8">
+                  <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="245"/>
+                </Border>
+                <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#65819A" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
+                  <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+                  <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+                  <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+                  <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+                </Grid>
+                <Button Content="校验并持久保存 SIM_ONLY ROI 草稿" Command="{Binding ValidateRoiCommand}"/>
+                <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#96652C" TextWrapping="Wrap"/>
+                <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
+                           TextWrapping="Wrap" Foreground="#637C92"/>
+              </StackPanel>
+            </Border>
+          </Grid>
+        </TabItem>
+      </TabControl>
     </Grid>
   </Grid>
 </Window>
