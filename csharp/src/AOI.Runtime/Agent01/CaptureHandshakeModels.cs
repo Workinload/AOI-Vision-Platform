@@ -111,10 +111,14 @@ public sealed record CaptureHandshakeProgress(
     string? FailureReason,
     long LastSequence)
 {
+    public IReadOnlyDictionary<string, ChannelOutcome> Outcomes { get; init; } =
+        new Dictionary<string, ChannelOutcome>(StringComparer.Ordinal);
+
     public bool HasAllInspections =>
         Ticket.ChannelIds.All(ch => InspectionChannels.Contains(ch, StringComparer.Ordinal));
     public bool ReadyForProductionResult =>
-        ConfirmedCamDone == 2 && HasAllInspections && FailureReason is null;
+        ConfirmedCamDone == 2 && HasAllInspections && FailureReason is null &&
+        Outcomes.Values.All(o => o is ChannelOutcome.Ok or ChannelOutcome.Ng);
 }
 
 public interface ICaptureHandshakeCoordinator
