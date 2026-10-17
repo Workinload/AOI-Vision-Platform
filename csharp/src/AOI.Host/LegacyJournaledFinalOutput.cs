@@ -68,9 +68,13 @@ internal sealed class LegacyJournaledFinalOutput
                 "A7 audit unavailable before final PLC output: " + ex);
             throw new LegacyOutputIncompleteException(token, [], ex);
         }
-        using var deadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        deadline.CancelAfter(LegacyPlcTiming.HistoricalReference.EndResultDeadline);
-        var budget = deadline.Token;
+        // OEM scanner acquisition and OEM final result confirmation are
+        // DIFFERENT time windows. Never spend the 2-second result deadline
+        // on the separate D2099=1/D2100 barcode handshake or A7 intent fsync.
+        // Historical scanner 10s is SIM_ONLY until a real PLC timing survey.
+        using var scannerDeadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        scannerDeadline.CancelAfter(TimeSpan.FromSeconds(10));
+        var scannerBudget = scannerDeadline.Token;
         var confirmed = new List<LegacyOutputStep>(2);
 
         try
@@ -78,7 +82,7 @@ internal sealed class LegacyJournaledFinalOutput
             // D4303 is a private SIM_ONLY request for the external scanner's
             // original D2099=1/D2100 input. No production DM is written yet.
             await _plc.WriteAsync(LegacyPlcShadow.SimOfferExitAddress,
-                [token, (ushort)scenario], budget);
+                [token, (ushort)scenario], scannerBudget);
             // A7 accepts only the actual on-wire scanner request/reply.
             // An invented or merely expected D2099=1 can never be recorded.
             var scanRequest = await _plc.ReadRawObservedAsync(
@@ -87,9 +91,9 @@ internal sealed class LegacyJournaledFinalOutput
                     if (evt.Stage == LegacyFinsObservationStage.ReadbackVerified)
                         _audit.ScannerRequestVerified(auditAttempt, evt.OperationId,
                             evt.RequestBytes.AsSpan(), evt.ResponseBytes.AsSpan());
-                }, budget);
+                }, scannerBudget);
             var words = await _plc.ReadAsync(
-                LegacyPlcShadow.EndBarcodeAddress, 10, budget);
+                LegacyPlcShadow.EndBarcodeAddress, 10, scannerBudget);
             if (scanRequest.Length != 1 || scanRequest[0] != 1)
                 throw new InvalidDataException(
                     "SIM_LEGACY_END_SCANNER_REQUEST_NOT_PRESENT");
@@ -118,6 +122,12 @@ internal sealed class LegacyJournaledFinalOutput
             throw new LegacyOutputIncompleteException(token, confirmed.ToArray(), ex);
         }
 
+        // This clock starts ONLY after the external scanner was confirmed.
+        // The two genuine PLC final words retain the bounded historical
+        // result deadline; neither scanner waiting nor audit.Begin consumes it.
+        using var outputDeadline = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        outputDeadline.CancelAfter(LegacyPlcTiming.HistoricalReference.EndResultDeadline);
+        var budget = outputDeadline.Token;
         while (!budget.IsCancellationRequested)
         {
             if (_safety.IsLatched())
