@@ -163,7 +163,7 @@ class FinsCausalAuditTests(unittest.TestCase):
     def test_missing_raw_packet_cannot_claim_pass(self):
         wire, events, cases = fixture()
         wire[1]["responseHex"] = ""
-        self.check_failure(wire, events, cases, "MISSING_OR_DUPLICATE")
+        self.check_failure(wire, events, cases, "FALSE_SUCCESS")
 
     def test_actual_socket_loopback_request_reply_decoded(self):
         # Parser sanity only: this responder is a unit fixture, NOT AOI Host.
