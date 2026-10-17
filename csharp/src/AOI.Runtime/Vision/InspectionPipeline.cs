@@ -73,14 +73,19 @@ public sealed class TriggeredVisionEngine
     private readonly VisionAssetLedger _ledger;
     private readonly IInspectionProcessor _processor;
     private readonly SemaphoreSlim _processingSlots;
+    private readonly LineScanRowMapping _lineRowMapping;
 
     public TriggeredVisionEngine(VisionAssetLedger ledger, IInspectionProcessor processor,
-        int maxParallelInspections = 2)
+        int maxParallelInspections = 2,
+        LineScanRowMapping lineRowMapping = LineScanRowMapping.DemoEvenOdd)
     {
         _ledger = ledger ?? throw new ArgumentNullException(nameof(ledger));
         _processor = processor ?? throw new ArgumentNullException(nameof(processor));
         if (maxParallelInspections is < 1 or > 16)
             throw new ArgumentOutOfRangeException(nameof(maxParallelInspections));
+        if (!Enum.IsDefined(lineRowMapping))
+            throw new ArgumentOutOfRangeException(nameof(lineRowMapping));
+        _lineRowMapping = lineRowMapping;
         _processingSlots = new SemaphoreSlim(maxParallelInspections, maxParallelInspections);
     }
 
@@ -171,8 +176,8 @@ public sealed class TriggeredVisionEngine
                 return Failure(ChannelOutcome.Error, "INVALID_PHYSICAL_LINE_GROUP", frameId, readyUtc, monotonic);
 
             // Split one physical parent, preserving FrameId and CaptureId for both children.
-            using var even = VisionPixelOps.ExtractInterleavedRows(frame.Pixels, 0);
-            using var odd = VisionPixelOps.ExtractInterleavedRows(frame.Pixels, 1);
+            using var even = VisionPixelOps.ExtractInterleavedRows(frame.Pixels, 0, _lineRowMapping);
+            using var odd = VisionPixelOps.ExtractInterleavedRows(frame.Pixels, 1, _lineRowMapping);
             var inspections = new[]
             {
                 _processor.Inspect(channels[0], even, settingsFor(channels[0])),
@@ -188,7 +193,7 @@ public sealed class TriggeredVisionEngine
                 .ToDictionary(x => x.ChannelId, x => x.Outcome, StringComparer.Ordinal);
             var persisted = _ledger.CaptureLineInterleaved(ticket.Workpiece,
                 ticket.PhysicalDeviceId, frame.Pixels, ticket.AttemptNo, outcomes,
-                ticket.CaptureId, frameId);
+                ticket.CaptureId, frameId, _lineRowMapping);
             return new(ticket, frameId, readyUtc, monotonic,
                 channels.Select((c, i) =>
                 {
