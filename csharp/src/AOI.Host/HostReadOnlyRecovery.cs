@@ -52,10 +52,63 @@ internal static class HostReadOnlyRecovery
         return cmd.ExecuteScalar() as string;
     }
 
-    public static Snapshot Capture(string root)
+    /// <summary>
+    /// First copy the stopped Core's committed SQLite/WAL evidence, then open
+    /// ONLY the temporary copies with SQLite. Windows SQLite may checkpoint
+    /// journal sidecars even for a ReadOnly connection: opening the source
+    /// would change forensic evidence. The source is never opened by SQLite.
+    /// </summary>
+    public static Snapshot Capture(string sourceRoot)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(root);
-        root = Path.GetFullPath(root);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sourceRoot);
+        sourceRoot = Path.GetFullPath(sourceRoot);
+        string masterFolder = Path.Combine(sourceRoot, "master");
+        if (!File.Exists(Path.Combine(masterFolder, "production.db")))
+            throw new FileNotFoundException(
+                "No previous Master production WAL to inspect.");
+
+        string snapshotRoot = Path.Combine(Path.GetTempPath(),
+            "aoi-crash-readonly-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(snapshotRoot);
+        try
+        {
+            // A1's writer lease is exclusively held by a live Host. Never
+            // take an unsynchronized forensic snapshot while that Core runs.
+            string writerLock = Path.Combine(masterFolder,
+                "final-plc-output.db.writer-lock");
+            using var stoppedCoreLease = File.Exists(writerLock)
+                ? new FileStream(writerLock, FileMode.Open, FileAccess.Read, FileShare.None)
+                : null;
+            foreach (string role in new[] { "master", "slave" })
+            {
+                string sourceFolder = Path.Combine(sourceRoot, role);
+                string targetFolder = Path.Combine(snapshotRoot, role);
+                Directory.CreateDirectory(targetFolder);
+                foreach (string fileName in new[] {
+                    "production.db", "sim-full-cycle.db",
+                    "final-plc-output.db", "host-peer-interlock.sqlite" })
+                {
+                    foreach (string extension in new[] { "", "-wal", "-shm" })
+                    {
+                        string source = Path.Combine(sourceFolder, fileName + extension);
+                        if (File.Exists(source))
+                            File.Copy(source, Path.Combine(targetFolder,
+                                fileName + extension), overwrite: false);
+                    }
+                }
+            }
+            // All SQLite checkpointing/SHM housekeeping is confined to these
+            // throwaway copies. The original WAL is byte-for-byte untouched.
+            return CaptureCopiedEvidence(snapshotRoot);
+        }
+        finally
+        {
+            Directory.Delete(snapshotRoot, recursive: true);
+        }
+    }
+
+    private static Snapshot CaptureCopiedEvidence(string root)
+    {
         string master = Path.Combine(root, "master");
         string slave = Path.Combine(root, "slave");
         var identities = new Dictionary<Guid, bool>();
