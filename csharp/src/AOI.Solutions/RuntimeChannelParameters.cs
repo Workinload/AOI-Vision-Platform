@@ -247,6 +247,9 @@ public sealed class PublishedParameterSnapshot
         return new WorkpieceParameterBinding(this, item);
     }
 
+    /// <summary>Read-only release preflight; actual inspection must Bind(workpiece).</summary>
+    public ChannelExecutionParameters DescribeChannel(string channelId) => RequireChannel(channelId);
+
     internal ChannelExecutionParameters RequireChannel(string channelId) =>
         _channels.TryGetValue(channelId, out var channel) ? channel
             : throw new ArgumentException("Unknown channel: " + channelId, nameof(channelId));
