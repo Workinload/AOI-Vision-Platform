@@ -345,4 +345,24 @@ public sealed class ProductionTimingTests
         Assert.That(overdue.Select(d => d.Code), Does.Not.Contain("FRAME_NOT_ARRIVED_BEFORE_DEADLINE"));
     }
 
+
+    [Test]
+    public void FrameArrivedButTooLate_IsDifferentFromFrameNeverArrived()
+    {
+        var item = Item();
+        var journal = Journal();
+        var capture = Guid.NewGuid();
+        var frame = Guid.NewGuid();
+        journal.Append(Capture(item, TimingStage.PlcCaptureRequestObserved, capture));
+        Thread.Sleep(25);
+        journal.Append(Capture(item, TimingStage.FrameArrived, capture, frame));
+        var timeline = new ProductionTimelineReader(_root)
+            .Query(new TimingFilter(item.WorkpieceId, CaptureId: capture));
+        var finding = ProductionTimingAnalyzer.Diagnose(timeline.Events,
+            evaluatedUtc: DateTimeOffset.UtcNow,
+            frameDeadline: TimeSpan.FromMilliseconds(1));
+        Assert.That(finding.Select(d => d.Code), Does.Contain("FRAME_ARRIVED_AFTER_DEADLINE"));
+        Assert.That(finding.Select(d => d.Code), Does.Not.Contain("FRAME_NOT_ARRIVED_BEFORE_DEADLINE"));
+    }
+
 }
