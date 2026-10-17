@@ -1,5 +1,6 @@
 using AOI.Contracts;
 using AOI.Domain;
+using AOI.Diagnostics;
 using AOI.Runtime;
 using AOI.Runtime.Plc;
 using AOI.Runtime.Plc.Mechanics;
@@ -220,8 +221,13 @@ public static class SimFullHost
         var interlock = new HostPeerInterlock(folder);
         using var outputJournal = legacyFins is null ? null :
             new FinalPlcOutputJournal(Path.Combine(folder, "final-plc-output.db"));
+        // Only the Master owns actual final-output audit evidence. This
+        // append-only A7 WAL is supplementary to A1's exclusive write claims.
+        var finalAudit = outputJournal is null ? null :
+            new FinalOutputAuditJournal(folder);
         var journaledOutput = outputJournal is null ? null :
-            new LegacyJournaledFinalOutput(legacyFins!, outputJournal, interlock);
+            new LegacyJournaledFinalOutput(legacyFins!, outputJournal,
+                interlock, finalAudit!);
         _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
