@@ -138,8 +138,13 @@ class FinsCausalAuditTests(unittest.TestCase):
         # Swap raw datagrams and their metadata but retain ordered receipt sequence.
         relevant = [i for i, x in enumerate(wire) if x["isWrite"] and x["address"] in (1016, 2099)]
         left, right = relevant
-        for key in ("address", "values", "requestHex", "responseHex"):
-            wire[left][key], wire[right][key] = wire[right][key], wire[left][key]
+        # Build two legitimately matched FINS request/reply pairs with the
+        # original SID at each sequence; reversing the actual write order
+        # must fail *business chronology*, not a malformed packet check.
+        for i, address, value in ((left, 2099, 2), (right, 1016, 1)):
+            packet, reply = sample_packet(True, address, (value,), wire[i]["sid"])
+            wire[i].update(address=address, values=[value],
+                           requestHex=packet.hex(), responseHex=reply.hex())
         self.check_failure(wire, events, cases, "FINAL_WIRE_ORDER")
 
     def test_sid_mutation_denied_even_if_metadata_claims_success(self):
