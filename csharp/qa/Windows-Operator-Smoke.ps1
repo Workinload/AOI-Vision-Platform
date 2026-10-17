@@ -566,7 +566,17 @@ public static class AoiWin {
         } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
     }
     $failed=@($script:checks | Where-Object { $_.status -eq 'FAIL' })
-    $exitCode=if($failed.Count -eq 0){0}else{1}
+    # The hosted runner may have an interactive HWND yet no way to render an
+    # operator-size desktop. UIA TabItem.Selected + screenshots at 1024x768
+    # are NOT proof that every 1080p page is visibly operable.
+    $unverified1080=$TryCi1080p -and @($script:checks | Where-Object {
+        $_.step -eq 'native_desktop_resolution' -and $_.status -ne 'PASS'
+    }).Count -gt 0
+    if($failed.Count -gt 0) { $exitCode=1 }
+    elseif($unverified1080) {
+        Record-Check 'operator_1080p_visible_pages' 'NOT_VERIFIED' 'Windows runner cannot display the required 1920x1080 native operator page; GUI mouse+ROI tests passed but visual acceptance remains pending'
+        $exitCode=3
+    } else { $exitCode=0 }
 } catch {
     $script:lastFailure=$_.Exception.ToString()
     Record-Check 'fatal' 'FAIL' $_.Exception.Message
@@ -578,7 +588,7 @@ public static class AoiWin {
     $report=[ordered]@{
         schema='AOI.Agent05.WindowsOperatorSmoke/1'
         timestampUtc=[DateTime]::UtcNow.ToString('o')
-        result=if($exitCode -eq 0){'PASS_INTERACTIVE_WINDOWS'}else{'FAIL_OR_UNVERIFIED'}
+        result=if($exitCode -eq 0){'PASS_INTERACTIVE_WINDOWS'}elseif($exitCode -eq 3){'PARTIAL_OPERATOR_GUI_1080P_NOT_VERIFIED'}else{'FAIL_OR_UNVERIFIED'}
         baseBranch='migration/csharp-avalonia-20261016'
         packageZipSha256=$script:sourceHash
         evidenceRoot=$script:evidence
@@ -645,6 +655,8 @@ public static class AoiWin {
         }
     }
     Write-Host ('A5_WINDOWS_SMOKE_REPORT='+ (Join-Path $script:evidence 'operator-smoke-report.json'))
-    if($exitCode -eq 0){Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS'}else{Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_FAIL'}
+    if($exitCode -eq 0) { Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS' }
+    elseif($exitCode -eq 3) { Write-Host 'A5_WINDOWS_DESKTOP_PARTIAL_REAL_GUI_AND_ROI_PASS_1080P_NOT_VERIFIED' }
+    else { Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_FAIL' }
 }
 exit $exitCode
