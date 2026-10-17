@@ -236,37 +236,56 @@ function Dump-UIA([IntPtr]$Window) {
     }
 }
 function Find-UIA([Windows.Automation.AutomationElement]$Root,[Windows.Automation.ControlType]$Type,[string]$Name) {
-    $all=Elements $Root $Type
-    foreach($el in $all) {
-        if($el.Current.Name -eq $Name) { return $el }
-    }
-    Dump-UIA $Root.Current.NativeWindowHandle
-    throw ("UI Automation cannot find visible "+$Name)
-}
-function Click-Tab([IntPtr]$Window,[string]$Name) {
-    $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-    $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) $Name
-    $pattern=$tab.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern)
-    $method='MOUSE'
-    if(-not $pattern.Current.IsSelected) {
+    $filter=[Windows.Automation.AndCondition]::new(@(
+        [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::ControlTypeProperty,$Type),
+        [Windows.Automation.PropertyCondition]::new([Windows.Automation.AutomationElement]::NameProperty,$Name)
+    ))
+    for($attempt=1;$attempt -le 4;$attempt++) {
         try {
-            Click-Element $Window $tab
-        } catch {
-            # Small GitHub desktop hides portions of the oversized window. The
-            # native UIAutomation selection is a real Avalonia control action,
-            # not a mocked change to Core state; report it honestly as UIA.
-            Write-Host ('A5_TAB_MOUSE_UNAVAILABLE '+$Name+' '+$_.Exception.Message)
+            $item=$Root.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
+            if($null -ne $item) {return $item}
+        } catch {if($attempt -eq 4){throw}}
+        Start-Sleep -Milliseconds (180*$attempt)
+    }
+    throw ("UIA element missing: "+$Name)
+}
+function Click-Workspace([IntPtr]$Window,[int]$Index) {
+    # Merged Agent04 (Issue #87) replaced five tabs with SIX sidebar buttons.
+    $names=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI')
+    $headers=@('生产总览','整机设备地图','11 路图集','历史与报警','PLC 工程','产品方案与 ROI')
+    if($Index -lt 0 -or $Index -ge $names.Count){throw "Invalid workspace index $Index"}
+    $rect=New-Object AoiRect
+    if(-not [AoiWin]::GetWindowRect($Window,[ref]$rect)){throw 'Window disappeared'}
+    $area=[Windows.Forms.SystemInformation]::WorkingArea
+    [void][AoiWin]::MoveWindow($Window,$area.Left+6,$area.Top+6,
+          $rect.Right-$rect.Left,$rect.Bottom-$rect.Top,$true)
+    [void][AoiWin]::SetForegroundWindow($Window)
+    Start-Sleep -Milliseconds 220
+    $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
+    $name=$names[$Index]
+    $buttons=Elements $root ([Windows.Automation.ControlType]::Button)
+    $target=$null
+    foreach($button in $buttons) {
+        if($button.Current.Name -like ('*'+$name) -and
+           $button.Current.BoundingRectangle.Left -lt $area.Left+280) {
+            $target=$button
+            break
         }
     }
+    if($null -eq $target){throw ("Left navigation button not exposed: "+$name)}
+    $method='MOUSE'
+    Click-Element $Window $target
+    $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
+    $tab=Find-UIA $root ([Windows.Automation.ControlType]::TabItem) $headers[$Index]
+    $pattern=$tab.GetCurrentPattern([Windows.Automation.SelectionItemPattern]::Pattern)
     if(-not $pattern.Current.IsSelected) {
-        $method='UIA_SELECT'
-        # Control genuinely exists in Win32 Automation; Select() activates
-        # its real Avalonia TabItem even if the tab header is clipped.
-        $pattern.Select()
-        Start-Sleep -Milliseconds 360
+        $method='UIA_INVOKE'
+        $invoke=$target.GetCurrentPattern([Windows.Automation.InvokePattern]::Pattern)
+        $invoke.Invoke()
+        Start-Sleep -Milliseconds 350
     }
-    if(-not $pattern.Current.IsSelected) { throw 'Native Windows TabItem failed to activate '+$Name }
-    Write-Host ('A5_TAB_ACTIVATED method='+$method+' name='+$Name)
+    if(-not $pattern.Current.IsSelected){throw ("Operator nav failed: "+$name)}
+    Write-Host ("A5_WORKSPACE_SELECTED index={0} method={1} page={2}" -f $Index,$method,$headers[$Index])
     return $method
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
