@@ -37,6 +37,9 @@ public sealed class OperatorWorkspaceTopologyTests
             "master", "READ", "WORD", "Fixture test", "0=off", "UNKNOWN", "", false);
         Assert.That(OperatorWorkspaceTopology.ResolveSignalChannels(signal.DmAddress), Is.Empty);
         Assert.That(OperatorWorkspaceTopology.ResolveSignalStation(signal), Is.EqualTo("ST05"));
+        // Canonical camera DM outranks a contradictory station label.
+        Assert.That(OperatorWorkspaceTopology.ResolveSignalStation("D1011", "ST03"),
+            Is.EqualTo("ST05"));
         Assert.That(OperatorWorkspaceTopology.ResolveSignalStation(signal with { StationId = "UNKNOWN" }), Is.Null);
         Assert.Throws<ArgumentException>(() => OperatorWorkspaceTopology.Require("ST99"));
     }
