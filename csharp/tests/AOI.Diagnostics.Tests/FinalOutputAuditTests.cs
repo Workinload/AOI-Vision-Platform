@@ -71,8 +71,12 @@ public sealed class FinalOutputAuditTests
     [TestCase(FinalOutputAuditScenario.BarcodeMismatch, FinalDisposition.Reject, 2099, 4, 1016, 2)]
     public void BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(
         FinalOutputAuditScenario scenario, FinalDisposition disposition,
-        ushort firstAddress, ushort firstValue, ushort secondAddress, ushort secondValue)
+        int firstAddressRaw, int firstValueRaw, int secondAddressRaw, int secondValueRaw)
     {
+        ushort firstAddress = checked((ushort)firstAddressRaw);
+        ushort firstValue = checked((ushort)firstValueRaw);
+        ushort secondAddress = checked((ushort)secondAddressRaw);
+        ushort secondValue = checked((ushort)secondValueRaw);
         var item = Workpiece();
         var j = Journal();
         Guid message = Guid.NewGuid();
