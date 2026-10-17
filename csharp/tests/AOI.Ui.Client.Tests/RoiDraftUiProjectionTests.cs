@@ -23,7 +23,7 @@ public sealed class RoiDraftUiProjectionTests
             MachineRole.Master, DateTimeOffset.UtcNow);
         Assert.That(projection.RoiDrafts, Is.Not.Null);
         Assert.That(projection.RoiDrafts!.Single().ChannelId, Is.EqualTo("CH06"));
-        Assert.That(projection.RoiDrafts.Single().Revision, Is.EqualTo(1));
+        Assert.That(projection.RoiDrafts!.Single().Revision, Is.EqualTo(1));
         Assert.That(projection.ActiveProduct, Is.Null);
     }
 
