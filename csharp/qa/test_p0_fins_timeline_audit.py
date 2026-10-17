@@ -160,6 +160,36 @@ class FinsCausalAuditTests(unittest.TestCase):
         wire, events, cases = fixture(repeat_poll=True)
         self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
 
+    def test_area_camera_late_camdone_fails_actual_utc_deadline(self):
+        wire, events, cases = fixture()
+        ack = next(x for x in wire if x["isWrite"] and x["address"] == 1011)
+        for row in wire:
+            if row["sequence"] >= ack["sequence"]:
+                row["receivedUtc"] = "2026-10-17T08:00:12+00:00"
+        self.check_failure(wire, events, cases, "CAM_ACK_WINDOW_EXCEEDED")
+        cases[0]["captureDeadlineMs"] = 20000
+        self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
+
+    def test_line_camera_has_separate_twenty_second_budget(self):
+        wire, events, cases = fixture(line=True)
+        ack = next(x for x in wire if x["isWrite"] and x["address"] == 1013)
+        for row in wire:
+            if row["sequence"] >= ack["sequence"]:
+                row["receivedUtc"] = "2026-10-17T08:00:12+00:00"
+        self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
+        cases[0]["captureDeadlineMs"] = 10000
+        self.check_failure(wire, events, cases, "CAM_ACK_WINDOW_EXCEEDED")
+
+    def test_final_two_fins_writes_must_fit_independent_end_budget(self):
+        wire, events, cases = fixture(scenario="NORMAL_GOOD")
+        second = next(x for x in wire if x["isWrite"] and x["address"] == 2099)
+        for row in wire:
+            if row["sequence"] >= second["sequence"]:
+                row["receivedUtc"] = "2026-10-17T08:00:03+00:00"
+        self.check_failure(wire, events, cases, "FINAL_WINDOW_EXCEEDED")
+        cases[0]["endDeadlineMs"] = 3500
+        self.assertEqual(verify_evidence(wire, events, cases)["end_sequences"], 1)
+
     def test_first_camdone_readback_stale_value_is_not_good(self):
         wire, events, cases = fixture()
         row = wire[3]
