@@ -13,6 +13,7 @@ import re
 import sqlite3
 import subprocess
 import sys
+import tempfile
 import time
 
 from p0_fins_timeline_audit import AuditFailure, demand, load_records, value, verify_evidence
@@ -96,10 +97,15 @@ def main(argv=None):
                 args.append("--repeat-barcode")
             # This existing script launches actual vPLC, Master/Slave Core and
             # two UI OS processes, validates SQL/WAL/PNG and cleans up PIDs.
-            with (root / "a5-five-process-driver.log").open("w", encoding="utf-8") as log:
+            # e2e_sim_full.py correctly REFUSES a nonempty evidence root.
+            # Keep this launcher log outside that root until the real child
+            # process run finishes; do not contaminate its clean-start WAL.
+            with tempfile.TemporaryFile(mode="w+t", encoding="utf-8") as log:
                 run = subprocess.run(args, cwd=source, env=env, stdout=log,
                                      stderr=subprocess.STDOUT, timeout=a.timeout + 40)
-            output = (root / "a5-five-process-driver.log").read_text(encoding="utf-8")
+                log.seek(0)
+                output = log.read()
+            (root / "a5-five-process-driver.log").write_text(output, encoding="utf-8")
             demand("SIM_FULL_FIVE_PROCESSES_LAUNCHED" in output and
                    len(re.findall(r"SIM_FULL_PROCESS_STARTED name=", output)) == 5,
                    "NOT_VERIFIED", "Five genuine AOI child process launches not proven")
