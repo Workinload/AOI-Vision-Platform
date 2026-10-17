@@ -393,7 +393,23 @@ def main():
                     acknowledgements >= 13 and fins_read(4005) == target):
                     break
             elif n == args.count and m == target and s == args.count * 6 and acknowledgements == args.count * 6:
-                if fins_read(4005) == target:
+                if args.flip_token and args.legacy_shadow:
+                    # On a blocked physical FIFO, trailing pieces still have
+                    # station events in flight. Do not assume that a reached
+                    # exit count also means all camera frames have arrived.
+                    # The reversed final FINS exchange must be fully applied,
+                    # and a Master HOLD must already be durable.
+                    master_results = scalar(
+                        evidence / 'master/production.db',
+                        'SELECT COUNT(*) FROM channel_results')
+                    master_holds = scalar(
+                        evidence / 'master/production.db',
+                        'SELECT COUNT(*) FROM workpiece_holds')
+                    if (master_results == args.count * 11 and
+                        master_holds == 1 and fins_read(4005) == target and
+                        fins_read(2099) == 4 and fins_read(1016) == 2):
+                        break
+                elif fins_read(4005) == target:
                     break
             time.sleep(0.15)
         else:
