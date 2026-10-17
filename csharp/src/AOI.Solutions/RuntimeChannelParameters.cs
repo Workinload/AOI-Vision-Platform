@@ -60,7 +60,8 @@ public sealed record InspectionAlgorithmTarget(
     internal InspectionAlgorithmTarget Canonical() => this with
     {
         NumericParameters = RecipeParameterRules.SortedNumbers(NumericParameters),
-        TextParameters = new SortedDictionary<string, string>(TextParameters, StringComparer.Ordinal)
+        TextParameters = new SortedDictionary<string, string>(
+            TextParameters.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal), StringComparer.Ordinal)
     };
 }
 
@@ -85,7 +86,8 @@ internal static class RecipeParameterRules
 
     internal static IReadOnlyDictionary<string, double> SortedNumbers(
         IReadOnlyDictionary<string, double> source) =>
-        new SortedDictionary<string, double>(source, StringComparer.Ordinal);
+        new SortedDictionary<string, double>(
+            source.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal), StringComparer.Ordinal);
 
     internal static IReadOnlyDictionary<string, double> FreezeNumbers(
         IReadOnlyDictionary<string, double> source) =>
