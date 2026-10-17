@@ -165,14 +165,42 @@ function Elements([Windows.Automation.AutomationElement]$Root,[Windows.Automatio
     return $Root.FindAll([Windows.Automation.TreeScope]::Descendants,$filter)
 }
 function Click-Element([IntPtr]$Window,[Windows.Automation.AutomationElement]$Element) {
-    $box=$Element.Current.BoundingRectangle
-    if($box.Width -lt 4 -or $box.Height -lt 4 -or $Element.Current.IsOffscreen) {
-        throw ("Element not visible for real mouse click: "+$Element.Current.Name)
+    # Win2025 hosted desktop is only ~920x664; Avalonia's natural 1580x940
+    # window puts its entire TabControl/ROI below or to the right of the monitor.
+    # Pan THAT TEST WINDOW, never resize a control or forge UIA state.
+    $bounds=$Element.Current.BoundingRectangle
+    if($bounds.Width -lt 4 -or $bounds.Height -lt 4) {
+        throw ("Element has no click geometry: "+$Element.Current.Name)
+    }
+    $area=[Windows.Forms.SystemInformation]::WorkingArea
+    $centerX=[int]($bounds.Left+$bounds.Width/2)
+    $centerY=[int]($bounds.Top+$bounds.Height/2)
+    $dx=0; $dy=0
+    $marginX=60; $marginTop=45; $marginBottom=55
+    if($centerX -gt $area.Right-$marginX) { $dx=($area.Right-$marginX)-$centerX }
+    elseif($centerX -lt $area.Left+$marginX) { $dx=($area.Left+$marginX)-$centerX }
+    if($centerY -gt $area.Bottom-$marginBottom) { $dy=($area.Bottom-$marginBottom)-$centerY }
+    elseif($centerY -lt $area.Top+$marginTop) { $dy=($area.Top+$marginTop)-$centerY }
+    if($dx -ne 0 -or $dy -ne 0) {
+        $r=New-Object AoiRect
+        if(-not [AoiWin]::GetWindowRect($Window,[ref]$r)) { throw 'Native window disappeared during operator click' }
+        if(-not [AoiWin]::MoveWindow($Window,($r.Left+$dx),($r.Top+$dy),($r.Right-$r.Left),($r.Bottom-$r.Top),$true)) {
+            throw 'Cannot pan oversized Avalonia window into actual desktop'
+        }
+        Write-Host ("A5_WINDOW_PAN dx={0} dy={1} target={2}" -f $dx,$dy,$Element.Current.Name)
+        Start-Sleep -Milliseconds 400
+    }
+    $bounds=$Element.Current.BoundingRectangle
+    $centerX=[int]($bounds.Left+$bounds.Width/2)
+    $centerY=[int]($bounds.Top+$bounds.Height/2)
+    if($centerX -lt $area.Left+5 -or $centerX -gt $area.Right-5 -or
+        $centerY -lt $area.Top+5 -or $centerY -gt $area.Bottom-5) {
+        throw ("Target remains outside real Windows desktop: "+$Element.Current.Name)
     }
     [void][AoiWin]::SetForegroundWindow($Window)
-    Start-Sleep -Milliseconds 180
-    [AoiWin]::Click([int]($box.Left+$box.Width/2),[int]($box.Top+$box.Height/2))
-    Start-Sleep -Milliseconds 320
+    Start-Sleep -Milliseconds 150
+    [AoiWin]::Click($centerX,$centerY)
+    Start-Sleep -Milliseconds 340
 }
 function Dump-UIA([IntPtr]$Window) {
     $key=$Window.ToInt64().ToString()
@@ -201,7 +229,7 @@ function Dump-UIA([IntPtr]$Window) {
 function Find-UIA([Windows.Automation.AutomationElement]$Root,[Windows.Automation.ControlType]$Type,[string]$Name) {
     $all=Elements $Root $Type
     foreach($el in $all) {
-        if($el.Current.Name -eq $Name -and -not $el.Current.IsOffscreen) { return $el }
+        if($el.Current.Name -eq $Name) { return $el }
     }
     Dump-UIA $Root.Current.NativeWindowHandle
     throw ("UI Automation cannot find visible "+$Name)
@@ -215,21 +243,40 @@ function Click-Tab([IntPtr]$Window,[string]$Name) {
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-    $items=Elements $root ([Windows.Automation.ControlType]::ListItem)
-    foreach($el in $items) {
-        if(-not $el.Current.IsOffscreen -and $el.Current.Name -match ('(^|[^A-Z0-9])'+$Id+'([^A-Z0-9]|$)')) {
-            Click-Element $Window $el
-            return
+    # Avalonia currently names each ListItem "AOI.Ui.Avalonia.ChannelTile";
+    # identify by its REAL child Text (CH06/CH02), then click its ListItem ancestor.
+    $texts=Elements $root ([Windows.Automation.ControlType]::Text)
+    $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
+    $wr=New-Object AoiRect
+    if(-not [AoiWin]::GetWindowRect($Window,[ref]$wr)) { throw 'Missing operator desktop window' }
+    foreach($el in $texts) {
+        if($el.Current.Name -ne $Id) { continue }
+        $ancestor=$walker.GetParent($el)
+        for($depth=0;$ancestor -ne $null -and $depth -lt 6;$depth++) {
+            if($ancestor.Current.ControlType -eq [Windows.Automation.ControlType]::ListItem) {
+                # Only the LEFT device map, not the right PLC table.
+                if($ancestor.Current.BoundingRectangle.Left -le $wr.Left+($wr.Right-$wr.Left)*0.65) {
+                    Click-Element $Window $ancestor
+                    Start-Sleep -Milliseconds 300
+                    $descriptions=Elements $root ([Windows.Automation.ControlType]::Text)
+                    if(-not @($descriptions | Where-Object { $_.Current.Name -like ($Id+' ·*') }).Count) {
+                        throw ("Map click did not update selected-channel description to "+$Id)
+                    }
+                    return
+                }
+                break
+            }
+            $ancestor=$walker.GetParent($ancestor)
         }
     }
-    throw ("Cannot find click-target ListItem for "+$Id+"; request AutomationProperties.Name from Agent04")
+    throw ("Map channel Text/ListItem unavailable for "+$Id)
 }
 function Click-RoiSave([IntPtr]$Window) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
     $edits=Elements $root ([Windows.Automation.ControlType]::Edit)
     $visible=@()
     foreach($e in $edits) {
-        if(-not $e.Current.IsOffscreen -and $e.Current.BoundingRectangle.Width -gt 25) { $visible+= $e }
+        if($e.Current.BoundingRectangle.Width -gt 25) { $visible+= $e }
     }
     if($visible.Count -lt 4) { throw 'Four ROI edit controls are not exposed to Windows UI Automation' }
     $fields=@($visible | Sort-Object { $_.Current.BoundingRectangle.Top }, { $_.Current.BoundingRectangle.Left } | Select-Object -Last 4)
@@ -248,7 +295,7 @@ function Click-RoiSave([IntPtr]$Window) {
     }
     $buttons=Elements $root ([Windows.Automation.ControlType]::Button)
     foreach($button in $buttons) {
-        if($button.Current.Name -like '*校验并保存本机 ROI 草稿*' -and -not $button.Current.IsOffscreen) {
+        if($button.Current.Name -like '*校验并保存本机 ROI 草稿*') {
             Click-Element $Window $button
             return
         }
@@ -278,6 +325,7 @@ public static class AoiWin {
     [DllImport("user32.dll")] public static extern bool IsWindowVisible(IntPtr h);
     [DllImport("user32.dll")] public static extern bool GetWindowRect(IntPtr h,out AoiRect r);
     [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);
+    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr h,int x,int y,int w,int ht,bool repaint);
     [DllImport("user32.dll")] private static extern bool SetCursorPos(int x,int y);
     [DllImport("user32.dll")] private static extern void mouse_event(uint flags,uint dx,uint dy,uint data,UIntPtr extra);
     public static void Click(int x,int y) {
