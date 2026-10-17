@@ -110,6 +110,14 @@ jobs:
           path: csharp/.artifacts/dist/AOI_SIM11_Windows/
           retention-days: 14
           if-no-files-found: error
+      - name: Upload native Windows operator screen and click evidence
+        if: always() && matrix.os == 'windows-2025'
+        uses: actions/upload-artifact@v4
+        with:
+          name: AOI_Agent05_Windows_Desktop_Evidence-${{ github.run_id }}
+          path: csharp/.artifacts/windows-operator-smoke/
+          retention-days: 14
+          if-no-files-found: warn
       - name: Save logs on failure and success
         if: always()
         uses: actions/upload-artifact@v4
