@@ -524,11 +524,31 @@ public static class AoiWin {
     Screenshot $masterWindow 'master-start'
     Screenshot $slaveWindow 'slave-start'
     Record-Check 'desktop_screenshots' 'PASS' 'Real visible Windows desktop captures saved separately for both GUI processes'
+    # ACTUAL operator-facing sidebar navigation, six pages on both Windows EXEs.
+    $allPages=@('生产总览','整机设备地图','11 路图集','历史 / HOLD','PLC 工程','产品方案 / ROI')
+    for($i=0;$i -lt $allPages.Count;$i++) {
+        try {
+            $method=Click-Workspace $masterWindow $i
+            Screenshot $masterWindow ('master-workspace-'+($i+1))
+            Record-Check ('master_workspace_'+($i+1)) 'PASS' ($allPages[$i]+' selected via '+$method)
+        } catch {
+            Record-Check ('master_workspace_'+($i+1)) 'FAIL' $_.Exception.Message
+        }
+    }
+    for($i=0;$i -lt $allPages.Count;$i++) {
+        try {
+            $method=Click-Workspace $slaveWindow $i
+            Screenshot $slaveWindow ('slave-workspace-'+($i+1))
+            Record-Check ('slave_workspace_'+($i+1)) 'PASS' ($allPages[$i]+' selected via '+$method)
+        } catch {
+            Record-Check ('slave_workspace_'+($i+1)) 'FAIL' $_.Exception.Message
+        }
+    }
+    # New A4 operator workbench's page six has the real Core-backed ROI editor.
+    # Both saves must pass the local-owner SQLite-backed Core IPC readback.
     try {
-        # Equipment map is independent of the separate PLC tab; verify ROI even if
-        # current Avalonia TabControl has inaccessible/collapsed headers.
+        [void](Click-Workspace $masterWindow 5)
         Click-LocalChannel $masterWindow 'CH06'
-        Start-Sleep -Milliseconds 900
         Screenshot $masterWindow 'master-selected-CH06'
         Click-RoiSave $masterWindow
         Wait-Until {
@@ -536,44 +556,32 @@ public static class AoiWin {
             return (@($fresh.roiDrafts | Where-Object {
                 $_.channelId -eq 'CH06' -and $_.revision -ge 1 -and
                 [Math]::Abs($_.x-0.15) -lt 0.000001 -and
-                [Math]::Abs($_.width-0.70) -lt 0.000001
+                [Math]::Abs($_.y-0.15) -lt 0.000001 -and
+                [Math]::Abs($_.width-0.70) -lt 0.000001 -and
+                [Math]::Abs($_.height-0.70) -lt 0.000001
             }).Count -ge 1)
-        } 'real UI click -> persisted Core ROI rev1' 15
-        Record-Check 'click_channel_CH06' 'PASS' 'Actual GUI selection proven by persisted Master-owned CH06 ROI'
+        } 'Master new GUI -> Core CH06 ROI revision' 15
         Screenshot $masterWindow 'master-roi-saved'
-        Record-Check 'roi_saved_by_real_click' 'PASS' 'Win32 mouse+ROI field edits -> Core snapshot confirms durable CH06 revision'
-    } catch { Record-Check 'roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
+        Record-Check 'master_new_workspace_roi_saved' 'PASS' 'Mouse selected CH06, edited 4 GUI fields and persisted Master-owned ROI revision'
+    } catch { Record-Check 'master_new_workspace_roi_saved' 'FAIL' $_.Exception.Message }
     try {
+        [void](Click-Workspace $slaveWindow 5)
         Click-LocalChannel $slaveWindow 'CH02'
-        Start-Sleep -Milliseconds 900
         Screenshot $slaveWindow 'slave-selected-CH02'
         Click-RoiSave $slaveWindow
         Wait-Until {
             $fresh=Get-CoreSnapshot 19622
             return (@($fresh.roiDrafts | Where-Object {
                 $_.channelId -eq 'CH02' -and $_.revision -ge 1 -and
+                [Math]::Abs($_.x-0.15) -lt 0.000001 -and
                 [Math]::Abs($_.y-0.15) -lt 0.000001 -and
+                [Math]::Abs($_.width-0.70) -lt 0.000001 -and
                 [Math]::Abs($_.height-0.70) -lt 0.000001
             }).Count -ge 1)
-        } 'Slave ROI saved from real GUI button into its own Core' 15
-        Record-Check 'click_slave_channel_CH02' 'PASS' 'Actual GUI selection proven by persisted Slave-owned CH02 ROI'
+        } 'Slave new GUI -> Core CH02 ROI revision' 15
         Screenshot $slaveWindow 'slave-roi-saved'
-        Record-Check 'slave_roi_saved_by_real_click' 'PASS' 'Slave GUI editing -> Slave Core persisted CH02 revision'
-    } catch { Record-Check 'slave_roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
-    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
-        try {
-            $method=Click-Tab $masterWindow $page
-            Screenshot $masterWindow ('tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
-            Record-Check ('click_tab_'+$page) 'PASS' ('Real Avalonia tab selected via '+$method+'; UIAutomation selected-state confirmed')
-        } catch { Record-Check ('click_tab_'+$page) 'FAIL' $_.Exception.Message }
-    }
-    foreach($page in @('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型')) {
-        try {
-            $method=Click-Tab $slaveWindow $page
-            Screenshot $slaveWindow ('slave-tab-'+([Array]::IndexOf(@('11 路通道监控','45 条 PLC 工程映射','14 项现场验证门禁','HOLD / 异常','产品方案 / 换型'),$page)+1))
-            Record-Check ('slave_click_tab_'+$page) 'PASS' ('Slave Avalonia tab selected via '+$method+'; UIAutomation selected-state confirmed')
-        } catch { Record-Check ('slave_click_tab_'+$page) 'FAIL' $_.Exception.Message }
-    }
+        Record-Check 'slave_new_workspace_roi_saved' 'PASS' 'Mouse selected CH02, edited 4 GUI fields and persisted Slave-owned ROI revision'
+    } catch { Record-Check 'slave_new_workspace_roi_saved' 'FAIL' $_.Exception.Message }
     $failed=@($script:checks | Where-Object { $_.status -eq 'FAIL' })
     # The hosted runner may have an interactive HWND yet no way to render an
     # operator-size desktop. UIA TabItem.Selected + screenshots at 1024x768
