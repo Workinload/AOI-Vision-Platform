@@ -94,6 +94,10 @@ internal sealed class LegacyPhysicalCapture
         var frameTicket = new VisionTicket(item, trigger.PhysicalDeviceId,
             trigger.CaptureId, trigger.AttemptNo);
         _captures.ExpectCapture(ticket);
+        _timeline.Append(new TimingObservation(item, TimingStage.HardwareTriggerObserved,
+            trigger.CaptureId, trigger.PhysicalDeviceId, AttemptNo: trigger.AttemptNo,
+            Status: "SIM_ONLY_SENSOR_EDGE",
+            Details: "Physical sensor event delivered to owning Core; not field-certified."));
         FrameRead? read = null;
         bool valid = false;
 
@@ -149,7 +153,25 @@ internal sealed class LegacyPhysicalCapture
         ushort? ack = _captures.Get(trigger.CaptureId).PendingCamDone;
         if (ack is not (2 or 3))
             throw new InvalidDataException("Camera completion without attributable frame or request.");
-        await _plc.WriteAsync(dm, [ack.Value], ct);
+        var write = await _plc.WriteObservedAsync(dm, ack.Value, sent =>
+        {
+            // Record the operation SID BEFORE the datagram is sent; this can
+            // never masquerade as an acknowledged FINS request.
+            _timeline.Append(new TimingObservation(item, TimingStage.CamDoneSent,
+                trigger.CaptureId, trigger.PhysicalDeviceId,
+                AttemptNo: trigger.AttemptNo,
+                OperationId: sent.OperationId, FinsSid: sent.Sid,
+                PlcDmAddress: trigger.PlcAddress, PlcValue: ack.Value,
+                Status: "FINS_DATAGRAM_PENDING"));
+        }, ct);
+        if (!write.ReplyVerified || write.AcknowledgedUtc is null)
+            throw new InvalidDataException("Unacknowledged camera completion is not a valid capture.");
+        _timeline.Append(new TimingObservation(item, TimingStage.CamDoneAcknowledged,
+            trigger.CaptureId, trigger.PhysicalDeviceId,
+            AttemptNo: trigger.AttemptNo,
+            OperationId: write.OperationId, FinsSid: write.Sid,
+            PlcDmAddress: trigger.PlcAddress, PlcValue: ack.Value,
+            Status: "ACTUAL_FINS_UDP_ACK"));
         var feedback = await _plc.ReadAsync(dm, 1, ct);
         if (feedback.Length != 1 || feedback[0] != ack.Value)
             throw new InvalidDataException("Camera FINS response/readback not verified.");
@@ -172,6 +194,10 @@ internal sealed class LegacyPhysicalCapture
             return;
         }
 
+        _timeline.Append(new TimingObservation(item, TimingStage.InspectionStarted,
+            trigger.CaptureId, trigger.PhysicalDeviceId,
+            AttemptNo: trigger.AttemptNo, FrameId: read!.Frame!.FrameId,
+            Status: "INSPECTOR_STARTED_AFTER_FINS_ACK"));
         var output = await _inspection.InspectAndPersistAsync(frameTicket, read!,
             c =>
             {
