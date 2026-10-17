@@ -285,10 +285,11 @@ public sealed class LegacyFinsLoopbackClient
         ImmutableArray<byte> actualRequest = ImmutableArray.CreateRange(request);
         var emptyReply = ImmutableArray<byte>.Empty;
         void Emit(LegacyFinsObservationStage stage,
-            ImmutableArray<byte> actualReply = default, string? detail = null)
+            ImmutableArray<byte> actualReply = default, string? detail = null,
+            DateTimeOffset? occurredAt = null)
         {
             onObservation(new LegacyFinsDatagramObservation(
-                operationId, sid, address, write, stage, DateTimeOffset.UtcNow,
+                operationId, sid, address, write, stage, occurredAt ?? DateTimeOffset.UtcNow,
                 Stopwatch.GetTimestamp(), actualRequest,
                 actualReply.IsDefault ? emptyReply : actualReply, detail));
         }
@@ -297,7 +298,9 @@ public sealed class LegacyFinsLoopbackClient
         budget.CancelAfter(_timeout);
         using var udp = new UdpClient(AddressFamily.InterNetwork);
         var prepared = DateTimeOffset.UtcNow;
-        Emit(LegacyFinsObservationStage.Prepared);
+        // A1 persists this exact timestamp in the pre-send proof and demands
+        // byte-for-byte identical SentUtc on its later acknowledged proof.
+        Emit(LegacyFinsObservationStage.Prepared, occurredAt: prepared);
         try
         {
             await udp.SendAsync(request, _endpoint, budget.Token);
