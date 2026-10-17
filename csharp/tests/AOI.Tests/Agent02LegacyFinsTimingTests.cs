@@ -1,3 +1,4 @@
+using AOI.Domain;
 using AOI.Runtime;
 using AOI.Runtime.Plc;
 using NUnit.Framework;
