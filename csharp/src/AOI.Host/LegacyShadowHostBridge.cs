@@ -109,6 +109,56 @@ internal static class LegacyShadowHostBridge
     /// Performs TWO individual old-address FINS writes with per-write readback.
     /// An incomplete receipt must not be retried or silently treated as success.
     /// </summary>
+    /// <summary>
+    /// OEM legacy abnormal end-scan order (opposite to normal quality-first):
+    /// D2099=3 on unreadable barcode or D2099=4 on a different barcode,
+    /// followed by D1016=2. The initial D4303 is PRIVATE simulator input;
+    /// the two legacy register writes are distinct real loopback FINS datagrams
+    /// and require separate ACK/readback evidence.
+    /// A HOLD must already be durably committed BEFORE entering this method.
+    /// </summary>
+    public static async Task<LegacyOutputReceipt> WriteAbnormalFinalAsync(
+        LegacyFinsLoopbackClient client, ushort token, LegacyExitScenario scenario,
+        string expectedBarcode, CancellationToken ct)
+    {
+        ArgumentNullException.ThrowIfNull(client);
+        if (token == 0 || scenario is not
+            (LegacyExitScenario.BarcodeFailure or LegacyExitScenario.BarcodeMismatch) ||
+            string.IsNullOrWhiteSpace(expectedBarcode))
+            throw new ArgumentException("Invalid legacy end-scanner failure context.");
+        await client.WriteAsync(LegacyPlcShadow.SimOfferExitAddress,
+            [token, (ushort)scenario], ct);
+        // Verify scanner data is actually exposed by the external PLC shadow.
+        // A Host-only simulated flag must never fake this input observation.
+        var scan = await client.ReadAsync(LegacyPlcShadow.EndRequestAddress, 1, ct);
+        var words = await client.ReadAsync(LegacyPlcShadow.EndBarcodeAddress, 10, ct);
+        if (scan.Length != 1 || scan[0] != 1)
+            throw new InvalidDataException("Legacy end scanner request not present.");
+        string observed = A2FinsProtocol.DecodeBaAscii(words);
+        if (scenario == LegacyExitScenario.BarcodeFailure
+            ? !string.IsNullOrWhiteSpace(observed)
+            : string.IsNullOrWhiteSpace(observed) ||
+              string.Equals(observed, expectedBarcode, StringComparison.Ordinal))
+            throw new InvalidDataException("Legacy end scanner failure profile does not match PLC input.");
+        var receipt = await LegacyFinsOutputWriter.WriteFinalAsync(client, token,
+            scenario, FinalDisposition.Reject,
+            LegacyPlcTiming.HistoricalReference.EndResultDeadline, ct);
+        ushort first = scenario == LegacyExitScenario.BarcodeFailure
+            ? (ushort)3 : (ushort)4;
+        if (receipt.ConfirmedSteps.Count != 2 ||
+            receipt.ConfirmedSteps[0].DmAddress != LegacyPlcShadow.EndRequestAddress ||
+            receipt.ConfirmedSteps[0].Value != first ||
+            receipt.ConfirmedSteps[1].DmAddress != LegacyPlcShadow.FinalQualityAddress ||
+            receipt.ConfirmedSteps[1].Value != 2)
+            throw new InvalidDataException("SIM_LEGACY_ABNORMAL_FINS_ORDER_MISMATCH");
+        Console.WriteLine("SIM_LEGACY_ABNORMAL_FINS_PASS token=" + token +
+            " scenario=" + scenario +
+            " steps=" + string.Join(",", receipt.ConfirmedSteps.Select(
+                step => "D" + step.DmAddress + "=" + step.Value)) +
+            " physical_exit=HOLD");
+        return receipt;
+    }
+
     public static async Task<LegacyOutputReceipt> WriteNormalFinalAsync(
         LegacyFinsLoopbackClient client, ushort token, FinalDisposition disposition,
         CancellationToken ct)
