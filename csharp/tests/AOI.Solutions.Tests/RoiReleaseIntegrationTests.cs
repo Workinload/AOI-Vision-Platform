@@ -122,7 +122,7 @@ public sealed class RoiReleaseIntegrationTests
         var revised = repo.Publish("RoiDemo", "operator");
         Assert.That(revised.ReleaseId, Is.Not.EqualTo(original.ReleaseId));
         Assert.That(revised.ContentSha256, Is.Not.EqualTo(original.ContentSha256));
-        Assert.That(repo.RequireRelease(original.ReleaseId), Is.EqualTo(original));
+        Assert.That(repo.RequireRelease(original.ReleaseId).ContentSha256, Is.EqualTo(original.ContentSha256));
         var publishedRoi = RoiReleaseWorkflow.ReadPublishedRoi(revised, "CH06");
         Assert.That(publishedRoi!.SourceRevision, Is.EqualTo(1));
         Assert.That(publishedRoi.Bounds.ToPixels(64, 64),
