@@ -13,6 +13,10 @@
       <Setter Property="Foreground" Value="#EAF4FF"/>
       <Setter Property="BorderThickness" Value="0"/>
     </Style>
+    <Style Selector="Button.station.focused">
+      <Setter Property="Background" Value="#C9EAF8"/>
+      <Setter Property="BorderBrush" Value="#167EAD"/>
+    </Style>
     <Style Selector="Button.station">
       <Setter Property="Background" Value="#FFFFFF"/>
       <Setter Property="Foreground" Value="#183954"/>
@@ -189,6 +193,7 @@
                         <TextBlock Canvas.Left="655" Canvas.Top="283" Text="←" FontSize="22" Foreground="#4C8AAE"/>
                         <TextBlock Canvas.Left="438" Canvas.Top="283" Text="←" FontSize="22" Foreground="#4C8AAE"/>
                         <Button Classes="station" Canvas.Left="36" Canvas.Top="145" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[0].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="LOADING">
                           <StackPanel Spacing="4">
                             <TextBlock Text="LOADING / 定位" FontWeight="Bold" FontSize="14"/>
@@ -197,6 +202,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="260" Canvas.Top="70" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[1].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST03">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST03 / 双面" FontWeight="Bold" FontSize="14"/>
@@ -205,6 +211,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="475" Canvas.Top="70" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[2].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST04">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST04 / 双面" FontWeight="Bold" FontSize="14"/>
@@ -213,6 +220,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="690" Canvas.Top="70" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[3].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST05">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST05 / 检测" FontWeight="Bold" FontSize="14"/>
@@ -221,6 +229,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="690" Canvas.Top="260" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[4].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST06">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST06 / 检测" FontWeight="Bold" FontSize="14"/>
@@ -229,6 +238,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="475" Canvas.Top="260" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[5].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST09">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST09 / 线扫" FontWeight="Bold" FontSize="14"/>
@@ -237,6 +247,7 @@
                           </StackPanel>
                         </Button>
                         <Button Classes="station" Canvas.Left="260" Canvas.Top="260" Width="160" Height="94"
+                                Classes.focused="{Binding MapStations[6].IsFocused}"
                                 Command="{Binding FocusStationCommand}" CommandParameter="ST10">
                           <StackPanel Spacing="4">
                             <TextBlock Text="ST10 / 线扫" FontWeight="Bold" FontSize="14"/>
