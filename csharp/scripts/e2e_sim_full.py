@@ -12,6 +12,8 @@ import re
 from pathlib import Path
 import socket
 import sqlite3
+import struct
+import zlib
 import subprocess
 import sys
 import tempfile
@@ -84,7 +86,27 @@ def scalar(path, statement):
     return None if value is None or len(value) == 0 else value[0][0]
 
 
-def verify(root, count, flip):
+def make_png(path, bright_defect=False, line_parent=False):
+    # Standard-library-only 8-bit grayscale PNG fixture: actual disk PNG, not
+    # a mocked OpenCV result. CH06 has one clear foreground contour.
+    width = 64
+    height = 32 if line_parent else 64
+    raw = bytearray()
+    for y in range(height):
+        raw.append(0)
+        for x in range(width):
+            raw.append(255 if bright_defect and 18 <= x < 42 and 17 <= y < 39 else 0)
+    def chunk(tag, data):
+        return struct.pack('>I', len(data)) + tag + data + struct.pack(
+            '>I', zlib.crc32(tag + data) & 0xffffffff)
+    png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR',
+        struct.pack('>IIBBBBB', width, height, 8, 0, 0, 0, 0)) + \
+        chunk(b'IDAT', zlib.compress(bytes(raw))) + chunk(b'IEND', b'')
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(png)
+
+
+def verify(root, count, flip, real_images=False):
     master = root / 'master/production.db'
     slave = root / 'slave/production.db'
     ledger = root / 'master/sim-full-cycle.db'
@@ -108,7 +130,8 @@ def verify(root, count, flip):
         assert wp['workpieceId'] and wp['epoch'] == 1
         if final:
             decision = json.loads(final)
-            assert decision['isSimulation'] is True and decision['disposition'] == 'good'
+            assert decision['isSimulation'] is True and decision['disposition'] == (
+                'reject' if real_images else 'good')
             assert len(decision['expected']) == len(decision['received']) == 10
             assert 'SIM_ONLY' in decision['proof']
     assert sum(x[2] is not None for x in identities) == expect_exit
@@ -121,7 +144,7 @@ def verify(root, count, flip):
     for token, identity, phase, outcome in rows:
         decision = next(x[2] for x in identities if x[0] == json.loads(identity)['workpieceId'])
         assert (phase == 'exited') == (decision is not None), token
-        assert outcome == ('Good' if phase == 'exited' else None), token
+        assert outcome == (('Reject' if real_images else 'Good') if phase == 'exited' else None), token
     if flip:
         assert rows[flip - 1][2] == 'registered', 'flipped exit token was released'
         assert all(x[2] != 'exited' for x in rows[flip - 1:]), 'later pieces overtook HOLD'
@@ -165,6 +188,8 @@ def main():
     parser.add_argument('--count', type=int, default=5)
     parser.add_argument('--flip-token', type=int, default=0)
     parser.add_argument('--repeat-barcode', action='store_true')
+    parser.add_argument('--with-images', action='store_true',
+                        help='Replay actual 8-bit disk PNG inputs; CH06 deliberately NG')
     parser.add_argument('--with-product', action='store_true',
                         help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
     parser.add_argument('--timeout', type=float, default=70.0)
@@ -180,6 +205,17 @@ def main():
     ui = source / 'src/AOI.Ui.Avalonia/bin/Debug/net10.0/AOI.Ui.Avalonia.dll'
     assert host.is_file() and ui.is_file(), 'Build AOI.slnx first'
     env = dict(os.environ)
+    if args.with_images:
+        image_root = evidence / 'operator-images'
+        for channel in range(1, 8):
+            make_png(image_root / f'CH{channel:02d}.png', bright_defect=channel == 6)
+        make_png(image_root / 'LINE-S-8.png', line_parent=True)
+        make_png(image_root / 'LINE-M-2.png', line_parent=True)
+        env['AOI_SIM_IMAGE_ROOT'] = str(image_root)
+        env['AOI_SIM_IMAGE_LAYOUT'] = 'FLAT'
+    else:
+        env.pop('AOI_SIM_IMAGE_ROOT', None)
+        env.pop('AOI_SIM_IMAGE_LAYOUT', None)
     env.update({'AOI_SIM_MODE': 'SIM_FULL', 'AOI_SIM_CHANNEL_SET': 'ALL_11',
                 'AOI_SIM_ITEM_COUNT': str(args.count), 'AOI_SIM_MAX_IN_FLIGHT': '3',
                 'AOI_SIM_END_BARCODE_FLIP_TOKEN': str(args.flip_token),
@@ -242,7 +278,7 @@ def main():
             raise TimeoutError('SIM_FULL timed out without complete concurrent production evidence')
         # A matched set must remain stable, especially when the front item is held.
         time.sleep(0.55)
-        verify(evidence, args.count, args.flip_token)
+        verify(evidence, args.count, args.flip_token, args.with_images)
         master_log = (evidence / 'master.log').read_text(encoding='utf-8')
         virtual_log = (evidence / 'vplc.log').read_text(encoding='utf-8')
         # Different OS scheduling can finish item #1 before slot #3 fills.
@@ -289,12 +325,14 @@ def main():
         print('SIM_FULL_PLC_ENGINEERING_IPC_PASS signals=45 fg=14 field_live=0 real_writes=0', flush=True)
         overview = snapshot.get('production')
         assert overview and overview['total'] == args.count, overview
-        assert overview['good'] == target and overview['reject'] == 0, overview
+        assert overview['good'] == (0 if args.with_images else target), overview
+        assert overview['reject'] == (target if args.with_images else 0), overview
         assert overview['unfinished'] == args.count - target, overview
         assert len(overview['recent']) == args.count, overview
         assert len({row['workpieceId'] for row in overview['recent']}) == args.count
         assert all(row['capturedChannels'] == 11 for row in overview['recent']), overview
-        assert sum(row['final'] == 'good' for row in overview['recent']) == target
+        assert sum(row['final'] == ('reject' if args.with_images else 'good')
+                   for row in overview['recent']) == target
         assert snapshot['latestWorkpiece'] is not None
         assert snapshot['latestWorkpiece']['releaseId'] == product_release
         assert snapshot['latestWorkpiece']['epoch'] == 1
@@ -370,7 +408,15 @@ def main():
         if args.repeat_barcode:
             barcodes = query(evidence / 'master/production.db', 'SELECT barcode FROM workpieces')
             assert len({x[0] for x in barcodes}) == 1, 'Duplicate barcode test was not exercised'
-        result = 'HOLD' if args.flip_token else 'GOOD'
+        if args.with_images:
+            assert master_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
+            slave_log = (evidence / 'slave.log').read_text(encoding='utf-8')
+            assert slave_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
+            assert 'defective=1' in master_log
+            assert 'defective=0' in slave_log
+            print('SIM_REAL_IMAGE_E2E_PASS actual_png=9 per_item_channels=11 '
+                  'line_parity=2 contour_ng=1 per_item_REJECT=1', flush=True)
+        result = 'HOLD' if args.flip_token else 'REJECT' if args.with_images else 'GOOD'
         print(f'SIM_FULL_E2E_PASS items={args.count} finals={target} outcome={result} '
               f'master_channels={args.count * 11} slave_channels={args.count * 6} '
               f'ack={args.count * 7} fifo=STRICT max_inflight={max(observed)} false_release=0 UI=2',

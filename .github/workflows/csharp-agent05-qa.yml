@@ -53,6 +53,8 @@ jobs:
         run: python scripts/e2e_sim_full.py --count 5 --flip-token 3 --evidence-root .artifacts/simfull-flipped
       - name: A6 immutable solution edit publish dual-node commit and live SIM_FULL recipe
         run: python scripts/e2e_sim_full.py --with-product --count 5 --evidence-root .artifacts/simfull-recipe
+      - name: SIM_FULL actual operator PNGs, OpenCV contour NG and line row-deinterleave
+        run: python scripts/e2e_sim_full.py --with-images --count 5 --evidence-root .artifacts/simfull-real-png
       - name: Publish Windows x64 framework-dependent SIM_ONLY preview
         if: matrix.os == 'windows-2025'
         shell: bash
@@ -64,6 +66,7 @@ jobs:
           dotnet publish src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/UI
           dotnet publish src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/Diagnostics
           dotnet publish src/AOI.Solutions.Cli/AOI.Solutions.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/Recipes
+          dotnet publish tools/AOI.Vision.Cli/AOI.Vision.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/VisionLab
           cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
           cp scripts/Launch-SIMFULL.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.cmd
           cp scripts/Configure-SIM-Recipe.cmd .artifacts/dist/AOI_SIM11_Windows/Configure-SIM-Recipe.cmd
@@ -72,6 +75,7 @@ jobs:
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/Recipes/AOI.Solutions.Cli.exe
+          test -f .artifacts/dist/AOI_SIM11_Windows/VisionLab/AOI.Vision.Cli.exe
           dotnet .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.dll verify .artifacts/qa-11channels/diagnostics/evidence.zip
           echo 'AOI_WIN_SIM11_PACKAGE_PASS host=1 ui=1 diagnostics=1 redacted_bundle_verified=1'
       - name: Upload Windows x64 SIM_ONLY preview package

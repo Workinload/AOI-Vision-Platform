@@ -119,7 +119,9 @@ public sealed class OfflineVisionReplay
     public ReplayBatch CaptureOwned(WorkpieceIdentity item, MachineRole owner,
         string imageRoot, string annotationRoot, ContourDefectRule rule,
         IReadOnlyDictionary<string, ImageRegion>? roiByChannel = null,
-        int attemptNo = 1, bool flatDemoFolder = false)
+        int attemptNo = 1, bool flatDemoFolder = false,
+        Func<string, int, int, ImageRegion?>? releasedRoiForImage = null,
+        Func<string, ContourDefectRule>? releasedRuleForChannel = null)
     {
         item.Validate();
         rule.Validate();
@@ -153,7 +155,10 @@ public sealed class OfflineVisionReplay
             }
             using (image)
             {
-                var inspection = ContourDefectDetector.Inspect(image, rule, SelectRoi(roiByChannel, channel.ChannelId));
+                var roi = SelectRoi(roiByChannel, channel.ChannelId) ??
+                    releasedRoiForImage?.Invoke(channel.ChannelId, image.Cols, image.Rows);
+                var inspection = ContourDefectDetector.Inspect(image,
+                    releasedRuleForChannel?.Invoke(channel.ChannelId) ?? rule, roi);
                 var capture = _ledger.CaptureAreaDetected(item, channel.ChannelId,
                     image, inspection.Outcome, attemptNo);
                 records.Add(Complete(channel.ChannelId, path, output, item, capture, image, inspection));
@@ -185,7 +190,10 @@ public sealed class OfflineVisionReplay
             {
                 var scans = new[] { even, odd };
                 var inspections = mapped.Select((c, i) =>
-                    ContourDefectDetector.Inspect(scans[i], rule, SelectRoi(roiByChannel, c.ChannelId))).ToArray();
+                    ContourDefectDetector.Inspect(scans[i],
+                        releasedRuleForChannel?.Invoke(c.ChannelId) ?? rule,
+                        SelectRoi(roiByChannel, c.ChannelId) ??
+                        releasedRoiForImage?.Invoke(c.ChannelId, scans[i].Cols, scans[i].Rows))).ToArray();
                 var outcomes = new Dictionary<string, ChannelOutcome>(StringComparer.Ordinal)
                 {
                     [mapped[0].ChannelId] = inspections[0].Outcome,

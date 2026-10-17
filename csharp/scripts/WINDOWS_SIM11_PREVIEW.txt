@@ -85,3 +85,20 @@ Keep the sim-config.sqlite evidence if archiving a simulated run.
 Configuration endpoints 127.0.0.1:19641 and :19642 use a short-lived session
 token, are not an industrial authentication mechanism and must not be exposed
 over a network.
+
+
+REAL OPERATOR PNG INPUT (SIM_ONLY / native OpenCvSharp)
+Set AOI_SIM_IMAGE_ROOT to a folder of actual 8-bit PNG images BEFORE invoking
+Launch-SIMFULL.cmd. Use AOI_SIM_IMAGE_LAYOUT=FLAT for a single operator sample
+set: CH01.png, CH02.png, CH03.png, CH04.png, CH05.png, CH06.png, CH07.png,
+LINE-S-8.png and LINE-M-2.png. Without FLAT, each separate workpiece requires
+a folder named after its newly assigned WorkpieceId in N format; this is mainly
+for API-driven offline replay, not normal conveyor sessions.
+Master/Slave load and inspect real PNG bytes, contour defects produce real NG,
+missing input fails closed rather than silently switching to synthetic GOOD.
+The two line-camera parent PNGs split by exact even/odd row parity. All input
+and annotations remain offline, no camera SDK or PLC writes.
+VisionLab/AOI.Vision.Cli.exe runs standalone image inspection and creates
+annotated PNG + report.html. Run with --help for exact options.
+Only published A6 ROI data is applied during the NEXT SIM_FULL run; GUI ROI
+drafts by themselves never modify currently running inspections.
