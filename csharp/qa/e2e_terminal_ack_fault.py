@@ -20,7 +20,7 @@ import sys
 import tempfile
 import time
 
-from e2e_sim_full import fins_read, make_png, scalar
+from e2e_sim_full import fins_read, make_png
 from p0_fins_timeline_audit import AuditFailure, demand, load_records, parse_trace
 from p0_terminal_wire_audit import decode_scan, sql
 
@@ -40,10 +40,10 @@ def check(root: Path, fault: str, scenario: str, require_utc=True):
     demand(bool(holds), "NOT_VERIFIED", "Faulty token not yet durably held")
     demand(len(holds) == 1 and holds[0][0] == reason and
            loaded[2][2] == "registered", "UNSAFE_HOLD", f"token3 incorrect HOLD: {holds}")
-    demand(scalar(master, "SELECT COUNT(*) FROM channel_results") == 33 and
-           scalar(slave, "SELECT COUNT(*) FROM channel_results") == 18,
+    demand(sql(master, "SELECT COUNT(*) FROM channel_results")[0][0] == 33 and
+           sql(slave, "SELECT COUNT(*) FROM channel_results")[0][0] == 18,
            "NOT_VERIFIED", "Nine physical cameras / 11 logical channels not yet completed")
-    demand(scalar(master, "SELECT COUNT(*) FROM workpieces WHERE final_json IS NOT NULL") == 2,
+    demand(sql(master, "SELECT COUNT(*) FROM workpieces WHERE final_json IS NOT NULL")[0][0] == 2,
            "NOT_VERIFIED", "Healthy tokens not finished; faulty token must have NO final")
     demand(loaded[0][2] == loaded[1][2] == "exited",
            "NOT_VERIFIED", "Unaffected token1/2 not yet safely exited")
@@ -96,8 +96,13 @@ def check(root: Path, fault: str, scenario: str, require_utc=True):
            else not scanned, "FALSE_SCANNER_FAULT",
            "Host-only fabricated scanner status cannot justify legacy abnormal write")
     if scenario == "unreadable":
+        # A2 deliberately labels this legitimate successful FINS read
+        # INJECTED_END_SCAN_UNREADABLE rather than OK. Verify the *actual*
+        # response bytes/end-code, not the simulator's semantic label alone.
         source_reads = [w for w in wire if w.token == 3 and
-                        w.address == 2020 and not w.write and w.ok and
+                        w.address == 2020 and not w.write and
+                        w.response_seen and w.end_code == 0 and
+                        w.outcome == "INJECTED_END_SCAN_UNREADABLE" and
                         len(w.reply_words) == 10]
         demand(bool(source_reads) and decode_scan(source_reads[-1].reply_words) == "",
                "MISSING_EXTERNAL_D2020_FAULT",
