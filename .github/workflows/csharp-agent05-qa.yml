@@ -80,6 +80,8 @@ jobs:
         run: python qa/p0_five_process_acceptance.py --audit-existing --count 5 --ordering FRAME_FIRST --expected-status NG --verify-final --evidence-root .artifacts/p0-nine-cameras-frame-first
       - name: A5 independent physical FINS causal proof with duplicate-barcode workpieces
         run: python qa/p0_five_process_acceptance.py --audit-existing --count 5 --ordering REQUEST_FIRST --expected-status NG --verify-final --repeat-barcode --evidence-root .artifacts/p0-nine-cameras-duplicate-barcode
+      - name: P0 actual legacy barcode mismatch reverse-order FINS and strict HOLD
+        run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --count 5 --flip-token 3 --evidence-root .artifacts/p0-end-barcode-mismatch-reversed
       - name: P0 one missing Slave physical camera frame holds exact item on both Cores
         run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --count 3 --missing-frame-token 3 --missing-frame-device HIK-S-2 --evidence-root .artifacts/p0-slave-missing-frame-hold
       - name: SIM_FULL five-process end-barcode corruption must block physical exit
