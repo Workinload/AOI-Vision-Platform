@@ -110,7 +110,7 @@ public sealed class TriggeredVisionEngine
                     Array.Empty<DefectBox>(), 0, null)).ToArray());
 
         using var frame = read.Frame;
-        if (read.Frame is null || read.Status != ChannelOutcome.Ok)
+        if (frame is null || read.Status != ChannelOutcome.Ok)
             return Failure(read.Status == ChannelOutcome.Missing ? ChannelOutcome.Missing : ChannelOutcome.Error,
                 read.Reason);
         if (frame.Ticket != ticket)
