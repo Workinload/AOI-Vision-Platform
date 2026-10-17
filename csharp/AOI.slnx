@@ -10,6 +10,7 @@
     <Project Path="src/AOI.Solutions.Cli/AOI.Solutions.Cli.csproj" />
     <Project Path="src/AOI.Diagnostics/AOI.Diagnostics.csproj" />
     <Project Path="src/AOI.Diagnostics.Cli/AOI.Diagnostics.Cli.csproj" />
+    <Project Path="tools/AOI.Vision.Cli/AOI.Vision.Cli.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/AOI.Tests/AOI.Tests.csproj" />
