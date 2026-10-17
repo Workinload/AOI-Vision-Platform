@@ -33,7 +33,7 @@ def sample_packet(write, address, words, sid, reply_words=(), end_code=0):
     return bytes(request), bytes(response)
 
 
-def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False):
+def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False, repeat_poll=False):
     address = 1013 if line else 1011
     device = "LINE-S-8" if line else "HIK-M-2"
     channels = ["CH08", "CH09"] if line else ["CH06"]
@@ -51,6 +51,8 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False
         return item
     tx(4300, True, (token, address))
     tx(address, reply=(1,))
+    if repeat_poll:
+        tx(address, reply=(1,))
     ack = tx(address, True, (3 if result == "MISSING" else 2,))
     tx(address, reply=(3 if result == "MISSING" else 2,))
     if scenario is not None:
@@ -150,6 +152,33 @@ class FinsCausalAuditTests(unittest.TestCase):
                            captureId=str(uuid.uuid4())))
         self.check_failure(wire, events, cases, "CROSS_WORKPIECE_FRAME_REUSE")
 
+    def test_repeat_plc_poll_is_normal_not_duplicate_camera_request(self):
+        wire, events, cases = fixture(repeat_poll=True)
+        self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
+
+    def test_first_camdone_readback_stale_value_is_not_good(self):
+        wire, events, cases = fixture()
+        row = wire[3]
+        req, rsp = sample_packet(False, 1011, (), row["sid"], (1,))
+        row.update(requestHex=req.hex(), responseHex=rsp.hex())
+        self.check_failure(wire, events, cases, "CAPTURE_READBACK_MISMATCH")
+
+    def test_final_write_lost_udp_reply_must_not_be_retried_or_assumed_safe(self):
+        wire, events, cases = fixture(scenario="NORMAL_GOOD")
+        row = next(x for x in wire if x["isWrite"] and x["address"] == 1016)
+        row["responseHex"] = ""
+        row["outcome"] = "INJECTED_UDP_TIMEOUT"
+        self.check_failure(wire, events, cases, "INCOMPLETE_FINAL_WRITE")
+
+    def test_final_first_readback_stale_is_rejected(self):
+        wire, events, cases = fixture(scenario="NORMAL_GOOD")
+        write = next(x for x in wire if x["isWrite"] and x["address"] == 1016)
+        row = next(x for x in wire if not x["isWrite"] and
+                   x["address"] == 1016 and x["sequence"] > write["sequence"])
+        req, rsp = sample_packet(False, 1016, (), row["sid"], (0,))
+        row.update(requestHex=req.hex(), responseHex=rsp.hex())
+        self.check_failure(wire, events, cases, "FINAL_READBACK_MISMATCH")
+
     def test_missing_image_cannot_appear_as_camdone_two(self):
         wire, events, cases = fixture(result="MISSING")
         self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
@@ -165,7 +194,7 @@ class FinsCausalAuditTests(unittest.TestCase):
     def test_old_d4003_mirror_is_not_two_fins_result_writes(self):
         wire, events, cases = fixture(scenario="NORMAL_GOOD")
         wire = [x for x in wire if x["address"] not in (1016, 2099)]
-        self.check_failure(wire, events, cases, "MISSING_OR_DUPLICATE")
+        self.check_failure(wire, events, cases, "INCOMPLETE_FINAL_WRITE")
 
     def test_final_write_reverse_order_rejected_despite_same_last_values(self):
         wire, events, cases = fixture(scenario="NORMAL_GOOD")
