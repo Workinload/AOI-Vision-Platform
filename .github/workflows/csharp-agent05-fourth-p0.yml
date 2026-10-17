@@ -1,0 +1,77 @@
+name: Agent05 P0 terminal FINS negative acceptance
+
+on:
+  pull_request:
+    paths:
+      - 'csharp/qa/p0_terminal_wire_audit.py'
+      - 'csharp/qa/test_p0_terminal_wire_audit.py'
+      - 'csharp/qa/p0_peer_interlock_audit.py'
+      - 'csharp/qa/test_p0_peer_interlock_audit.py'
+      - 'csharp/tests/AOI.Tests/Agent05FinalFinsAckLossTests.cs'
+      - '.github/workflows/csharp-agent05-fourth-p0.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  actual-fins-negative:
+    name: a5-real-udp-endstation-${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 18
+    defaults:
+      run:
+        working-directory: csharp
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Build actual CSharp Host and test projects
+        shell: bash
+        run: |
+          set -e
+          unset PLATFORM
+          dotnet restore AOI.slnx --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+          dotnet build AOI.slnx --no-restore -c Debug
+
+      - name: A5 NUnit actual IPv4 UDP after-apply ACK loss and refusal
+        shell: bash
+        run: |
+          dotnet test tests/AOI.Tests/AOI.Tests.csproj --no-build -c Debug --filter FullyQualifiedName~Agent05FinalFinsAckLossTests --logger 'console;verbosity=normal'
+
+      - name: Independent raw FINS terminal negative-fixture unit tests
+        shell: bash
+        run: |
+          python -m unittest discover -s qa -p 'test_p0_terminal_wire_audit.py' -v
+
+      - name: Real five OS processes, nine physical FINS cameras, mismatched end barcode
+        shell: bash
+        run: |
+          python scripts/e2e_sim_full.py --legacy-shadow --with-images --count 3 \
+            --flip-token 3 --evidence-root .artifacts/a5-p0-abnormal-mismatch
+
+      - name: A5 independent SAME-RUN packet, SID, D2100 bytes, readback and WAL audit
+        shell: bash
+        run: |
+          python qa/p0_terminal_wire_audit.py \
+            --evidence-root .artifacts/a5-p0-abnormal-mismatch \
+            --token 3 --scenario BARCODE_MISMATCH --healthy-before 2 \
+            --report .artifacts/a5-p0-abnormal-mismatch/a5-independent-terminal-audit.json
+
+      - name: Preserve actual five-process raw FINS and SQLite logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a5-fourth-p0-wire-${{ matrix.os }}-${{ github.run_id }}
+          path: csharp/.artifacts/a5-p0-abnormal-mismatch/
+          if-no-files-found: warn
+          retention-days: 7
