@@ -163,4 +163,7 @@ public sealed record TimingComparison(
 
 public sealed record TimingTimeline(
     Guid WorkpieceId, DateTimeOffset QueriedUtc,
-    TimingEvent[] Events, TimingDifference[] DiagnosticDifferences);
+    TimingEvent[] Events, TimingDifference[] DiagnosticDifferences)
+{
+    public bool Truncated { get; init; }
+}
