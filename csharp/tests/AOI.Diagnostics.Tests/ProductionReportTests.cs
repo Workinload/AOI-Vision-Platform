@@ -212,4 +212,39 @@ public sealed class ProductionReportTests
         var csv = File.ReadAllText(path);
         Assert.That(csv, Does.Contain("\"'=1+2\""));
     }
+
+    [Test]
+    public void RealA3VisionLedger_LineScanParentsAndSlaveOwnedPixelsResolveInTrace()
+    {
+        var (master, slave) = Stores();
+        var item = Item("LINE-TRACE");
+        Register(master, item, 1);
+        slave.AcceptIncoming(PeerEnvelope.Create("master", "slave", 1, item,
+            "workpiece_registered", item), "slave");
+
+        var ledger = new VisionAssetLedger(Path.Combine(_root, "slave", "vision"));
+        using var parentPixels = new OpenCvSharp.Mat(32, 64,
+            OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.White);
+        var children = ledger.CaptureLinePair(item, "LINE-S-8", parentPixels,
+            new ImageRegion(0, 0, 32, 32), new ImageRegion(32, 0, 32, 32),
+            simRule: new SimPixelRule(127, 0.1));
+        int sequence = 1;
+        foreach (var child in children)
+        {
+            var sent = PeerEnvelope.Create("slave", "master", sequence++, item,
+                "channel_result", child, child.ChannelId);
+            slave.SaveLocalResult(child, sent);
+            master.AcceptIncoming(sent, "master");
+        }
+
+        var trace = new ProductionReports(_root).Trace(item.WorkpieceId, verifyImages: true);
+        Assert.That(trace.Channels, Has.Length.EqualTo(2));
+        Assert.That(trace.Channels.Select(c => c.Result.ChannelId),
+            Is.EquivalentTo(new[] { "CH08", "CH09" }));
+        Assert.That(trace.Channels.All(c => c.NodeId == "slave"), Is.True);
+        Assert.That(trace.Channels.All(c => c.Image.State == "VERIFIED"), Is.True);
+        Assert.That(trace.Channels.All(c => c.Image.ParentRelativePath is not null), Is.True);
+        Assert.That(trace.Channels.Select(c => c.Result.ParentFrameId).Distinct().Count(), Is.EqualTo(1));
+    }
+
 }
