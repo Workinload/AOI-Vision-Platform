@@ -446,6 +446,30 @@ def main():
                 assert any(p['Token'] == token and p['Address'] == 2099 and not p['IsWrite']
                            and p['Sequence'] > second[0]['Sequence'] and
                            p['ResponseHex'].startswith('C0') for p in packets)
+            if args.flip_token:
+                # A different end barcode is a real old-PLC reverse-order
+                # exchange, not the old D4003 fake mirror or an unsafe exit.
+                token = args.flip_token
+                first = written(token, 2099, 4)
+                second = written(token, 1016, 2)
+                assert len(first) == len(second) == 1, (
+                    'missing actual FINS abnormal D2099=4 then D1016=2', token)
+                assert first[0]['Sequence'] < second[0]['Sequence']
+                assert any(p['Token'] == token and p['Address'] == 2099 and
+                           not p['IsWrite'] and first[0]['Sequence'] < p['Sequence'] <
+                           second[0]['Sequence'] for p in packets), (
+                    'no first abnormal write readback', token)
+                assert any(p['Token'] == token and p['Address'] == 1016 and
+                           not p['IsWrite'] and p['Sequence'] > second[0]['Sequence']
+                           for p in packets), ('no final reject write readback', token)
+                assert not written(token, 2099, 2), (
+                    'mismatched barcode was falsely marked as normal scan', token)
+                assert not any(p['Token'] > token and p['IsWrite'] and
+                               p['Address'] in (1016, 2099) for p in packets), (
+                    'later physically blocked pieces illegally received finals')
+                print('A0_LEGACY_BARCODE_MISMATCH_FINS_PASS token=' + str(token) +
+                      ' D2099_4_then_D1016_2=1 actual_udp=1 no_fifo_ejection=1 '
+                      'no_automatic_retry=1', flush=True)
             for node, physical_count in [('master', 4), ('slave', 5)]:
                 db = evidence / node / 'timing-events.sqlite'
                 for stage in ('FrameReady', 'PlcCaptureRequestObserved'):
@@ -477,6 +501,10 @@ def main():
                       "WHERE json_extract(event_json,'$.kind')='ejectionConfirmed'") == target
         if args.flip_token:
             assert f'SIM_FULL_HOLD token={args.flip_token}' in master_log
+            if args.legacy_shadow:
+                assert f'SIM_LEGACY_ABNORMAL_FINS_PASS token={args.flip_token} ' in master_log
+                assert 'scenario=BarcodeMismatch' in master_log
+                assert 'physical_exit=HOLD' in master_log
         for name, proc in processes[3:]:
             assert proc.wait(timeout=10) == 0, name + ' UI failed'
             ui_log = (evidence / (name + '.log')).read_text(encoding='utf-8')
