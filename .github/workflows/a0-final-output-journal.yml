@@ -1,10 +1,10 @@
 name: A0 Final FINS WAL Intent Real Five-Process Gate
 on:
   pull_request:
-    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_raw_fins_audit.py', '.github/workflows/a0-final-output-journal.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_raw_fins_audit.py', 'csharp/scripts/e2e_a0_readonly_recovery.py', '.github/workflows/a0-final-output-journal.yml']
   push:
     branches: ['migration/csharp-avalonia-20261016']
-    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_raw_fins_audit.py', '.github/workflows/a0-final-output-journal.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_raw_fins_audit.py', 'csharp/scripts/e2e_a0_readonly_recovery.py', '.github/workflows/a0-final-output-journal.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -41,6 +41,8 @@ jobs:
         run: python scripts/e2e_a0_final_output_journal.py --evidence-root .artifacts/a0-final-output-journal
       - name: Independently reconcile A1 ClaimId and A7 raw FINS SHA with actual vPLC UDP packets
         run: python scripts/e2e_a0_raw_fins_audit.py --evidence-root .artifacts/a0-final-output-journal
+      - name: Offline forensic operator view is read-only against normal HOLD and unknown-ACK WAL
+        run: python scripts/e2e_a0_readonly_recovery.py --evidence-root .artifacts/a0-final-output-journal
       - name: Upload failure evidence for A0
         if: failure()
         uses: actions/upload-artifact@v4
