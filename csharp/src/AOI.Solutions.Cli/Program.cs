@@ -5,7 +5,8 @@ using System.Globalization;
 
 if (args.Length < 2 || args[0] is not
     ("bootstrap" or "tune" or "publish" or "activate" or "status" or
-     "import-roi" or "roi-preview" or "roi-diff" or "roi-sample"))
+     "import-roi" or "roi-preview" or "roi-diff" or "roi-sample" or
+     "camera-target" or "algorithm-param" or "params-draft" or "params-release"))
 {
     Console.Error.WriteLine("""
         AOI.Solutions.Cli - SIM_ONLY local offline product editor
@@ -18,6 +19,10 @@ if (args.Length < 2 || args[0] is not
           import-roi <root> <solutionId> <channelId> <expectedRoiRevision> <expectedStationRevision> <actor>
           roi-preview <root> <solutionId> <channelId> <sourcePng> <baselineReleaseId>
           roi-diff <root> <releaseA> <releaseB> <channelId> <sourcePng>
+          camera-target <root> <solutionId> <physicalDeviceId> <expectedStationRevision> <adapterId> <triggerMode> <triggerInput|-> <timeoutMs|-> <exposureUs|-> <gainDb|-> <actor>
+          algorithm-param <root> <solutionId> <channelId> <expectedStationRevision> <algorithmId> <numericKey> <numericValue> <actor>
+          params-draft <root> <solutionId> <channelId>
+          params-release <root> <releaseId> <epoch> <channelId>
           ROI edits import as product drafts only; publish + activate separately.
         DANGER: No command touches physical PLC or clears A6 changeover SafeHold.
         """);
@@ -73,7 +78,7 @@ try
             ["minimumBrightFraction"] = fraction
         };
         var saved = repository.SaveDraft(solutionId,
-            new StationRecipe(draft.Recipe.StationId, draft.Recipe.ChannelIds, tunables),
+            draft.Recipe with { Tunables = tunables },
             revision, actor);
         Console.WriteLine($"SIM_PRODUCT_TUNE_OK station={saved.StationId} revision={saved.Revision} threshold={threshold} fraction={fraction}");
     }
@@ -122,6 +127,54 @@ try
             $"b={second.ReleaseId} b_result={comparison.After.Outcome} " +
             $"b_fraction={comparison.After.BrightFraction.ToString("F6", CultureInfo.InvariantCulture)} " +
             $"changed={comparison.Changed} native_opencv=1");
+    }
+    else if (mode == "camera-target")
+    {
+        if (args.Length != 12) throw new ArgumentException(
+            "camera-target requires solutionId physicalDeviceId stationRevision adapterId triggerMode triggerInput|- timeoutMs|- exposureUs|- gainDb|- actor");
+        static int? OptionalInteger(string text) => text == "-" ? null : int.Parse(text, CultureInfo.InvariantCulture);
+        static double? OptionalDouble(string text) => text == "-" ? null : double.Parse(text, CultureInfo.InvariantCulture);
+        if (!Enum.TryParse<CaptureTriggerMode>(args[6], ignoreCase: true, out var trigger))
+            throw new ArgumentException("Invalid trigger mode (ExternalHardwareEdge/ExternalHardwareLevel/SoftwareCommand).");
+        var camera = new CameraCaptureTarget(args[3], args[5], trigger, args[7] == "-" ? null : args[7],
+            OptionalInteger(args[8]), OptionalDouble(args[9]), OptionalDouble(args[10]),
+            new Dictionary<string, double>());
+        var edited = SolutionParameterEditor.SetCaptureTarget(repository, args[2], camera,
+            long.Parse(args[4], CultureInfo.InvariantCulture), args[11]);
+        Console.WriteLine($"SIM_CAMERA_TARGET_DRAFT_SAVED station={edited.StationId} revision={edited.Revision} device={camera.PhysicalDeviceId} trigger={camera.TriggerMode} NOT_APPLIED_TO_DEVICE");
+    }
+    else if (mode == "algorithm-param")
+    {
+        if (args.Length != 9) throw new ArgumentException(
+            "algorithm-param requires solutionId channelId stationRevision algorithmId numericKey numericValue actor");
+        var draft = SolutionParameterEditor.ReadDraft(repository, args[2], args[3]);
+        var previous = draft.InspectionTarget;
+        bool samePlugin = previous is not null && previous.AlgorithmId == args[5];
+        var numeric = samePlugin
+            ? new Dictionary<string, double>(previous!.NumericParameters, StringComparer.Ordinal)
+            : new Dictionary<string, double>(StringComparer.Ordinal);
+        var text = samePlugin
+            ? new Dictionary<string, string>(previous!.TextParameters, StringComparer.Ordinal)
+            : new Dictionary<string, string>(StringComparer.Ordinal);
+        numeric[args[6]] = double.Parse(args[7], CultureInfo.InvariantCulture);
+        var target = new InspectionAlgorithmTarget(args[3], args[5], numeric, text);
+        var edited = SolutionParameterEditor.SetInspectionTarget(repository, args[2], target,
+            long.Parse(args[4], CultureInfo.InvariantCulture), args[8]);
+        Console.WriteLine($"SIM_ALGORITHM_DRAFT_SAVED channel={args[3]} algorithm={target.AlgorithmId} revision={edited.Revision} NOT_PUBLISHED");
+    }
+    else if (mode == "params-draft")
+    {
+        if (args.Length != 4) throw new ArgumentException("params-draft requires solutionId channelId");
+        var draft = SolutionParameterEditor.ReadDraft(repository, args[2], args[3]);
+        Console.WriteLine("SIM_CHANNEL_DRAFT " + WireFormat.Serialize(draft));
+    }
+    else if (mode == "params-release")
+    {
+        if (args.Length != 5) throw new ArgumentException("params-release requires releaseId epoch channelId");
+        var release = repository.RequireRelease(args[2]);
+        var parameters = new PublishedParameterSnapshot(release,
+            long.Parse(args[3], CultureInfo.InvariantCulture)).DescribeChannel(args[4]);
+        Console.WriteLine("SIM_CHANNEL_RELEASE " + WireFormat.Serialize(parameters));
     }
     else if (mode == "publish")
     {

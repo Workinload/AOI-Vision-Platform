@@ -3,6 +3,7 @@ using AOI.Domain;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Text.Json.Serialization;
 
 namespace AOI.Solutions;
 
@@ -70,11 +71,28 @@ public sealed record StationRecipe(
                 !double.IsFinite(value) || Math.Abs(value) > 1e9)
                 throw new InvalidDataException("Invalid finite, bounded recipe tunable.");
         }
+        RecipeParameterRules.ValidateStation(this);
     }
 
-    internal StationRecipe Canonical() => new(
-        StationId, ChannelIds.Order(StringComparer.Ordinal).ToArray(),
-        new SortedDictionary<string, double>(Tunables.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal), StringComparer.Ordinal));
+    // Optional A6 extensions do NOT appear as JSON null for old Releases.
+    // This keeps every pre-existing manifest's canonical SHA256 unchanged.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<CameraCaptureTarget>? CaptureTargets { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IReadOnlyList<InspectionAlgorithmTarget>? InspectionTargets { get; init; }
+
+    internal StationRecipe Canonical() => this with
+    {
+        ChannelIds = ChannelIds.Order(StringComparer.Ordinal).ToArray(),
+        Tunables = new SortedDictionary<string, double>(
+            Tunables.ToDictionary(x => x.Key, x => x.Value, StringComparer.Ordinal),
+            StringComparer.Ordinal),
+        CaptureTargets = CaptureTargets?.OrderBy(x => x.PhysicalDeviceId, StringComparer.Ordinal)
+            .Select(x => x.Canonical()).ToArray(),
+        InspectionTargets = InspectionTargets?.OrderBy(x => x.ChannelId, StringComparer.Ordinal)
+            .Select(x => x.Canonical()).ToArray()
+    };
 }
 
 public sealed record StationDraft(

@@ -125,7 +125,7 @@ public static class RoiReleaseWorkflow
         values.Add(prefix + "width", source.Width);
         values.Add(prefix + "height", source.Height);
         values.Add(prefix + "revision", source.Revision);
-        var recipe = new StationRecipe(draft.StationId, draft.Recipe.ChannelIds, values);
+        var recipe = draft.Recipe with { Tunables = values };
         ValidateStationRois(recipe);
         var saved = repository.SaveDraft(solutionId, recipe, expectedStationRevision, actor);
         return new(solutionId, channelId, channel.StationId, source.Revision,
