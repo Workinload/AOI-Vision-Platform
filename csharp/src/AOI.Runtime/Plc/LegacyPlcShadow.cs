@@ -69,6 +69,9 @@ public sealed class LegacyPlcShadow
     private readonly Dictionary<ushort, CameraState> _cameras = new();
     private readonly List<LegacyWireTransaction> _wire = new();
     private readonly HashSet<ushort> _dropOnce = new();
+    // External end-scanner failure is observable on D2020 AND D2100 for the
+    // specified FIFO token. Never change the existing FIFO barcode fixture.
+    private readonly HashSet<ushort> _unreadableEndScanTokens;
     private LoadState? _load;
     private EndState? _end;
     private long _sequence;
@@ -88,9 +91,16 @@ public sealed class LegacyPlcShadow
 
     public LegacyPlcShadow(SimFullVirtualPlc existing,
         LegacyFinsNodes? nodes = null, LegacyPlcTiming? timing = null,
-        TimeProvider? clock = null)
+        TimeProvider? clock = null, IReadOnlyCollection<ushort>? unreadableEndScanTokens = null)
     {
         _existing = existing ?? throw new ArgumentNullException(nameof(existing));
+        // Existing A0 Host constructs the shadow with no new argument. A vPLC-only
+        // environment variable is enough to opt in without changing Host/DTO code.
+        // Explicit tokens make tests independent of process-wide environment.
+        _unreadableEndScanTokens = new HashSet<ushort>(
+            unreadableEndScanTokens ?? ReadEndScanFaultTokensFromEnvironment());
+        if (_unreadableEndScanTokens.Any(token => token is < 1 or > 128))
+            throw new ArgumentOutOfRangeException(nameof(unreadableEndScanTokens));
         _nodes = nodes ?? LegacyFinsNodes.Demo;
         _nodes.Validate();
         _timing = timing ?? LegacyPlcTiming.HistoricalReference;
@@ -98,6 +108,25 @@ public sealed class LegacyPlcShadow
         _clock = clock ?? TimeProvider.System;
         if (DevicesByAddress.Count != 9)
             throw new InvalidOperationException("Legacy camera profile must contain 9 physical devices.");
+    }
+
+    /// <summary>
+    /// Optional SIM_ONLY fixture: AOI_SIM_END_SCAN_FAIL_TOKENS=3 or 3,5.
+    /// Never a real PLC register and never a production scanner control.
+    /// </summary>
+    private static IReadOnlyCollection<ushort> ReadEndScanFaultTokensFromEnvironment()
+    {
+        string? value = Environment.GetEnvironmentVariable("AOI_SIM_END_SCAN_FAIL_TOKENS");
+        if (string.IsNullOrWhiteSpace(value)) return Array.Empty<ushort>();
+        var tokens = new List<ushort>();
+        foreach (string part in value.Split(',', StringSplitOptions.TrimEntries))
+        {
+            if (!ushort.TryParse(part, out var token) || token is < 1 or > 128)
+                throw new InvalidOperationException(
+                    "AOI_SIM_END_SCAN_FAIL_TOKENS must be comma-separated tokens 1..128.");
+            tokens.Add(token);
+        }
+        return tokens;
     }
 
     public LegacyFinsNodes Nodes => _nodes;
@@ -202,6 +231,13 @@ public sealed class LegacyPlcShadow
                 response = [];
                 outcome = "INJECTED_UDP_TIMEOUT";
             }
+            else if (IsUnreadableEndBarcodeRead(op))
+            {
+                // A real FINS/UDP READ sees zero-filled scanner words at D2020
+                // for exactly the configured FIFO head. Later tokens are intact.
+                response = LegacyFinsWire.MakeResponse(frame, 0, new ushort[op.Count]);
+                outcome = "INJECTED_END_SCAN_UNREADABLE";
+            }
             else if (!IsOwnedRange(op.Address, op.Count))
             {
                 var queueReply = _existing.Handle(frame);
@@ -252,6 +288,13 @@ public sealed class LegacyPlcShadow
         }
     }
 
+    private bool IsUnreadableEndBarcodeRead(LegacyDmRequest request) =>
+        !request.IsWrite &&
+        request.Address >= SimFullVirtualPlc.EndBarcodeAddress &&
+        request.Address + request.Count <= SimFullVirtualPlc.EndBarcodeAddress + 10 &&
+        _unreadableEndScanTokens.Contains(
+            _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress));
+
     private static bool IsOwnedWord(int word) =>
         word is >= 1006 and <= 1014 or 1016 or 1999 or 2099
             or >= 2000 and <= 2009 or >= 2100 and <= 2109
@@ -296,11 +339,19 @@ public sealed class LegacyPlcShadow
         if (op.Address == SimOfferExitAddress && op.Count == 2)
         {
             if (op.Values[1] > 2) throw new InvalidOperationException("UNKNOWN_END_CASE");
+            // Scanner failure belongs to the active FIFO head, not just a
+            // caller-supplied token. This is the external SIM-only observation.
+            ushort exitToken = _existing.ReadForTest(SimFullVirtualPlc.ExitTokenAddress);
+            if (exitToken != op.Values[0])
+                throw new InvalidOperationException("END_SCAN_TOKEN_NOT_FIFO_HEAD");
+            bool unreadable = _unreadableEndScanTokens.Contains(exitToken);
+            if (unreadable && op.Values[1] != (ushort)LegacyExitScenario.BarcodeFailure)
+                throw new InvalidOperationException("UNREADABLE_END_SCAN_REQUIRES_FAILURE_BRANCH");
             var fixture = new ushort[10];
             for (int i = 0; i < fixture.Length; i++)
                 fixture[i] = _existing.ReadForTest((ushort)(2020 + i));
             IssueEndScanLocked(op.Values[0], (LegacyExitScenario)op.Values[1],
-                A2FinsProtocol.DecodeBaAscii(fixture));
+                unreadable ? "" : A2FinsProtocol.DecodeBaAscii(fixture));
             return;
         }
 
