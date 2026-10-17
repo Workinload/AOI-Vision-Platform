@@ -113,10 +113,10 @@ function Assert-PortUnused([int]$Port) {
     $listener=[Net.Sockets.TcpListener]::new([Net.IPAddress]::Loopback,$Port)
     try { $listener.Start() } finally { $listener.Stop() }
 }
-function Start-AoiProcess([string]$Name,[string]$Exe,[string]$Args) {
+function Start-AoiProcess([string]$Name,[string]$Exe,[string]$ArgumentLine) {
     $out=Join-Path $script:evidence ($Name+'.stdout.log')
     $err=Join-Path $script:evidence ($Name+'.stderr.log')
-    $p=Start-Process -FilePath $Exe -ArgumentList $Args -WorkingDirectory (Split-Path $Exe) -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
+    $p=Start-Process -FilePath $Exe -ArgumentList $ArgumentLine -WorkingDirectory (Split-Path $Exe) -PassThru -RedirectStandardOutput $out -RedirectStandardError $err
     $script:processes[$Name]=$p
     Record-Check ('process_'+$Name) 'PASS' ("PID={0} EXE={1}" -f $p.Id,$Exe)
 }
