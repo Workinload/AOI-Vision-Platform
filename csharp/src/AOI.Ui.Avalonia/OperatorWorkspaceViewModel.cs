@@ -186,6 +186,7 @@ public partial class MainWindowViewModel
         if (_lastProjection is { } projection)
             RequestPreview(projection);
         RefreshGallery();
+        RefreshCaptureDebugSelection();
     }
 
     /// <summary>
