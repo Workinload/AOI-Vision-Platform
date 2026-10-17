@@ -64,8 +64,10 @@ jobs:
         run: python qa/chaos_e2e.py --all-channels --evidence-root .artifacts/qa-11channels-barcode-flip
       - name: SIM_FULL five-process FIFO multi-workpiece with repeated barcodes
         run: python scripts/e2e_sim_full.py --count 5 --repeat-barcode --evidence-root .artifacts/simfull-normal
-      - name: P0 opt-in legacy PLC shadow actual FINS barcode and normal final datagrams
-        run: python scripts/e2e_sim_full.py --legacy-shadow --count 5 --evidence-root .artifacts/simfull-legacy-shadow
+      - name: P0 ST05 hardware-frame versus PLC-request first real five-process capture
+        run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --st05-order REQUEST_FIRST --count 5 --evidence-root .artifacts/p0-st05-request-first
+      - name: P0 ST05 frame arrives before PLC request real five-process capture
+        run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --st05-order FRAME_FIRST --count 5 --evidence-root .artifacts/p0-st05-frame-first
       - name: SIM_FULL five-process end-barcode corruption must block physical exit
         run: python scripts/e2e_sim_full.py --count 5 --flip-token 3 --evidence-root .artifacts/simfull-flipped
       - name: A6 immutable solution edit publish dual-node commit and live SIM_FULL recipe
