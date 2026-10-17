@@ -1,4 +1,6 @@
 using System.Buffers.Binary;
+using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
@@ -151,6 +153,40 @@ public sealed record LegacyFinsWriteProof(
     DateTimeOffset SentUtc, DateTimeOffset? AcknowledgedUtc, bool ReplyVerified);
 
 /// <summary>
+/// Every phase describes the REAL datagram passed to or returned from the UDP socket.
+/// Prepared is only a pre-send intent. WireSent means SendAsync returned successfully,
+/// NOT that the peer received the packet. ReplyReceived is not a validated ACK.
+/// AckAccepted requires matching endpoint, route, SID, opcode and FINS end-code.
+/// ReadbackVerified is an independent real DM read (never inferred from a write).
+/// </summary>
+public enum LegacyFinsObservationStage
+{
+    Prepared,
+    WireSent,
+    ReplyReceived,
+    AckAccepted,
+    AckRejected,
+    ReadbackVerified,
+    TransportFailure
+}
+
+/// <summary>
+/// Snapshot of a single localhost network operation: raw request/response are
+/// immutable copies of the exact socket buffers. Empty ResponseBytes explicitly
+/// means NO datagram was observed; it must never be filled with a synthetic reply.
+/// Callback delivery is synchronous, in real network phase order, allowing A0/A7
+/// to persist prepared intent before dispatching an irreversible output.
+/// </summary>
+public sealed record LegacyFinsDatagramObservation(
+    Guid OperationId, byte Sid, ushort DmAddress, bool IsWrite,
+    LegacyFinsObservationStage Stage, DateTimeOffset OccurredUtc,
+    long MonotonicTimestamp, ImmutableArray<byte> RequestBytes,
+    ImmutableArray<byte> ResponseBytes, string? Detail = null)
+{
+    public bool HasActualReply => !ResponseBytes.IsDefaultOrEmpty;
+}
+
+/// <summary>
 /// Strict IPv4-loopback FINS/UDP test client; never accepts hostnames or production IPs.
 /// FINS protocol SID, route and endpoint validated on each real network reply.
 /// </summary>
@@ -180,30 +216,142 @@ public sealed class LegacyFinsLoopbackClient
         _ = await ExecuteAsync(true, address, values, cancellationToken);
 
     /// <summary>
-    /// Execute a single REAL loopback UDP datagram. onBeforeSend runs BEFORE
-    /// SendAsync, so a durable timing event never asserts an ACK prematurely.
-    /// An acknowledged proof is returned only after actual SID, route, opcode
-    /// and FINS end-code validation. The raw vPLC logs retain the matching SID.
+    /// Original A1-compatible API, unchanged signature/semantics. Its pre-send
+    /// callback still receives ONLY prepared intent, not a confirmed send/ACK.
+    /// The shared raw transport now supplies the actual network proof internally.
     /// </summary>
-    public async Task<LegacyFinsWriteProof> WriteObservedAsync(
+    public Task<LegacyFinsWriteProof> WriteObservedAsync(
         ushort address, ushort value, Action<LegacyFinsWriteProof> onBeforeSend,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(onBeforeSend);
+        Guid operationId = Guid.NewGuid();
+        return WriteRawObservedAsync(address, value, operationId, evt =>
+        {
+            if (evt.Stage == LegacyFinsObservationStage.Prepared)
+                onBeforeSend(new LegacyFinsWriteProof(operationId, evt.Sid, address,
+                    value, evt.OccurredUtc, AcknowledgedUtc: null, ReplyVerified: false));
+        }, cancellationToken);
+    }
+
+    /// <summary>
+    /// ADDITIVE raw write API. The OperationId is supplied by the durable caller;
+    /// only this one FINS/UDP packet uses it. No implicit retry/readback.
+    /// Observe Prepared BEFORE sending, WireSent AFTER successful SendAsync,
+    /// and AckAccepted ONLY after receiving and validating the actual response.
+    /// In a dropped-ACK scenario neither ReplyReceived nor AckAccepted is emitted.
+    /// Observer exceptions propagate: caller must never assume a send was absent.
+    /// </summary>
+    public async Task<LegacyFinsWriteProof> WriteRawObservedAsync(
+        ushort address, ushort value, Guid operationId,
+        Action<LegacyFinsDatagramObservation> onObservation,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExchangeRawObservedAsync(true, address, [value],
+            operationId, onObservation, cancellationToken);
+        return new LegacyFinsWriteProof(operationId, result.Sid, address, value,
+            result.PreparedUtc, result.AcknowledgedUtc, ReplyVerified: true);
+    }
+
+    /// <summary>
+    /// ADDITIVE independent one-or-more-word READ: D2099=1 scanner observation
+    /// and separate post-write D2099/D1016 readback are REAL socket operations.
+    /// Only a validated read emits ReadbackVerified, with exact request AND reply.
+    /// Read values return from verified reply bytes, never from expected write values.
+    /// </summary>
+    public async Task<ushort[]> ReadRawObservedAsync(
+        ushort address, ushort count, Guid operationId,
+        Action<LegacyFinsDatagramObservation> onObservation,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await ExchangeRawObservedAsync(false, address, new ushort[count],
+            operationId, onObservation, cancellationToken);
+        return result.Values;
+    }
+
+    private async Task<(ushort[] Values, byte Sid, DateTimeOffset PreparedUtc,
+        DateTimeOffset AcknowledgedUtc)> ExchangeRawObservedAsync(
+        bool write, ushort address, ushort[] values, Guid operationId,
+        Action<LegacyFinsDatagramObservation> onObservation,
+        CancellationToken cancellationToken)
+    {
+        if (operationId == Guid.Empty)
+            throw new ArgumentException("A durable FINS OperationId is required.", nameof(operationId));
+        ArgumentNullException.ThrowIfNull(onObservation);
+        // The request is constructed ONCE; these exact bytes are sent to the socket.
+        // No observer fabricates data from address/values or reconstructs a reply.
+        byte sid = unchecked((byte)Interlocked.Increment(ref _sid));
+        byte[] request = LegacyFinsWire.MakeRequest(write, address, values, sid, _nodes);
+        ImmutableArray<byte> actualRequest = ImmutableArray.CreateRange(request);
+        var emptyReply = ImmutableArray<byte>.Empty;
+        void Emit(LegacyFinsObservationStage stage,
+            ImmutableArray<byte> actualReply = default, string? detail = null)
+        {
+            onObservation(new LegacyFinsDatagramObservation(
+                operationId, sid, address, write, stage, DateTimeOffset.UtcNow,
+                Stopwatch.GetTimestamp(), actualRequest,
+                actualReply.IsDefault ? emptyReply : actualReply, detail));
+        }
+
         using var budget = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         budget.CancelAfter(_timeout);
-        byte sid = unchecked((byte)Interlocked.Increment(ref _sid));
-        var request = LegacyFinsWire.MakeRequest(true, address, [value], sid, _nodes);
-        var sent = new LegacyFinsWriteProof(Guid.NewGuid(), sid, address, value,
-            DateTimeOffset.UtcNow, AcknowledgedUtc: null, ReplyVerified: false);
-        onBeforeSend(sent);
         using var udp = new UdpClient(AddressFamily.InterNetwork);
-        await udp.SendAsync(request, _endpoint, budget.Token);
-        var reply = await udp.ReceiveAsync(budget.Token);
-        if (!reply.RemoteEndPoint.Equals(_endpoint))
-            throw new InvalidDataException("Unexpected loopback FINS responder.");
-        _ = LegacyFinsWire.DecodeResponse(request, reply.Buffer, _nodes);
-        return sent with { AcknowledgedUtc = DateTimeOffset.UtcNow, ReplyVerified = true };
+        var prepared = DateTimeOffset.UtcNow;
+        Emit(LegacyFinsObservationStage.Prepared);
+        try
+        {
+            await udp.SendAsync(request, _endpoint, budget.Token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or SocketException)
+        {
+            Emit(LegacyFinsObservationStage.TransportFailure, detail: "UDP_SEND_" + ex.GetType().Name);
+            throw;
+        }
+        Emit(LegacyFinsObservationStage.WireSent);
+
+        UdpReceiveResult received;
+        try
+        {
+            received = await udp.ReceiveAsync(budget.Token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or SocketException)
+        {
+            // No received datagram => no ReplyReceived or AckAccepted, EVER.
+            Emit(LegacyFinsObservationStage.TransportFailure,
+                detail: "UDP_RECEIVE_" + ex.GetType().Name);
+            throw;
+        }
+
+        // FINS DM read/write replies are at most 142 bytes by profile. Preserve
+        // whole observed packets up to 4096; never silently truncate forged/invalid
+        // oversized traffic and then call it accepted.
+        if (received.Buffer.Length > 4096)
+        {
+            Emit(LegacyFinsObservationStage.TransportFailure,
+                detail: "UDP_REPLY_OVERSIZED_UNRECORDED");
+            throw new InvalidDataException("FINS UDP response exceeds bounded raw observation limit.");
+        }
+
+        ImmutableArray<byte> actualReply = ImmutableArray.CreateRange(received.Buffer);
+        Emit(LegacyFinsObservationStage.ReplyReceived, actualReply);
+        ushort[] decoded;
+        try
+        {
+            if (!received.RemoteEndPoint.Equals(_endpoint))
+                throw new InvalidDataException("Unexpected loopback FINS responder.");
+            decoded = LegacyFinsWire.DecodeResponse(request, received.Buffer, _nodes);
+        }
+        catch (InvalidDataException ex)
+        {
+            Emit(LegacyFinsObservationStage.AckRejected, actualReply, ex.Message);
+            throw;
+        }
+
+        var acknowledgedAt = DateTimeOffset.UtcNow;
+        Emit(LegacyFinsObservationStage.AckAccepted, actualReply);
+        if (!write)
+            Emit(LegacyFinsObservationStage.ReadbackVerified, actualReply);
+        return (decoded, sid, prepared, acknowledgedAt);
     }
 
     private async Task<ushort[]> ExecuteAsync(bool write, ushort address, ushort[] values,
