@@ -55,11 +55,64 @@ public sealed class ProductionTimelineReader
             .ToArray();
         bool truncated = ordered.Length > filter.Limit;
         var events = ordered.Take(filter.Limit).ToArray();
-        var problems = ProductionTimingAnalyzer.Diagnose(events, truncated);
+        var problems = ProductionTimingAnalyzer.Diagnose(events, truncated)
+            .Concat(FindCrossWorkpieceFrameReuse(events))
+            .ToArray();
         return new TimingTimeline(filter.WorkpieceId, DateTimeOffset.UtcNow, events, problems)
         {
             Truncated = truncated
         };
+    }
+
+    /// <summary>
+    /// A query for one WorkpieceId must still discover if an observed FrameId was
+    /// also attributed to ANOTHER workpiece/capture. Never fold in that other
+    /// workpiece's timeline; only return the specific collision finding.
+    /// </summary>
+    private TimingDifference[] FindCrossWorkpieceFrameReuse(TimingEvent[] selected)
+    {
+        var findings = new List<TimingDifference>();
+        var frames = selected.Where(e => e.Origin == "DIRECT_OBSERVATION" &&
+            e.FrameId is not null && e.CaptureId is not null &&
+            e.PhysicalDeviceId is not null)
+            .GroupBy(e => (e.FrameId, e.WorkpieceId, e.CaptureId, e.PhysicalDeviceId))
+            .Select(g => g.First()).ToArray();
+        if (frames.Length == 0) return [];
+        foreach (var node in new[] { "master", "slave" })
+        {
+            string path = Path.Combine(_root, node, ProductionTimingJournal.FileName);
+            if (!File.Exists(path)) continue;
+            using var db = OpenExisting(path);
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = """
+                SELECT event_json FROM timing_events
+                 WHERE json_extract(event_json,'$.frameId')=$frame
+                   AND (workpiece_id<>$item
+                     OR COALESCE(capture_id,'')<>$capture
+                     OR COALESCE(physical_device_id,'')<>$device)
+                 LIMIT 1
+                """;
+            var frame = cmd.Parameters.Add("$frame", SqliteType.Text);
+            var item = cmd.Parameters.Add("$item", SqliteType.Text);
+            var capture = cmd.Parameters.Add("$capture", SqliteType.Text);
+            var device = cmd.Parameters.Add("$device", SqliteType.Text);
+            foreach (var e in frames)
+            {
+                frame.Value = e.FrameId!.Value.ToString("D");
+                item.Value = e.WorkpieceId.ToString("D");
+                capture.Value = e.CaptureId!.Value.ToString("D");
+                device.Value = e.PhysicalDeviceId!;
+                if (cmd.ExecuteScalar() is not string raw) continue;
+                var conflicting = DiagnosticsFormat.Parse<TimingEvent>(raw);
+                if (conflicting.FrameId != e.FrameId) continue;
+                findings.Add(new TimingDifference("FRAME_REUSED_ACROSS_WORKPIECES", "ERROR",
+                    -1, e.Stage, e.EventId,
+                    $"FrameId {e.FrameId} is also linked to WorkpieceId {conflicting.WorkpieceId}, " +
+                    $"CaptureId {conflicting.CaptureId}, device {conflicting.PhysicalDeviceId}; " +
+                    "do not join or reuse this image."));
+            }
+        }
+        return findings.DistinctBy(f => (f.Code, f.ActualEventId)).ToArray();
     }
 
     private static SqliteConnection OpenExisting(string path)
