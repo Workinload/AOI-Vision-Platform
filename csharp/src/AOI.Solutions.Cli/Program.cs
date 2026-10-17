@@ -73,7 +73,7 @@ try
             ["minimumBrightFraction"] = fraction
         };
         var saved = repository.SaveDraft(solutionId,
-            new StationRecipe(draft.Recipe.StationId, draft.Recipe.ChannelIds, tunables),
+            draft.Recipe with { Tunables = tunables },
             revision, actor);
         Console.WriteLine($"SIM_PRODUCT_TUNE_OK station={saved.StationId} revision={saved.Revision} threshold={threshold} fraction={fraction}");
     }
