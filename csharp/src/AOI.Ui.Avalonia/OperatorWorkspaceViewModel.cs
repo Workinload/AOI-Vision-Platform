@@ -260,7 +260,11 @@ public partial class MainWindowViewModel
         foreach (var tile in GalleryChannels)
         {
             tile.Show(null, workpieceId is null ? "尚无工件" : "正在从 Core 读取 PNG...");
-            tile.ChannelState = Channels.First(c => c.ChannelId == tile.ChannelId).State;
+            // A historical PNG has a verified WorkpieceId, but v0.1 IPC has no
+            // per-channel historical outcome contract: never bind latest item's status.
+            tile.ChannelState = _lastProjection?.Workpiece?.WorkpieceId == workpieceId
+                ? Channels.First(c => c.ChannelId == tile.ChannelId).State
+                : "历史 PNG · 本件逐通道判定未开放 IPC";
         }
         if (workpieceId is null) return;
         GallerySummary = "WorkpieceId " + workpieceId.Value.ToString("D") +
