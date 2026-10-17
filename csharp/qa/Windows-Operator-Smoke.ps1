@@ -29,6 +29,7 @@ $script:processes=@{}
 $script:evidence=[IO.Path]::GetFullPath($EvidenceRoot)
 $script:sourceHash=$null
 $script:desktopScreenshots=New-Object System.Collections.ArrayList
+$script:uiaDumped=@{}
 $script:dataRoot=$null
 $script:masterSnapshot=$null
 $script:slaveSnapshot=$null
@@ -173,11 +174,36 @@ function Click-Element([IntPtr]$Window,[Windows.Automation.AutomationElement]$El
     [AoiWin]::Click([int]($box.Left+$box.Width/2),[int]($box.Top+$box.Height/2))
     Start-Sleep -Milliseconds 320
 }
+function Dump-UIA([IntPtr]$Window) {
+    $key=$Window.ToInt64().ToString()
+    if($script:uiaDumped.ContainsKey($key)) { return }
+    $script:uiaDumped[$key]=$true
+    $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
+    $all=$root.FindAll([Windows.Automation.TreeScope]::Descendants,[Windows.Automation.Condition]::TrueCondition)
+    $output=New-Object System.Collections.Generic.List[string]
+    for($i=0;$i -lt $all.Count -and $i -lt 250;$i++) {
+        try {
+            $el=$all.Item($i)
+            $a=$el.Current
+            $b=$a.BoundingRectangle
+            $output.Add(('{0:000} type={1} name="{2}" offscreen={3} rect={4},{5},{6},{7}' -f
+                $i,$a.ControlType.ProgrammaticName,$a.Name,$a.IsOffscreen,
+                [int]$b.Left,[int]$b.Top,[int]$b.Width,[int]$b.Height))
+        } catch { }
+    }
+    $path=Join-Path $script:evidence ('uia-'+$key+'.txt')
+    $output | Set-Content -LiteralPath $path -Encoding UTF8
+    Write-Host ('A5_UIA_DUMP window={0} count={1} file={2}' -f $key,$all.Count,$path)
+    foreach($line in @($output | Where-Object { $_ -match 'Tab|Button|ListItem|11 |45 |HOLD|ROI|产品|通道' } | Select-Object -First 28)) {
+        Write-Host ('A5_UIA_ENTRY '+$line)
+    }
+}
 function Find-UIA([Windows.Automation.AutomationElement]$Root,[Windows.Automation.ControlType]$Type,[string]$Name) {
     $all=Elements $Root $Type
     foreach($el in $all) {
         if($el.Current.Name -eq $Name -and -not $el.Current.IsOffscreen) { return $el }
     }
+    Dump-UIA $Root.Current.NativeWindowHandle
     throw ("UI Automation cannot find visible "+$Name)
 }
 function Click-Tab([IntPtr]$Window,[string]$Name) {
