@@ -198,8 +198,23 @@ public sealed class FinalOutputAuditJournal
         var reply = FinalOutputFinsEvidence.VerifiedReply(readRequest, readResponse, true);
         if (reply.EndCode != 0 || reply.Word is null)
             throw new InvalidDataException("Readback FINS response was refused; record uncertainty.");
-        return Append(attemptId, FinalOutputAuditPhase.ReadbackVerified, stepNumber,
-            readOperationId, sid, address, null,
+        ushort expected;
+        using (var db = Open())
+        {
+            using var cmd = db.CreateCommand();
+            cmd.CommandText = """
+                SELECT value FROM final_output_audit_events
+                 WHERE attempt_id=$id AND step_number=$step AND phase='StepPrepared'
+                """;
+            cmd.Parameters.AddWithValue("$id", attemptId.ToString("D"));
+            cmd.Parameters.AddWithValue("$step", stepNumber);
+            var raw = cmd.ExecuteScalar();
+            if (raw is null) throw new InvalidOperationException("No reserved step for readback.");
+            expected = checked((ushort)Convert.ToInt32(raw, CultureInfo.InvariantCulture));
+        }
+        return Append(attemptId, reply.Word == expected
+                ? FinalOutputAuditPhase.ReadbackVerified : FinalOutputAuditPhase.ReadbackMismatch,
+            stepNumber, readOperationId, sid, address, null,
             FinalOutputFinsEvidence.Sha256(readRequest),
             FinalOutputFinsEvidence.Sha256(readResponse), reply.Word);
     }
