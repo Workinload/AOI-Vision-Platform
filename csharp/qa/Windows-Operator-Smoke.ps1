@@ -268,37 +268,37 @@ function Click-Tab([IntPtr]$Window,[string]$Name) {
     return $method
 }
 function Click-LocalChannel([IntPtr]$Window,[string]$Id) {
-    $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
-    # Avalonia currently names each ListItem "AOI.Ui.Avalonia.ChannelTile";
-    # identify by its REAL child Text (CH06/CH02), then click its ListItem ancestor.
-    $texts=Elements $root ([Windows.Automation.ControlType]::Text)
-    $walker=[Windows.Automation.TreeWalker]::ControlViewWalker
-    $wr=New-Object AoiRect
-    if(-not [AoiWin]::GetWindowRect($Window,[ref]$wr)) { throw 'Missing operator desktop window' }
-    foreach($el in $texts) {
-        if($el.Current.Name -ne $Id) { continue }
-        $ancestor=$walker.GetParent($el)
-        for($depth=0;$ancestor -ne $null -and $depth -lt 6;$depth++) {
-            if($ancestor.Current.ControlType -eq [Windows.Automation.ControlType]::ListItem) {
-                # Only the LEFT device map, not the right PLC table.
-                if($ancestor.Current.BoundingRectangle.Left -le $wr.Left+($wr.Right-$wr.Left)*0.65) {
-                    # Click the actual channel TEXT, not the ListItem center.
-                    # The second-row tile CH06 center can fall below its parent
-                    # ScrollViewer viewport even when its header text is visible.
-                    Click-Element $Window $el
-                    Start-Sleep -Milliseconds 300
-                    $descriptions=Elements $root ([Windows.Automation.ControlType]::Text)
-                    if(-not @($descriptions | Where-Object { $_.Current.Name -like ($Id+' ·*') }).Count) {
-                        throw ("Map click did not update selected-channel description to "+$Id)
-                    }
-                    return
-                }
-                break
+    # FindFirst narrows native UIAutomation traversal: FindAll(Text) across 11
+    # tiles + PLC table occasionally returns provider COM E_FAIL on Windows.
+    # A real Windows mouse event still selects the target; the subsequent
+    # node-owned Core ROI revision check proves the correct channel was chosen.
+    $filter=[Windows.Automation.AndCondition]::new(@(
+        [Windows.Automation.PropertyCondition]::new(
+            [Windows.Automation.AutomationElement]::ControlTypeProperty,
+            [Windows.Automation.ControlType]::Text),
+        [Windows.Automation.PropertyCondition]::new(
+            [Windows.Automation.AutomationElement]::NameProperty,$Id)
+    ))
+    for($attempt=1;$attempt -le 5;$attempt++) {
+        try {
+            $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
+            $nameElement=$root.FindFirst([Windows.Automation.TreeScope]::Descendants,$filter)
+            if($null -eq $nameElement) { throw ("No actual Text peer for "+$Id) }
+            $win=New-Object AoiRect
+            if(-not [AoiWin]::GetWindowRect($Window,[ref]$win)) {
+                throw 'Target GUI window disappeared'
             }
-            $ancestor=$walker.GetParent($ancestor)
+            $labelX=$nameElement.Current.BoundingRectangle.Left
+            if($labelX -gt $win.Left+($win.Right-$win.Left)*0.65) {
+                throw ("CHxx match appears in PLC table rather than left equipment map: "+$Id)
+            }
+            Click-Element $Window $nameElement
+            return
+        } catch {
+            if($attempt -eq 5) { throw }
+            Start-Sleep -Milliseconds (190*$attempt)
         }
     }
-    throw ("Map channel Text/ListItem unavailable for "+$Id)
 }
 function Click-RoiSave([IntPtr]$Window) {
     $root=[Windows.Automation.AutomationElement]::FromHandle($Window)
@@ -457,7 +457,6 @@ public static class AoiWin {
         Click-LocalChannel $masterWindow 'CH06'
         Start-Sleep -Milliseconds 900
         Screenshot $masterWindow 'master-selected-CH06'
-        Record-Check 'click_channel_CH06' 'PASS' 'Real mouse selection of own Master camera channel'
         Click-RoiSave $masterWindow
         Wait-Until {
             $fresh=Get-CoreSnapshot 19621
@@ -467,6 +466,7 @@ public static class AoiWin {
                 [Math]::Abs($_.width-0.70) -lt 0.000001
             }).Count -ge 1)
         } 'real UI click -> persisted Core ROI rev1' 15
+        Record-Check 'click_channel_CH06' 'PASS' 'Actual GUI selection proven by persisted Master-owned CH06 ROI'
         Screenshot $masterWindow 'master-roi-saved'
         Record-Check 'roi_saved_by_real_click' 'PASS' 'Win32 mouse+ROI field edits -> Core snapshot confirms durable CH06 revision'
     } catch { Record-Check 'roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
@@ -474,7 +474,6 @@ public static class AoiWin {
         Click-LocalChannel $slaveWindow 'CH02'
         Start-Sleep -Milliseconds 900
         Screenshot $slaveWindow 'slave-selected-CH02'
-        Record-Check 'click_slave_channel_CH02' 'PASS' 'Real mouse selection of Slave-owned camera'
         Click-RoiSave $slaveWindow
         Wait-Until {
             $fresh=Get-CoreSnapshot 19622
@@ -484,6 +483,7 @@ public static class AoiWin {
                 [Math]::Abs($_.height-0.70) -lt 0.000001
             }).Count -ge 1)
         } 'Slave ROI saved from real GUI button into its own Core' 15
+        Record-Check 'click_slave_channel_CH02' 'PASS' 'Actual GUI selection proven by persisted Slave-owned CH02 ROI'
         Screenshot $slaveWindow 'slave-roi-saved'
         Record-Check 'slave_roi_saved_by_real_click' 'PASS' 'Slave GUI editing -> Slave Core persisted CH02 revision'
     } catch { Record-Check 'slave_roi_saved_by_real_click' 'FAIL' $_.Exception.Message }
