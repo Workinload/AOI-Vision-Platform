@@ -148,11 +148,13 @@ try
         if (args.Length != 9) throw new ArgumentException(
             "algorithm-param requires solutionId channelId stationRevision algorithmId numericKey numericValue actor");
         var draft = SolutionParameterEditor.ReadDraft(repository, args[2], args[3]);
-        var numeric = draft.InspectionTarget?.AlgorithmId == args[5]
-            ? new Dictionary<string, double>(draft.InspectionTarget.NumericParameters, StringComparer.Ordinal)
+        var previous = draft.InspectionTarget;
+        bool samePlugin = previous is not null && previous.AlgorithmId == args[5];
+        var numeric = samePlugin
+            ? new Dictionary<string, double>(previous!.NumericParameters, StringComparer.Ordinal)
             : new Dictionary<string, double>(StringComparer.Ordinal);
-        var text = draft.InspectionTarget?.AlgorithmId == args[5]
-            ? new Dictionary<string, string>(draft.InspectionTarget.TextParameters, StringComparer.Ordinal)
+        var text = samePlugin
+            ? new Dictionary<string, string>(previous!.TextParameters, StringComparer.Ordinal)
             : new Dictionary<string, string>(StringComparer.Ordinal);
         numeric[args[6]] = double.Parse(args[7], CultureInfo.InvariantCulture);
         var target = new InspectionAlgorithmTarget(args[3], args[5], numeric, text);
