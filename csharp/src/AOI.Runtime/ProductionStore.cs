@@ -248,6 +248,71 @@ public sealed class ProductionStore
         tx.Commit();
     }
 
+    /// <summary>
+    /// Atomically persist the Slave's bounded per-workpiece HOLD and its durable
+    /// outbound camera-fault message. A crash cannot leave a completed failure
+    /// locally without a replayable Master notification.
+    /// </summary>
+    public void HoldAndQueueCaptureFault(PhysicalCaptureFault fault, PeerEnvelope outbound)
+    {
+        ArgumentNullException.ThrowIfNull(fault);
+        fault.Validate();
+        outbound.Validate();
+        var trigger = fault.Trigger;
+        var item = trigger.Workpiece;
+        if (outbound.SenderNodeId != "slave" || outbound.ReceiverNodeId != "master" ||
+            outbound.PayloadType != "capture_fault" ||
+            outbound.WorkpieceId != item.WorkpieceId ||
+            outbound.Epoch != item.Epoch || outbound.TraceId != item.TraceId ||
+            outbound.SolutionReleaseId != item.ReleaseId ||
+            outbound.ChannelId != trigger.Channels[0].ChannelId ||
+            outbound.StationId != trigger.StationId ||
+            outbound.PayloadJson != WireFormat.Serialize(fault))
+            throw new InvalidDataException("Capture fault outbox identity or camera owner mismatch.");
+        using var db = Open();
+        using var tx = db.BeginTransaction();
+        if (RequireWorkpiece(db, tx, item.WorkpieceId) != item)
+            throw new InvalidDataException("Capture fault must match registered Slave identity.");
+        using (var final = Cmd(db, tx,
+            "SELECT final_json FROM workpieces WHERE workpiece_id=$id",
+            ("$id", item.WorkpieceId.ToString("D"))))
+            if (final.ExecuteScalar() is string)
+                throw new InvalidOperationException("Cannot hold an already finalized workpiece.");
+        using (var find = Cmd(db, tx,
+            "SELECT reason_code,detail FROM workpiece_holds WHERE workpiece_id=$id",
+            ("$id", item.WorkpieceId.ToString("D"))))
+        using (var reader = find.ExecuteReader())
+            if (reader.Read() && (reader.GetString(0) != fault.ReasonCode ||
+                                  reader.GetString(1) != fault.Detail))
+                throw new InvalidDataException("Conflicting Slave workpiece HOLD reasons.");
+
+        using (var add = Cmd(db, tx, """
+            INSERT INTO workpiece_holds(workpiece_id,reason_code,detail,raised_utc)
+            VALUES($id,$code,$detail,$utc)
+            ON CONFLICT(workpiece_id) DO NOTHING
+            """, ("$id", item.WorkpieceId.ToString("D")),
+            ("$code", fault.ReasonCode), ("$detail", fault.Detail),
+            ("$utc", fault.OccurredUtc.ToString("O"))))
+            add.ExecuteNonQuery();
+        Queue(db, tx, outbound);
+        Event(db, tx, "WORKPIECE_HOLD", item.WorkpieceId, null,
+            "reason=" + fault.ReasonCode + " device=" + trigger.PhysicalDeviceId);
+        Event(db, tx, "CAPTURE_FAULT_OUTBOX_QUEUED", item.WorkpieceId,
+            outbound.MessageId, trigger.CaptureId.ToString("D"));
+        tx.Commit();
+    }
+
+    /// <summary>Read whether this exact WorkpieceId has a durable HOLD.</summary>
+    public bool HasWorkpieceHold(Guid workpieceId)
+    {
+        if (workpieceId == Guid.Empty) throw new ArgumentException("Invalid workpiece ID.");
+        using var db = Open();
+        using var cmd = db.CreateCommand();
+        cmd.CommandText = "SELECT COUNT(*) FROM workpiece_holds WHERE workpiece_id=$id";
+        cmd.Parameters.AddWithValue("$id", workpieceId.ToString("D"));
+        return Convert.ToInt64(cmd.ExecuteScalar()) != 0;
+    }
+
     /// <summary>Slave consumption queue, populated in the SAME transaction as the peer ACK.</summary>
     public IReadOnlyList<PhysicalCaptureTrigger> PendingCaptureTriggers(int limit = 32)
     {
@@ -329,6 +394,7 @@ public sealed class ProductionStore
         WorkpieceIdentity? registration = null;
         ChannelResult? inspection = null;
         PhysicalCaptureTrigger? captureTrigger = null;
+        PhysicalCaptureFault? captureFault = null;
         if (inbound.PayloadType == "workpiece_registered")
         {
             if (inbound.SenderNodeId != "master" || expectedReceiver != "slave" ||
@@ -371,6 +437,22 @@ public sealed class ProductionStore
                 captureTrigger.StationId != inbound.StationId)
                 throw new InvalidDataException("Capture event identity, station or channel is forged.");
         }
+        else if (inbound.PayloadType == "capture_fault")
+        {
+            if (inbound.SenderNodeId != "slave" || expectedReceiver != "master" ||
+                string.IsNullOrWhiteSpace(inbound.ChannelId))
+                throw new InvalidDataException("Physical capture fault may only travel Slave -> Master.");
+            captureFault = WireFormat.Parse<PhysicalCaptureFault>(inbound.PayloadJson);
+            captureFault.Validate();
+            var trigger = captureFault.Trigger;
+            if (trigger.Workpiece.WorkpieceId != inbound.WorkpieceId ||
+                trigger.Workpiece.TraceId != inbound.TraceId ||
+                trigger.Workpiece.Epoch != inbound.Epoch ||
+                trigger.Workpiece.ReleaseId != inbound.SolutionReleaseId ||
+                trigger.Channels[0].ChannelId != inbound.ChannelId ||
+                trigger.StationId != inbound.StationId)
+                throw new InvalidDataException("Physical camera fault carries forged workpiece or channel.");
+        }
         else throw new InvalidDataException($"Unrecognized packet type {inbound.PayloadType}");
 
         // A payload digest alone cannot prove workpiece, station, epoch, sender,
@@ -409,6 +491,38 @@ public sealed class ProductionStore
                 ("$attempt", captureTrigger.AttemptNo),
                 ("$body", WireFormat.Serialize(captureTrigger)));
             triggerInsert.ExecuteNonQuery();
+        }
+
+        else if (captureFault is not null)
+        {
+            var trigger = captureFault.Trigger;
+            var item = trigger.Workpiece;
+            if (RequireWorkpiece(db, tx, item.WorkpieceId) != item)
+                throw new InvalidDataException("Remote physical fault workpiece identity mismatch.");
+            using (var final = Cmd(db, tx,
+                "SELECT final_json FROM workpieces WHERE workpiece_id=$id",
+                ("$id", item.WorkpieceId.ToString("D"))))
+                if (final.ExecuteScalar() is string)
+                    throw new InvalidOperationException("Cannot accept a late fault after final output.");
+            using (var existingHold = Cmd(db, tx,
+                "SELECT reason_code,detail FROM workpiece_holds WHERE workpiece_id=$id",
+                ("$id", item.WorkpieceId.ToString("D"))))
+            using (var reader = existingHold.ExecuteReader())
+                if (reader.Read() && (reader.GetString(0) != captureFault.ReasonCode ||
+                                      reader.GetString(1) != captureFault.Detail))
+                    throw new InvalidDataException("Conflicting Master HOLD: manual reconciliation required.");
+
+            using (var insertHold = Cmd(db, tx, """
+                INSERT INTO workpiece_holds(workpiece_id,reason_code,detail,raised_utc)
+                VALUES($id,$code,$detail,$utc)
+                ON CONFLICT(workpiece_id) DO NOTHING
+                """,
+                ("$id", item.WorkpieceId.ToString("D")),
+                ("$code", captureFault.ReasonCode), ("$detail", captureFault.Detail),
+                ("$utc", captureFault.OccurredUtc.ToString("O"))))
+                insertHold.ExecuteNonQuery();
+            Event(db, tx, "REMOTE_CAPTURE_HOLD", item.WorkpieceId,
+                inbound.MessageId, trigger.PhysicalDeviceId + ":" + trigger.CaptureId);
         }
 
         using var commitInbox = Cmd(db, tx, """
