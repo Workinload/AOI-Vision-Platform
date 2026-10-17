@@ -1,10 +1,10 @@
 name: A0 Final FINS WAL Intent Real Five-Process Gate
 on:
   pull_request:
-    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', '.github/workflows/a0-final-output-journal.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_readonly_recovery.py', '.github/workflows/a0-final-output-journal.yml']
   push:
     branches: ['migration/csharp-avalonia-20261016']
-    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', '.github/workflows/a0-final-output-journal.yml']
+    paths: ['csharp/src/AOI.Host/**', 'csharp/src/AOI.Runtime/Agent01/FinalPlcOutputJournal.cs', 'csharp/src/AOI.Runtime/Plc/LegacyPlcShadow.cs', 'csharp/scripts/e2e_a0_final_output_journal.py', 'csharp/scripts/e2e_a0_readonly_recovery.py', '.github/workflows/a0-final-output-journal.yml']
   workflow_dispatch:
 permissions:
   contents: read
@@ -39,6 +39,8 @@ jobs:
           dotnet build AOI.slnx --no-restore -c Debug
       - name: Real five-process A1 final WAL claims versus actual FINS SID and ACK-loss interlock
         run: python scripts/e2e_a0_final_output_journal.py --evidence-root .artifacts/a0-final-output-journal
+      - name: A0 offline read-only Core crash reconciliation from actual WAL evidence
+        run: python scripts/e2e_a0_readonly_recovery.py --evidence-root .artifacts/a0-final-output-journal
       - name: Upload failure evidence for A0
         if: failure()
         uses: actions/upload-artifact@v4
