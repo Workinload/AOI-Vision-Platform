@@ -354,8 +354,8 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
         lock (_sync)
         {
             var state = Require(result.CaptureId);
-            VerifyResult(state, result);
             if (!IsLatest(state) || state.Failure is not null) return false;
+            VerifyResult(state, result);
             if (state.Results.TryGetValue(result.ChannelId, out var previous))
             {
                 if (previous != result)
@@ -377,7 +377,7 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
         lock (_sync)
         {
             var state = Require(captureId);
-            if (!IsLatest(state) || state.Failure is not null) return false;
+            if (!IsLatest(state) || state.Terminal) return false;
             FailCaptureCore(captureId, reason);
             return true;
         }
@@ -418,7 +418,11 @@ public sealed class CaptureHandshakeCoordinator : ICaptureHandshakeCoordinator
         var completed = state.Results.Keys.Order(StringComparer.Ordinal).ToArray();
         return new(state.Ticket, phase, state.RequestObserved, state.Frame is not null,
             state.FrameIsValidated, state.AckDue, state.CamDoneSent,
-            Array.AsReadOnly(completed), state.Failure, state.LastSequence);
+            Array.AsReadOnly(completed), state.Failure, state.LastSequence)
+        {
+            Outcomes = new System.Collections.ObjectModel.ReadOnlyDictionary<string, ChannelOutcome>(
+                state.Results.ToDictionary(x => x.Key, x => x.Value.Outcome, StringComparer.Ordinal))
+        };
     }
 
     public CaptureHandshakeProgress Get(Guid captureId)
