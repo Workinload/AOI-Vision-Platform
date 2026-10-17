@@ -85,6 +85,9 @@ public sealed class ProductionTimingTests
         var comparison = ProductionTimingAnalyzer.Compare(item.WorkpieceId, expected, queried.Events);
         Assert.That(comparison.IsMatch, Is.True, DiagnosticsFormat.Serialize(comparison));
         Assert.That(queried.DiagnosticDifferences, Is.Empty);
+        TestContext.Progress.WriteLine($"A7_ST05_TIMELINE_PASS ordering={(frameFirst ? "FRAME_FIRST" : "REQUEST_FIRST")} " +
+            $"workpiece={item.WorkpieceId:D} capture={cap:D} " +
+            $"events={queried.Events.Length} stopwatchRun={journal.ProcessRunId:D}");
         var csv = Path.Combine(_root, "timing", "audit.csv");
         var json = Path.Combine(_root, "timing", "audit.json");
         ProductionTimelineExports.SaveCsv(queried, csv);
@@ -114,6 +117,8 @@ public sealed class ProductionTimingTests
         Assert.That(comparison.IsMatch, Is.False);
         Assert.That(comparison.Differences.Select(d => d.Code),
             Does.Contain("EXPECTED_EVENT_NOT_OBSERVED"));
+        TestContext.Progress.WriteLine($"A7_ST05_TIMELINE_NEGATIVE workpiece={item.WorkpieceId:D} " +
+            "missing=FrameReady; observed=CamDone2; rejected=1");
     }
 
     [Test]
@@ -291,6 +296,8 @@ public sealed class ProductionTimingTests
             Is.EqualTo((ushort)1));
         Assert.That(events.Where(e => e.OperationId == op).Select(e => e.FinsSid)
             .Distinct(), Is.EquivalentTo(new byte?[] { 31 }));
+        TestContext.Progress.WriteLine($"A7_UDP_FINS_D1011_PASS workpiece={item.WorkpieceId:D} " +
+            $"capture={cap:D} operation={op:D} sid=31 register=D1011 response={words[0]}");
     }
 
     [Test]
