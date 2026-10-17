@@ -6,9 +6,10 @@ using AOI.Host;
 using System.Net;
 using System.Net.Sockets;
 
-if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc"))
+if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc" or "inspect"))
 {
-    Console.Error.WriteLine("Usage: AOI.Host [master|slave|vplc] [--data /path]  (strictly SIM_ONLY)");
+    Console.Error.WriteLine(
+        "Usage: AOI.Host [master|slave|vplc|inspect] [--data /path] (SIM_ONLY; inspect is read-only)");
     return 2;
 }
 
@@ -16,6 +17,23 @@ string role = args[0];
 bool allEleven = SimElevenChannelFixture.Enabled;
 string dataRoot = args.Length >= 3 && args[1] == "--data"
     ? Path.GetFullPath(args[2]) : Path.GetFullPath("./.artifacts/sim");
+if (role == "inspect")
+{
+    // Offline recovery is NOT a production mode: no virtual PLC, no camera,
+    // no PeerLink, no A1 writer lease, and never a real PLC transport.
+    // The sealed snapshot is intentionally incapable of issuing a reset.
+    try
+    {
+        Console.WriteLine("AOI_RECOVERY_INSPECT_JSON=" +
+            WireFormat.Serialize(HostReadOnlyRecovery.Capture(dataRoot)));
+        return 0;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("AOI_RECOVERY_INSPECT_FAILED " + ex);
+        return 1;
+    }
+}
 using var cancelled = new CancellationTokenSource();
 Console.CancelKeyPress += (_, ev) => { ev.Cancel = true; cancelled.Cancel(); };
 Console.WriteLine($"AOI_HOST role={role} mode=SIM_LIGHT channels={(allEleven ? 11 : 2)} real_plc_writes=DISABLED");
