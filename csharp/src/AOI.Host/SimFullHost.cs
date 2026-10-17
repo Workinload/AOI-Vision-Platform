@@ -66,6 +66,10 @@ public static class SimFullHost
         var product = SimProductRuntime.Load(root);
         Console.WriteLine($"SIM_FULL_SLAVE_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
+        var interlock = new HostPeerInterlock(folder);
+        bool injectDisconnect = Environment.GetEnvironmentVariable(
+            "AOI_SIM_DROP_PEER_AFTER_SLAVE_REGISTRATION") == "1";
+        bool injectedOnce = false;
         var legacyFins = LegacyShadowHostBridge.Enabled
             ? LegacyShadowHostBridge.NewClient() : null;
         var physical = legacyFins is null ? null :
@@ -86,7 +90,11 @@ public static class SimFullHost
                 using var session = new PeerSession(tcp);
                 using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var pump = session.PumpOutboxAsync(store, linked.Token);
-                Task? captureWorker = physical is null ? null :
+                bool readonlySession = interlock.IsLatched();
+                if (readonlySession)
+                    Console.Error.WriteLine(
+                        "SIM_FULL_SLAVE_PEER_READONLY_RECONNECTED no_capture_retry=1");
+                Task? captureWorker = physical is null || readonlySession ? null :
                     RunSlaveCaptureWorkerAsync(store, physical, linked.Token);
                 try
                 {
@@ -106,6 +114,20 @@ public static class SimFullHost
                                 throw new InvalidDataException("SIM_FULL Slave received unsupported packet.");
                             var item = WireFormat.Parse<WorkpieceIdentity>(message.PayloadJson);
                             product.VerifyWorkpiece(item);
+                            if (injectDisconnect && !injectedOnce && !duplicate)
+                            {
+                                injectedOnce = true;
+                                Console.Error.WriteLine(
+                                    "SIM_ONLY_SLAVE_INJECT_PEER_DROP_AFTER_PERSISTED_REGISTRATION id=" +
+                                    item.WorkpieceId);
+                                throw new IOException("SIM_ONLY_PEER_LINK_LOSS_INJECTION");
+                            }
+                            if (interlock.IsLatched())
+                            {
+                                Console.Error.WriteLine("SIM_FULL_SLAVE_PEER_METADATA_ONLY id=" +
+                                    item.WorkpieceId + " no_capture_retry=1");
+                                return Task.CompletedTask;
+                            }
                             if (physical is not null)
                             {
                                 Console.WriteLine("SIM_FULL_SLAVE_REGISTERED_FOR_TRIGGER id=" +
@@ -123,29 +145,41 @@ public static class SimFullHost
                                 throw new InvalidDataException("Incomplete duplicate registration; manual HOLD.");
                             return Task.CompletedTask;
                         }, linked.Token);
-                    if (captureWorker is not null)
+                    // A send failure must not be hidden behind an idle TCP read.
+                    // Both sides monitor the receive task AND outbound WAL pump.
+                    Task first = captureWorker is null
+                        ? await Task.WhenAny(read, pump)
+                        : await Task.WhenAny(read, pump, captureWorker);
+                    if (ReferenceEquals(first, captureWorker))
                     {
-                        var first = await Task.WhenAny(read, captureWorker);
-                        if (ReferenceEquals(first, captureWorker))
-                        {
-                            await captureWorker; // propagate real worker failure
-                            throw new InvalidOperationException("Slave capture worker exited unexpectedly.");
-                        }
+                        await captureWorker!; // real camera worker failure is fatal
+                        throw new InvalidOperationException(
+                            "Slave capture worker exited unexpectedly.");
                     }
-                    await read;
+                    await first; // throws if the peer socket or writer failed
+                    throw new IOException("SIM_FULL_SLAVE_PEER_TASK_ENDED");
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested &&
                     ex is IOException or SocketException)
                 {
-                    Console.Error.WriteLine("SIM_FULL_SLAVE_RECONNECT " + ex.Message);
+                    linked.Cancel(); // freeze physical capture before reconciliation
+                    interlock.Latch("PEER_LINK_LOST", ex.ToString());
+                    Console.Error.WriteLine(
+                        "SIM_FULL_SLAVE_PEER_INTERLOCK_HOLD no_capture_retry=1 " +
+                        "manual_reconciliation=1 " + ex.Message);
                 }
                 finally
                 {
                     linked.Cancel();
-                    try { await pump; } catch (OperationCanceledException) { }
+                    try { await pump; }
+                    catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                    catch (IOException) when (linked.IsCancellationRequested) { }
+                    catch (SocketException) when (linked.IsCancellationRequested) { }
                     if (captureWorker is not null)
+                    {
                         try { await captureWorker; }
                         catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
+                    }
                 }
             }
         }
