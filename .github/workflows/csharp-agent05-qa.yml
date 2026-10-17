@@ -96,7 +96,7 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          powershell.exe -NoLogo -NoProfile -File qa/Windows-Operator-Smoke.ps1 -PackageRoot .artifacts/dist/AOI_SIM11_Windows -EvidenceRoot .artifacts/windows-operator-smoke -TimeoutSeconds 110
+          powershell.exe -NoLogo -NoProfile -File qa/Windows-Operator-Smoke.ps1 -PackageRoot .artifacts/dist/AOI_SIM11_Windows -EvidenceRoot .artifacts/windows-operator-smoke -TimeoutSeconds 110 -TryCi1080p
           if ($LASTEXITCODE -ne 0) {
             Write-Host 'A5_WINDOWS_DESKTOP_NOT_VERIFIED: inspect report and screenshots; hosted runner may lack interactive session'
             exit 1
