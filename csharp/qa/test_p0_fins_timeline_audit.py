@@ -118,6 +118,14 @@ class FinsCausalAuditTests(unittest.TestCase):
             verify_evidence(wire, events, cases)
         self.assertEqual(raised.exception.code, code)
 
+    def test_actual_a7_wireformat_camel_case_timing_stages(self):
+        wire, events, cases = fixture()
+        # A7 DiagnosticsFormat.Json inherits A0 WireFormat.Json, which emits
+        # enum names as camelCase (not the PascalCase fixture label).
+        for e in events:
+            e["stage"] = e["stage"][0].lower() + e["stage"][1:]
+        self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
+
     def test_frame_first_real_packet_fields_and_st05_ack(self):
         wire, events, cases = fixture("FRAME_FIRST", "OK")
         self.assertEqual(verify_evidence(wire, events, cases)["physical_capture_ack"], 1)
