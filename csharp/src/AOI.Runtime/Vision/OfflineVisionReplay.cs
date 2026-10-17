@@ -121,7 +121,8 @@ public sealed class OfflineVisionReplay
         IReadOnlyDictionary<string, ImageRegion>? roiByChannel = null,
         int attemptNo = 1, bool flatDemoFolder = false,
         Func<string, int, int, ImageRegion?>? releasedRoiForImage = null,
-        Func<string, ContourDefectRule>? releasedRuleForChannel = null)
+        Func<string, ContourDefectRule>? releasedRuleForChannel = null,
+        string? deferPhysicalDeviceId = null)
     {
         item.Validate();
         rule.Validate();
@@ -131,7 +132,8 @@ public sealed class OfflineVisionReplay
         var directory = Path.GetFullPath(flatDemoFolder
             ? imageRoot : Path.Combine(imageRoot, item.WorkpieceId.ToString("N")));
         var output = Path.GetFullPath(annotationRoot);
-        var definitions = ChannelCatalog.All.Where(c => c.OwnerRole == owner)
+        var definitions = ChannelCatalog.All.Where(c => c.OwnerRole == owner &&
+            (deferPhysicalDeviceId is null || c.PhysicalDeviceId != deferPhysicalDeviceId))
             .OrderBy(c => c.ChannelId, StringComparer.Ordinal).ToArray();
         // An accidental ROI for another node's channel is never applied to this node's image.
         if (roiByChannel is not null && roiByChannel.Keys.Any(k =>
