@@ -113,7 +113,9 @@ internal sealed class LegacyJournaledFinalOutput
                     "External PLC scanner input disagrees with immutable output intent.");
         }
         catch (Exception ex) when (ex is IOException or SocketException or
-                                   InvalidDataException or OperationCanceledException)
+                                   InvalidDataException or InvalidOperationException or
+                                   Microsoft.Data.Sqlite.SqliteException or
+                                   OperationCanceledException)
         {
             // An offer may have reached PLC while its response was lost.
             // Freeze all production rather than offering/claiming again.
@@ -204,7 +206,8 @@ internal sealed class LegacyJournaledFinalOutput
             }
             catch (Exception ex) when (ex is IOException or SocketException or
                                        InvalidDataException or OperationCanceledException or
-                                       InvalidOperationException)
+                                       InvalidOperationException or
+                                       Microsoft.Data.Sqlite.SqliteException)
             {
                 // The A1 ClaimId is fsynced BEFORE actual UDP SendAsync.
                 // First freeze ALL further output, then persist A1 UNKNOWN.
