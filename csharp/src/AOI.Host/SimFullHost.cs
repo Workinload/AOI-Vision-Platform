@@ -66,6 +66,10 @@ public static class SimFullHost
         var product = SimProductRuntime.Load(root);
         Console.WriteLine($"SIM_FULL_SLAVE_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
+        var legacyFins = LegacyShadowHostBridge.Enabled
+            ? LegacyShadowHostBridge.NewClient() : null;
+        var physical = legacyFins is null ? null :
+            new LegacyPhysicalCapture(folder, MachineRole.Slave, store, product, legacyFins);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Slave);
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL", product.Overview, simConfig);
         _ = RoiDraftIpc.ServeAsync(simConfig, 19642,
@@ -82,15 +86,32 @@ public static class SimFullHost
                 using var session = new PeerSession(tcp);
                 using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
                 var pump = session.PumpOutboxAsync(store, linked.Token);
+                Task? captureWorker = physical is null ? null :
+                    RunSlaveCaptureWorkerAsync(store, physical, linked.Token);
                 try
                 {
-                    await session.ReadAsync(self, "master", store,
+                    var read = session.ReadAsync(self, "master", store,
                         (message, duplicate, _) =>
                         {
+                            if (message.PayloadType == "capture_trigger" && physical is not null)
+                            {
+                                // Store.AcceptIncoming already journaled this trigger
+                                // in the same transaction BEFORE PeerLink ACK.
+                                Console.WriteLine("SIM_SLAVE_TRIGGER_PERSISTED capture=" +
+                                    WireFormat.Parse<PhysicalCaptureTrigger>(message.PayloadJson).CaptureId +
+                                    " duplicate=" + duplicate);
+                                return Task.CompletedTask;
+                            }
                             if (message.PayloadType != "workpiece_registered")
                                 throw new InvalidDataException("SIM_FULL Slave received unsupported packet.");
                             var item = WireFormat.Parse<WorkpieceIdentity>(message.PayloadJson);
                             product.VerifyWorkpiece(item);
+                            if (physical is not null)
+                            {
+                                Console.WriteLine("SIM_FULL_SLAVE_REGISTERED_FOR_TRIGGER id=" +
+                                    item.WorkpieceId);
+                                return Task.CompletedTask;
+                            }
                             if (!duplicate)
                             {
                                 int resultCount = SimElevenChannelFixture.CaptureOwned(item,
@@ -102,6 +123,16 @@ public static class SimFullHost
                                 throw new InvalidDataException("Incomplete duplicate registration; manual HOLD.");
                             return Task.CompletedTask;
                         }, linked.Token);
+                    if (captureWorker is not null)
+                    {
+                        var first = await Task.WhenAny(read, captureWorker);
+                        if (ReferenceEquals(first, captureWorker))
+                        {
+                            await captureWorker; // propagate real worker failure
+                            throw new InvalidOperationException("Slave capture worker exited unexpectedly.");
+                        }
+                    }
+                    await read;
                 }
                 catch (Exception ex) when (!ct.IsCancellationRequested &&
                     ex is IOException or SocketException)
@@ -112,6 +143,9 @@ public static class SimFullHost
                 {
                     linked.Cancel();
                     try { await pump; } catch (OperationCanceledException) { }
+                    if (captureWorker is not null)
+                        try { await captureWorker; }
+                        catch (OperationCanceledException) when (linked.IsCancellationRequested) { }
                 }
             }
         }
@@ -151,8 +185,8 @@ public static class SimFullHost
         _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
-        var st05Capture = legacyFins is null ? null :
-            new LegacySt05Capture(folder, store, product, legacyFins);
+        var physicalCapture = legacyFins is null ? null :
+            new LegacyPhysicalCapture(folder, MachineRole.Master, store, product, legacyFins);
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL",
             product.Overview, simConfig, bridge.Snapshot);
         _ = RoiDraftIpc.ServeAsync(simConfig, 19641,
@@ -171,7 +205,7 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, legacyFins, st05Capture,
+            var production = PollAsync(store, ledger, fins, legacyFins, physicalCapture,
                 folder, bootNonce, product, bridge, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
             // A production task can fault while the peer read task waits forever.
@@ -210,7 +244,7 @@ public static class SimFullHost
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
         FinsSimClient fins, LegacyFinsLoopbackClient? legacyFins,
-        LegacySt05Capture? st05Capture, string folder,
+        LegacyPhysicalCapture? physicalCapture, string folder,
         uint bootNonce, SimProductRuntime product, SimProductionBridge bridge,
         CancellationToken ct)
     {
@@ -242,10 +276,10 @@ public static class SimFullHost
                     "workpiece_registered", item);
                 store.CreateAndQueueRegistration(item, registration);
                 ledger.Register(load, item);
-                int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master,
-                    store, folder, product,
-                    deferredPhysicalDeviceId: st05Capture is null ? null : "HIK-M-2");
-                if (frames != (st05Capture is null ? 5 : 4))
+                int frames = physicalCapture is null
+                    ? SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master,
+                        store, folder, product) : 0;
+                if (frames != (physicalCapture is null ? 5 : 0))
                     throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
                 bridge.Register(load, item);
                 if (legacyFins is not null)
@@ -261,16 +295,31 @@ public static class SimFullHost
             // station sensor actually fires. This drives A1 WAL progress and
             // A2 item positions while keeping PeerLink ownership unchanged.
             var stationEvents = bridge.Advance(store);
-            if (st05Capture is not null)
+            if (physicalCapture is not null)
                 foreach (var evt in stationEvents)
                 {
                     if (evt.Kind != SimMechanicalEventKind.CaptureRequested ||
-                        evt.PhysicalDeviceId != "HIK-M-2") continue;
+                        string.IsNullOrWhiteSpace(evt.PhysicalDeviceId)) continue;
                     var capturedItem = ledger.Find(evt.Token);
-                    if (capturedItem is null ||
-                        capturedItem.WorkpieceId != evt.WorkpieceId)
-                        throw new InvalidDataException("ST05 physical trigger has no durable workpiece owner.");
-                    await st05Capture.HandleCaptureAsync(evt.Token, capturedItem, ct);
+                    if (capturedItem is null || capturedItem.WorkpieceId != evt.WorkpieceId)
+                        throw new InvalidDataException("Physical sensor has no durable workpiece owner.");
+                    var trigger = new PhysicalCaptureTrigger(capturedItem, Guid.NewGuid(),
+                        evt.Token, evt.PhysicalDeviceId, 1, evt.Sequence, DateTimeOffset.UtcNow);
+                    trigger.Validate();
+                    if (trigger.OwnerRole == MachineRole.Master)
+                        await physicalCapture.HandleAsync(trigger, ct);
+                    else
+                    {
+                        // The physical trigger belongs to a Slave-owned camera.
+                        // Never synthesize its image/result inside Master.
+                        var msg = PeerEnvelope.Create("master", "slave", evt.Sequence,
+                            capturedItem, "capture_trigger", trigger,
+                            trigger.Channels[0].ChannelId);
+                        store.QueueCaptureTrigger(trigger, msg);
+                        Console.WriteLine("SIM_MASTER_SLAVE_TRIGGER_QUEUED token=" +
+                            evt.Token + " device=" + evt.PhysicalDeviceId +
+                            " workpiece=" + evt.WorkpieceId + " capture=" + trigger.CaptureId);
+                    }
                 }
             ushort exit = (await fins.ReadAsync(SimFullVirtualPlc.ExitTokenAddress, 1, ct))[0];
             if (exit != 0 && !held.Contains(exit) && !exited.Contains(exit))
@@ -329,6 +378,24 @@ public static class SimFullHost
                 }
             }
             await Task.Delay(55, ct);
+        }
+    }
+
+    private static async Task RunSlaveCaptureWorkerAsync(ProductionStore store,
+        LegacyPhysicalCapture physical, CancellationToken ct)
+    {
+        while (!ct.IsCancellationRequested)
+        {
+            var pending = store.PendingCaptureTriggers();
+            foreach (var trigger in pending)
+            {
+                ct.ThrowIfCancellationRequested();
+                await physical.HandleAsync(trigger, ct);
+                store.CompleteCaptureTrigger(trigger);
+                Console.WriteLine("SIM_SLAVE_TRIGGER_COMPLETED capture=" +
+                    trigger.CaptureId + " device=" + trigger.PhysicalDeviceId);
+            }
+            await Task.Delay(35, ct);
         }
     }
 
