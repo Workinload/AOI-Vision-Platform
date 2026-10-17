@@ -184,8 +184,10 @@ public sealed class TriggeredVisionTests
         var ticket = Ticket(device: "LINE-M-2");
         Guid parentId = Guid.NewGuid();
         using var parent = new Mat(9, 6, MatType.CV_8UC1, Scalar.Black);
-        for (int row = 0; row < parent.Rows; row++)
-            Cv2.Rectangle(parent, new Rect(0, row, parent.Cols, 1),
+        int rowCount = parent.Rows;
+        int colCount = parent.Cols;
+        for (int row = 0; row < rowCount; row++)
+            Cv2.Rectangle(parent, new Rect(0, row, colCount, 1),
                 new Scalar(row * 15), -1);
         using (var first = VisionPixelOps.ExtractInterleavedRows(parent, 0,
                    LineScanRowMapping.LegacySkipFirstRow))
