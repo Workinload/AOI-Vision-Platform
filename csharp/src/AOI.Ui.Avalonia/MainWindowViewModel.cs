@@ -496,6 +496,7 @@ public partial class MainWindowViewModel : ObservableObject
         ProductionCounters = "生产统计：IPC 离线，数据已失效";
         HistoryNote = "仅可查看在线 Core 的真实持久化数据";
         RecentWorkpieces.Clear();
+        ResetReportWorkspace();
         PlcSignals.Clear();
         PlcGates.Clear();
         SelectedPlcSignal = null;

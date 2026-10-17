@@ -53,6 +53,7 @@
             <Button Classes="nav" Content="04   历史 / HOLD" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="3"/>
             <Button Classes="nav" Content="05   PLC 工程" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="4"/>
             <Button Classes="nav" Content="06   产品方案 / ROI" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="5"/>
+            <Button Classes="nav" Content="07   生产日报 / 周报" Command="{Binding NavigateWorkspaceCommand}" CommandParameter="6"/>
           </StackPanel>
           <StackPanel Grid.Row="2" Spacing="10">
             <Border Background="#29516E" CornerRadius="8" Padding="11">
@@ -559,6 +560,64 @@
                 <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
                            TextWrapping="Wrap" Foreground="#637C92"/>
               </StackPanel>
+            </Border>
+          </Grid>
+        </TabItem>
+        <TabItem Header="生产日报 / 周报">
+          <Grid RowDefinitions="Auto,Auto,*" Margin="8" RowSpacing="12">
+            <Border Background="White" CornerRadius="10" Padding="17">
+              <StackPanel Spacing="9">
+                <TextBlock Text="生产统计 · 日报与周报" FontSize="19" FontWeight="SemiBold"
+                           Foreground="#1D4364"/>
+                <TextBlock Text="Master SQLite WAL 实际记录 · 工件数而非缺陷次数 · 按主机当地日期统计"
+                           FontSize="11" Foreground="#6E8297" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding DailyReportText}" FontSize="14" FontWeight="SemiBold"
+                           Foreground="#1475A1" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding WeeklyReportText}" FontSize="13"
+                           Foreground="#225776" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="Auto,Auto,*" ColumnSpacing="9">
+                  <Button Content="刷新实际生产统计" Command="{Binding RefreshReportsCommand}"/>
+                  <Button Grid.Column="1" Content="导出日报、周报与最近工件 CSV"
+                          Command="{Binding ExportReportCsvCommand}"/>
+                </Grid>
+                <TextBlock Text="{Binding ReportStatus}" FontSize="11"
+                           Foreground="#607B8E" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+            <Border Grid.Row="1" Background="#E8F2F9" CornerRadius="9" Padding="10">
+              <TextBlock Text="良率分母：已完工 GOOD+NG；HOLD 与进行中单列，不混入已完成品良率。历史工件以 WorkpieceId 唯一归档，同条码不合并。CSV 保存在本机 Documents/AOI-Vision-Reports。"
+                         Foreground="#526D85" FontSize="11" TextWrapping="Wrap"/>
+            </Border>
+            <Border Grid.Row="2" Background="White" Padding="14" CornerRadius="10">
+              <Grid RowDefinitions="Auto,*" RowSpacing="9">
+                <Grid ColumnDefinitions="75,*,90,75,100,110">
+                  <TextBlock Text="工件 ID" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Grid.Column="1" Text="条码" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Grid.Column="2" Text="判定" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Grid.Column="3" Text="通道" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Grid.Column="4" Text="时间" FontSize="11" FontWeight="Bold"/>
+                  <TextBlock Grid.Column="5" Text="异常原因" FontSize="11" FontWeight="Bold"/>
+                </Grid>
+                <ListBox Grid.Row="1" ItemsSource="{Binding ReportHistory}"
+                         Background="#F5F8FC" BorderThickness="0">
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Grid ColumnDefinitions="75,*,90,75,100,110" Margin="8,10">
+                        <TextBlock Text="{Binding ShortId}" FontSize="11"
+                                   Foreground="#245B80" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="1" Text="{Binding Barcode}" FontSize="11"
+                                   TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Grid.Column="2" Text="{Binding Verdict}" FontSize="11"
+                                   Foreground="#226E96" FontWeight="SemiBold"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Channels}" FontSize="11"/>
+                        <TextBlock Grid.Column="4" Text="{Binding Time}" FontSize="10"/>
+                        <TextBlock Grid.Column="5" Text="{Binding Reason}" FontSize="10"
+                                   TextTrimming="CharacterEllipsis"/>
+                      </Grid>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Grid>
             </Border>
           </Grid>
         </TabItem>

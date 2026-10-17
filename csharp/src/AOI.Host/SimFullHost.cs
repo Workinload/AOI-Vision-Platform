@@ -141,6 +141,7 @@ public static class SimFullHost
         if (bootNonce == 0) throw new InvalidDataException("Invalid virtual PLC boot proof.");
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
+        _ = SimReportIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
         _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL",

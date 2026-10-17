@@ -69,6 +69,16 @@ def core_snapshot(port):
             return json.loads(reader.readline())
 
 
+def core_report():
+    with socket.create_connection(('127.0.0.1', 19651), timeout=4) as sock:
+        sock.settimeout(4)
+        sock.sendall(b'REPORT\n')
+        with sock.makefile('r', encoding='utf-8') as reader:
+            result = reader.readline()
+            assert result, 'No Master read-only report response'
+            return json.loads(result)
+
+
 def query(path, statement):
     if not path.is_file():
         return None
@@ -336,6 +346,28 @@ def main():
                       'SELECT identity_json FROM sim_full_tokens WHERE token=3')[0][0]
             )['workpieceId']
         print(f"SIM_FULL_HOLD_IPC_PASS active={hold_overview['activeCount']} fail_closed=1", flush=True)
+        response = core_report()
+        assert response['accepted'] is True and response['reports']['isSimulation'] is True, response
+        report = response['reports']
+        assert report['allTimeMatches'] == args.count and len(report['recent']) == args.count, report
+        assert len({r['workpieceId'] for r in report['recent']}) == args.count
+        expected_good = (0 if args.with_images else target)
+        expected_ng = (target if args.with_images else 0)
+        expected_hold = (1 if args.flip_token else 0)
+        expected_pending = args.count - expected_good - expected_ng - expected_hold
+        for period in (report['today'], report['thisWeek']):
+            assert period['total'] == args.count, period
+            assert period['good'] == expected_good and period['ng'] == expected_ng, period
+            assert period['hold'] == expected_hold and period['inProgress'] == expected_pending, period
+            assert period['goodRate'] == ((expected_good / target) if target else None), period
+        if args.repeat_barcode:
+            assert len({r['barcode'] for r in report['recent']}) == 1
+        if args.flip_token:
+            assert any(r['disposition'] == 'Hold' and r['holdReason'] == 'END_BARCODE_MISMATCH'
+                       for r in report['recent']), report
+        print(f"SIM_REPORT_A7_IPC_PASS total={args.count} good={expected_good} "
+              f"ng={expected_ng} hold={expected_hold} unfinished={expected_pending} "
+              "read_only=1 days=2", flush=True)
         plc_registry = snapshot.get('plcEngineering')
         assert plc_registry and plc_registry['isFieldLive'] is False, plc_registry
         assert len(plc_registry['signals']) == 45 and len(plc_registry['gates']) == 14

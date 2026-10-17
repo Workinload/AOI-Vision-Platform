@@ -138,6 +138,7 @@ static async Task RunMasterAsync(string root, bool allEleven, CancellationToken 
     const string self = "master";
     var folder = Path.Combine(root, self);
     var store = new ProductionStore(Path.Combine(folder, "production.db"));
+    _ = SimReportIpc.ServeAsync(root, ct);
     using var finalGate = new SemaphoreSlim(1, 1);
     var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
     _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, roiStore: simConfig);
