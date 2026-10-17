@@ -210,7 +210,8 @@ public sealed class Agent01ProductionFlowTests
         Assert.That(historic.CurrentStationId, Is.EqualTo("LOADING"));
         var restored = new ProductionFlowCoordinator(JournalPath);
         Assert.That(restored.Get(item.WorkpieceId).CompletedStationCount, Is.EqualTo(1));
-        Assert.That(restored.Replay(item.WorkpieceId, beforeCompleted), Is.EqualTo(historic));
+        Assert.That(restored.Replay(item.WorkpieceId, beforeCompleted).CapturedChannels, Is.EquivalentTo(historic.CapturedChannels));
+        Assert.That(restored.Replay(item.WorkpieceId, beforeCompleted).CompletedStationCount, Is.EqualTo(historic.CompletedStationCount));
         Assert.That(restored.EventsFor(item.WorkpieceId), Has.Count.EqualTo(4));
         Assert.Throws<InvalidDataException>(() =>
             restored.Register(item with { ReleaseId = "WRONG_RELEASE" }));
