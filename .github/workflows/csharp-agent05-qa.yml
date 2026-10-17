@@ -69,8 +69,10 @@ jobs:
           dotnet publish tools/AOI.Vision.Cli/AOI.Vision.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/VisionLab
           cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
           cp scripts/Launch-SIMFULL.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.cmd
+          cp scripts/Launch-SIMFULL-Images.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           cp scripts/Configure-SIM-Recipe.cmd .artifacts/dist/AOI_SIM11_Windows/Configure-SIM-Recipe.cmd
           cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
+          test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.exe
