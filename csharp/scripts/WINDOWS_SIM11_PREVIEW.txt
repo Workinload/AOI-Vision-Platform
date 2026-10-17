@@ -44,3 +44,24 @@ A previous Core WAL or changed vPLC boot proof causes HOLD, never auto-release.
 D4000-D4009 are reserved solely for loopback virtual machine tests.
 There is no actual conveyor, industrial sensor, camera SDK or production model.
 
+
+A6 SIM_ONLY PRODUCT SOLUTION / STATION RECIPE
+
+NEW: Recipes\\AOI.Solutions.Cli.exe is an offline, versioned product editor.
+Before FIRST SIM_FULL run, double-click Configure-SIM-Recipe.cmd to create
+SIM_PRODUCT_A, edit the ST05 threshold to 110, publish immutable manifest and
+commit matching hash+epoch on BOTH local A6 simulated nodes. Then run
+Launch-SIMFULL.cmd. In the Avalonia "产品方案 / 换型" tab inspect the active
+release ID, epoch, digest and each station's actual pixel-rule tunables.
+The scheme really changes SIM_ONLY native OpenCV pixel thresholds, not hardware.
+
+For custom OFFLINE recipes use commands from a terminal:
+  Recipes\\AOI.Solutions.Cli.exe bootstrap sim-full-data S1 "Demo Product" engineer
+  Recipes\\AOI.Solutions.Cli.exe tune sim-full-data S1 ST05 1 110 0.1 engineer
+  Recipes\\AOI.Solutions.Cli.exe publish sim-full-data S1 engineer
+  Recipes\\AOI.Solutions.Cli.exe activate sim-full-data SIMREL-<id-from-publish> engineer
+  Recipes\\AOI.Solutions.Cli.exe status sim-full-data
+Never activate after any production.db/sim-full-cycle.db appears. A6's
+COMMITTED_HOLD state does NOT unhold a physical line, enable any real I/O, or
+certify production changeover. For a new test archive the old root and start
+with a NEW EMPTY sim-full-data root. No silent restart or rollback.

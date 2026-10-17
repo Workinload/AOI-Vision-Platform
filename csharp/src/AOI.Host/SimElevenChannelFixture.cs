@@ -24,12 +24,18 @@ public static class SimElevenChannelFixture
             .Select(c => c.ChannelId).Order(StringComparer.Ordinal).ToArray();
 
     public static int CaptureOwned(WorkpieceIdentity item, MachineRole role,
-        ProductionStore store, string nodeFolder)
+        ProductionStore store, string nodeFolder, SimProductRuntime? product = null)
     {
-        if (item.ReleaseId != "SIM_LIGHT_TEST_RELEASE")
-            throw new InvalidOperationException("11-channel fixture is SIM_LIGHT_TEST_RELEASE only.");
+        if (product is null)
+        {
+            if (item.ReleaseId != "SIM_LIGHT_TEST_RELEASE")
+                throw new InvalidOperationException("SIM_LIGHT fixture does not accept an unverified product.");
+        }
+        else product.VerifyWorkpiece(item);
         var ledger = new VisionAssetLedger(Path.Combine(nodeFolder, "vision"));
-        var frames = SimVisionFixture.CaptureOwnedChannels(item, role, ledger, new SimPixelRule(127, 0.1));
+        Func<ChannelDefinition, SimPixelRule>? rules = product is null ? null : product.RuleFor;
+        var frames = SimVisionFixture.CaptureOwnedChannels(
+            item, role, ledger, new SimPixelRule(127, 0.1), rules);
         int expected = ChannelCatalog.All.Count(c => c.OwnerRole == role);
         if (frames.Count != expected || frames.Any(x => !x.IsSimulated || x.Outcome != ChannelOutcome.Ok))
             throw new InvalidDataException("Synthetic channel capture incomplete, HOLD.");

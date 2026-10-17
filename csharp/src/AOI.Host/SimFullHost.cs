@@ -58,8 +58,10 @@ public static class SimFullHost
     {
         const string self = "slave";
         var folder = NodeFolder(root, self);
+        var product = SimProductRuntime.Load(root);
+        Console.WriteLine($"SIM_FULL_SLAVE_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
-        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL");
+        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Slave, 19622, ct, "SIM_FULL", product.Overview);
         _ = FramePreviewIpc.ServeAsync(store, MachineRole.Slave, folder, 19632, ct);
         var listener = new TcpListener(IPAddress.Loopback, 19610);
         listener.Start();
@@ -80,10 +82,11 @@ public static class SimFullHost
                             if (message.PayloadType != "workpiece_registered")
                                 throw new InvalidDataException("SIM_FULL Slave received unsupported packet.");
                             var item = WireFormat.Parse<WorkpieceIdentity>(message.PayloadJson);
+                            product.VerifyWorkpiece(item);
                             if (!duplicate)
                             {
                                 int resultCount = SimElevenChannelFixture.CaptureOwned(item,
-                                    MachineRole.Slave, store, folder);
+                                    MachineRole.Slave, store, folder, product);
                                 if (resultCount != 6) throw new InvalidDataException("Missing Slave channel: HOLD.");
                                 Console.WriteLine($"SIM_FULL_SLAVE_CAPTURE id={item.WorkpieceId} channels={resultCount}");
                             }
@@ -111,6 +114,8 @@ public static class SimFullHost
     {
         const string self = "master";
         var folder = NodeFolder(root, self);
+        var product = SimProductRuntime.Load(root);
+        Console.WriteLine($"SIM_FULL_MASTER_PRODUCT epoch={product.Epoch} release={product.ReleaseId}");
         // Bind one boot nonce before accepting any virtual load or exit token.
         var fins = new FinsSimClient();
         ushort[] nonceParts;
@@ -133,7 +138,7 @@ public static class SimFullHost
         if (bootNonce == 0) throw new InvalidDataException("Invalid virtual PLC boot proof.");
         var ledger = new SimFullCycleLedger(Path.Combine(folder, "sim-full-cycle.db"), bootNonce);
         var store = new ProductionStore(Path.Combine(folder, "production.db"));
-        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL");
+        _ = SnapshotIpc.ServeAsync(store, self, MachineRole.Master, 19621, ct, "SIM_FULL", product.Overview);
         _ = FramePreviewIpc.ServeAsync(store, MachineRole.Master, folder, 19631, ct);
         while (!ct.IsCancellationRequested)
         {
@@ -148,7 +153,7 @@ public static class SimFullHost
             using var session = new PeerSession(tcp);
             using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
             var pump = session.PumpOutboxAsync(store, linked.Token);
-            var production = PollAsync(store, ledger, fins, folder, bootNonce, linked.Token);
+            var production = PollAsync(store, ledger, fins, folder, bootNonce, product, linked.Token);
             Console.WriteLine("SIM_FULL_MASTER_PEER_CONNECTED");
             try
             {
@@ -169,7 +174,7 @@ public static class SimFullHost
     }
 
     private static async Task PollAsync(ProductionStore store, SimFullCycleLedger ledger,
-        FinsSimClient fins, string folder, uint bootNonce, CancellationToken ct)
+        FinsSimClient fins, string folder, uint bootNonce, SimProductRuntime product, CancellationToken ct)
     {
         var held = new HashSet<ushort>();
         var exited = new HashSet<ushort>();
@@ -189,12 +194,12 @@ public static class SimFullHost
                 if (string.IsNullOrWhiteSpace(barcode))
                     throw new InvalidDataException("SIM_FULL_EMPTY_LOAD_BARCODE_HOLD");
                 // Persistent identity never derives from barcode or reused token.
-                var item = WorkpieceIdentity.New(barcode, 1, "SIM_LIGHT_TEST_RELEASE");
+                var item = WorkpieceIdentity.New(barcode, product.Epoch, product.ReleaseId);
                 var registration = PeerEnvelope.Create("master", "slave", load, item,
                     "workpiece_registered", item);
                 store.CreateAndQueueRegistration(item, registration);
                 ledger.Register(load, item);
-                int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master, store, folder);
+                int frames = SimElevenChannelFixture.CaptureOwned(item, MachineRole.Master, store, folder, product);
                 if (frames != 5) throw new InvalidDataException("SIM_FULL_MASTER_FRAMES_HOLD");
                 await EnsureNonceAsync(fins, bootNonce, ct);
                 await fins.WriteAsync(SimFullVirtualPlc.LoadAckAddress, load);

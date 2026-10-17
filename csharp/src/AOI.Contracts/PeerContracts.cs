@@ -137,6 +137,37 @@ public sealed record WorkpieceHoldOverview(long ActiveCount,
     }
 }
 
+/// <summary>Offline SIM_ONLY product release, independently verified by each Core.</summary>
+public sealed record SimActiveStation(
+    string StationId, IReadOnlyList<string> ChannelIds,
+    byte BrightThreshold, double MinimumBrightFraction);
+
+public sealed record SimActiveProductSnapshot(
+    string SolutionId, string ReleaseId, string ContentSha256, long Epoch,
+    bool IsSimulation, IReadOnlyList<SimActiveStation> Stations)
+{
+    public void Validate()
+    {
+        if (!IsSimulation || Epoch < 1 ||
+            string.IsNullOrWhiteSpace(SolutionId) ||
+            string.IsNullOrEmpty(ContentSha256) || ContentSha256.Length != 64 ||
+            !ContentSha256.All(Uri.IsHexDigit) ||
+            ReleaseId != "SIMREL-" + ContentSha256[..32] ||
+            Stations is null ||
+            Stations.Select(s => s.StationId).Distinct(StringComparer.Ordinal).Count() != Stations.Count ||
+            Stations.Any(s => s.ChannelIds is null ||
+                s.ChannelIds.Any(c => !ChannelCatalog.All.Any(def =>
+                    def.StationId == s.StationId && def.ChannelId == c)) ||
+                !double.IsFinite(s.MinimumBrightFraction) ||
+                s.MinimumBrightFraction is < 0 or > 1) ||
+            !Stations.SelectMany(s => s.ChannelIds)
+                .OrderBy(c => c, StringComparer.Ordinal)
+                .SequenceEqual(ChannelCatalog.All.Select(c => c.ChannelId)
+                    .OrderBy(c => c, StringComparer.Ordinal), StringComparer.Ordinal))
+            throw new InvalidDataException("SIM_ONLY product activation proof is incomplete or unsafe.");
+    }
+}
+
 public sealed record MachineSnapshot(string NodeId, MachineRole Role, string MachineState,
     WorkpieceIdentity? LatestWorkpiece, FinalDecision? LatestFinal,
     IReadOnlyList<ChannelSnapshot> Channels, DateTimeOffset UpdatedUtc,
@@ -145,4 +176,5 @@ public sealed record MachineSnapshot(string NodeId, MachineRole Role, string Mac
     public ProductionOverview? Production { get; init; }
     public PlcEngineeringSnapshot? PlcEngineering { get; init; }
     public WorkpieceHoldOverview? Holds { get; init; }
+    public SimActiveProductSnapshot? ActiveProduct { get; init; }
 }
