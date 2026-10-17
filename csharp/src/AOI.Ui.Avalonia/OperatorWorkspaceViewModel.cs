@@ -142,12 +142,12 @@ public partial class MainWindowViewModel
         RefreshViewedWorkpiece();
     }
 
-    partial void OnSelectedHistoryItemChanged(WorkpieceHistoryTile? item)
+    partial void OnSelectedHistoryItemChanged(WorkpieceHistoryTile? value)
     {
         if (_synchronizingHistory) return;
-        _pinnedWorkpieceId = item?.WorkpieceId;
+        _pinnedWorkpieceId = value?.WorkpieceId;
         RefreshViewedWorkpiece();
-        if (item is not null) SelectedWorkspaceIndex = 2;
+        if (value is not null) SelectedWorkspaceIndex = 2;
     }
 
     partial void OnSelectedWorkspaceIndexChanged(int value)
