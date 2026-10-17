@@ -223,6 +223,11 @@ public static class SimFullHost
             {
                 if (ledger.Find(load) is not null)
                     throw new InvalidDataException("SIM_FULL_DUPLICATE_LOAD_HOLD");
+                // The legacy shadow owns D2000: D4302 makes the PLC post the
+                // independent D1999=1 scan and publish the current barcode.
+                // Reading D2000 before the PLC offer would otherwise see zeros.
+                if (legacyFins is not null)
+                    await LegacyShadowHostBridge.OfferLoadAsync(legacyFins, load, ct);
                 var barcode = FinsDm.SimBarcode(await fins.ReadAsync(2000, 10, ct));
                 if (string.IsNullOrWhiteSpace(barcode))
                     throw new InvalidDataException("SIM_FULL_EMPTY_LOAD_BARCODE_HOLD");
