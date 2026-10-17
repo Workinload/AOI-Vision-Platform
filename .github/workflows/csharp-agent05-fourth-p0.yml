@@ -3,6 +3,7 @@ name: Agent05 P0 terminal FINS negative acceptance
 on:
   pull_request:
     paths:
+      - 'csharp/qa/e2e_terminal_ack_fault.py'
       - 'csharp/qa/p0_terminal_wire_audit.py'
       - 'csharp/qa/test_p0_terminal_wire_audit.py'
       - 'csharp/qa/p0_peer_interlock_audit.py'
@@ -67,11 +68,33 @@ jobs:
             --token 3 --scenario BARCODE_MISMATCH --healthy-before 2 \
             --report .artifacts/a5-p0-abnormal-mismatch/a5-independent-terminal-audit.json
 
+      - name: Real five OS processes mismatch first FINS write applied ACK lost
+        shell: bash
+        run: |
+          python qa/e2e_terminal_ack_fault.py --scenario mismatch --fault ack-first \
+            --evidence-root .artifacts/a5-ack-first-mismatch
+
+      - name: Real five OS processes mismatch second FINS write applied ACK lost
+        shell: bash
+        run: |
+          python qa/e2e_terminal_ack_fault.py --scenario mismatch --fault ack-second \
+            --evidence-root .artifacts/a5-ack-second-mismatch
+
+      - name: Real five OS processes external unreadable scan and explicit FINS refusal
+        shell: bash
+        run: |
+          python qa/e2e_terminal_ack_fault.py --scenario unreadable --fault reject-first \
+            --evidence-root .artifacts/a5-scanner-unreadable-reject
+
       - name: Preserve actual five-process raw FINS and SQLite logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: a5-fourth-p0-wire-${{ matrix.os }}-${{ github.run_id }}
-          path: csharp/.artifacts/a5-p0-abnormal-mismatch/
+          path: |
+            csharp/.artifacts/a5-p0-abnormal-mismatch/
+            csharp/.artifacts/a5-ack-first-mismatch/
+            csharp/.artifacts/a5-ack-second-mismatch/
+            csharp/.artifacts/a5-scanner-unreadable-reject/
           if-no-files-found: warn
           retention-days: 7
