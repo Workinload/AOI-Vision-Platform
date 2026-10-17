@@ -72,7 +72,9 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False
     capture = str(uuid.uuid4())
     frame = str(uuid.uuid4())
     process = str(uuid.uuid4())
+    trace = str(uuid.uuid4())
     spec = dict(token=token, workpieceId=workpiece, captureId=capture,
+                epoch=1, releaseId="SIM_TEST_RELEASE", traceId=trace,
                 physicalDeviceId=device, channelId=channels[0],
                 cameraAddress=address, ordering=order, result=result)
     if line:
@@ -83,9 +85,11 @@ def fixture(order="FRAME_FIRST", result="OK", scenario=None, token=1, line=False
     def event(stage, tick, **extra):
         payload = dict(workpieceId=workpiece, captureId=capture,
                        physicalDeviceId=device, attemptNo=1,
+                       epoch=1, releaseId="SIM_TEST_RELEASE", traceId=trace,
                        processRunId=process, monotonicTick=tick,
                        stage=stage, **extra)
         events.append(payload)
+    event("HardwareTriggerObserved", 5 if order == "FRAME_FIRST" else 15)
     if order == "FRAME_FIRST" and result != "MISSING":
         event("FrameArrived", 10, frameId=frame)
         event("PlcCaptureRequestObserved", 20, plcDmAddress=f"D{address}", plcValue=1)
