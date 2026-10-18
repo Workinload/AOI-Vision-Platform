@@ -5,7 +5,7 @@ namespace AOI.Ui.Client;
 
 public sealed record OperatorTimingTile(
     string EventUtc, string NodeId, string Stage, string Provenance,
-    string ChannelDevice, string PlcEvidence, string CaptureIdentity,
+    string? ChannelId, string ChannelDevice, string PlcEvidence, string CaptureIdentity,
     string Status)
 {
     public bool IsDirect => Provenance == "DIRECT_OBSERVATION";
@@ -52,7 +52,7 @@ public static class OperatorTimingProjection
                 (e.PhysicalDeviceId ?? "整机");
             return new OperatorTimingTile(
                 e.OccurredUtc.ToUniversalTime().ToString("HH:mm:ss.fff 'UTC'"),
-                e.NodeId, e.Stage, e.Origin, device, plc, capture,
+                e.NodeId, e.Stage, e.Origin, e.ChannelId, device, plc, capture,
                 e.Status ?? "未报告状态");
         }).ToArray();
         return new OperatorTimingDisplay(summary, events,
@@ -142,7 +142,7 @@ public static class OperatorTimingProjection
         }).ToArray();
     }
 
-    private static string Short(Guid? id) => id?.ToString("N")[..8] ?? "—";
+    private static string Short(Guid? id) => id is { } value ? value.ToString("N")[..8] : "—";
     private static string Utc(OperatorTimingMilestone e) =>
         e.OccurredUtc.ToUniversalTime().ToString("HH:mm:ss.fff 'UTC'");
 }
