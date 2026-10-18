@@ -11,6 +11,18 @@ namespace AOI.Tests;
 [TestFixture]
 public sealed class Agent01FinalPlcOutputJournalTests
 {
+    // This particular test proves actual two-step FINS/UDP wire bytes and
+    // durable one-shot claims, NOT the physical 2s ejection deadline. Freeze
+    // only vPLC logical UTC so CI's variable Windows SQLite/NUnit startup
+    // cannot expire the simulated PLC end window before the first datagram.
+    // HistoricalReference timeout enforcement remains unchanged in production
+    // and is tested independently by the timing/fault suites.
+    private sealed class FrozenTestClock : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() =>
+            new(2026, 10, 18, 0, 0, 0, TimeSpan.Zero);
+    }
+
     private string _folder = string.Empty;
     private string JournalPath => Path.Combine(_folder, "master", "final-output.db");
 
@@ -90,7 +102,7 @@ public sealed class Agent01FinalPlcOutputJournalTests
     {
         var store = Store();
         var item = Item("SIM-0001");
-        var shadow = new LegacyPlcShadow(new SimFullVirtualPlc(2));
+        var shadow = new LegacyPlcShadow(new SimFullVirtualPlc(2), clock: new FrozenTestClock());
         shadow.IssueEndScan(1, LegacyExitScenario.Normal, item.Barcode);
         using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(20));
         var udp = new LegacyPlcShadowUdp(shadow, port: 0);
