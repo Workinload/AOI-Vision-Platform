@@ -63,7 +63,7 @@ internal static class SimTimingIpc
             try
             {
                 using var reader = new StreamReader(client.GetStream(), Encoding.ASCII,
-                    detectEncodingFromByteOrderMarks: false, leaveOpen: true);
+                    detectEncodingFromByteOrderMarks: false, bufferSize: 1024, leaveOpen: true);
                 var line = await reader.ReadLineAsync(timeout.Token);
                 if (line is null || line.Length > 64 ||
                     !line.StartsWith("TIMING|", StringComparison.Ordinal) ||
