@@ -137,8 +137,8 @@ public static class PublishedRuntimeParameterResolver
         if (id == LegacyBrightnessId)
         {
             EnsureKnown(numbers, BrightnessKeys, id);
-            byte threshold = ByteThreshold(numbers, "brightThreshold", 127);
-            double fraction = Value(numbers, "minimumBrightFraction", 0.1);
+            byte threshold = ByteThreshold(numbers, "brightThreshold", settings.StationBrightThreshold);
+            double fraction = Value(numbers, "minimumBrightFraction", settings.StationMinimumBrightFraction);
             if (!double.IsFinite(fraction) || fraction is < 0 or > 1)
                 throw new InvalidDataException("INVALID_PUBLISHED_BRIGHT_FRACTION");
             return new(workpieceId, settings.ReleaseId, settings.Epoch,
@@ -159,7 +159,7 @@ public static class PublishedRuntimeParameterResolver
                 area != otherArea)
                 throw new InvalidDataException("CONFLICTING_PUBLISHED_CONTOUR_AREA");
             double threshold = numbers.TryGetValue("binaryThreshold", out direct)
-                ? direct : Value(numbers, "brightThreshold", 127);
+                ? direct : Value(numbers, "brightThreshold", settings.StationBrightThreshold);
             byte binaryThreshold = ByteThreshold(threshold);
             double minArea = numbers.TryGetValue("minimumContourAreaPixels", out area)
                 ? area : Value(numbers, "minimumAreaPixels", 8);
