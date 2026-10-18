@@ -41,6 +41,7 @@ public sealed class SimTimingReadOnlyClientTests
         var op = Guid.NewGuid();
         var capture = Guid.NewGuid();
         var reply = Reply(item,
+            Milestone(item, capture, "CamDoneSent", op, 49, 2),
             Milestone(item, capture, "CamDoneAcknowledged", op, 49, 2));
         var request = Task.Run(async () =>
         {
@@ -73,6 +74,21 @@ public sealed class SimTimingReadOnlyClientTests
         Assert.That(rows.CamDoneEvidence, Does.Contain("已发送但未确认 ACK"));
         Assert.That(rows.CamDoneEvidence, Does.Not.Contain("ACK已观测"));
         Assert.That(rows.InspectionResult, Does.Contain("InspectionCompleted OK"));
+    }
+
+    [Test]
+    public void AnAckWithDifferentOperationIdOrSidIsNotAcceptedAsThisWriteAcknowledgment()
+    {
+        var id = Guid.NewGuid();
+        var capture = Guid.NewGuid();
+        var sent = Milestone(id, capture, "CamDoneSent", Guid.NewGuid(), 24, 2);
+        var wrongOperation = Milestone(id, capture, "CamDoneAcknowledged",
+            Guid.NewGuid(), 24, 2);
+        var wrongSid = Milestone(id, capture, "CamDoneAcknowledged",
+            sent.OperationId, 25, 2);
+        var row = St05(Reply(id, sent, wrongOperation, wrongSid));
+        Assert.That(row.CamDoneEvidence, Does.Contain("不匹配"));
+        Assert.That(row.CamDoneEvidence, Does.Not.Contain("ACK已观测"));
     }
 
     [Test]
