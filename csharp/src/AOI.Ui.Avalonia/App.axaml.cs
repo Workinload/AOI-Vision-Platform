@@ -16,7 +16,9 @@ public partial class App : Application
             var args = desktop.Args ?? [];
             var role = args.Contains("--slave", StringComparer.Ordinal) ? "slave" : "master";
             var once = args.Contains("--once", StringComparer.Ordinal);
-            var window = new MainWindow(new MainWindowViewModel(role, once));
+            var viewModel = new MainWindowViewModel(role, once);
+            viewModel.ApplyOfflineLaunch(OfflineRecipeLaunchOptions.Parse(args));
+            var window = new MainWindow(viewModel);
             if (role == "slave")
                 window.Opened += (_, _) => OffsetSlaveWindow(window);
             desktop.MainWindow = window;

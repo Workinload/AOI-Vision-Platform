@@ -34,7 +34,8 @@ internal sealed class SqliteSupport
 
     public void Initialize(string schema)
     {
-        if (_readOnly) throw new InvalidOperationException("Read-only A6 access cannot initialize or repair a store.");
+        if (_readOnly)
+            throw new InvalidOperationException("Read-only A6 access cannot initialize or repair a store.");
         using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;" + schema;

@@ -89,6 +89,12 @@ public partial class MainWindowViewModel : ObservableObject
 
     public string NodeLabel => _role == "slave" ? "SLAVE · 从机" : "MASTER · 主机";
     public string ChannelCount => "11 逻辑通道 / 9 物理相机 / +1 整机";
+
+    /// <summary>
+    /// Real OFFLINE_RECIPE_MANAGEMENT workspace. Attached only through the explicit
+    /// startup entry / operator action, and A6 writes stay fail-closed until #149 merges.
+    /// </summary>
+    public OfflineProductWorkspaceViewModel OfflineProduct { get; }
     [ObservableProperty] private string connectionState = "等待 Core IPC 连接...";
     [ObservableProperty] private string productionState = "SIM_ONLY · 尚未连接";
     [ObservableProperty] private string latestIdentity = "WorkpieceId：等待上料事件";
@@ -110,14 +116,47 @@ public partial class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, RoiDraftState> _savedRoiDrafts = new(StringComparer.Ordinal);
     public string SelectedChannelName => SelectedChannel?.ChannelId ?? "未选择通道";
 
-    public MainWindowViewModel(string role, bool once)
+    public MainWindowViewModel(string role, bool once) : this(role, once, OfflineWriteGate.Production) { }
+
+    internal MainWindowViewModel(string role, bool once, OfflineWriteGate offlineGate)
     {
         _role = role;
         _once = once;
+        OfflineProduct = new OfflineProductWorkspaceViewModel(offlineGate);
+        OfflineProduct.ChannelSelected = SelectChannelById;
         SelectChannelCommand = new CommunityToolkit.Mvvm.Input.RelayCommand<ChannelTile?>(SelectChannel);
         ValidateRoiCommand = new CommunityToolkit.Mvvm.Input.RelayCommand(ValidateRoi);
         InitializeOperatorWorkspace();
         InitializeCaptureDebug();
+    }
+
+    /// <summary>
+    /// Applies the explicit OFFLINE_RECIPE_MANAGEMENT startup entry. A partial or malformed
+    /// entry is reported and never opens a database.
+    /// </summary>
+    public void ApplyOfflineLaunch(OfflineRecipeLaunchOptions launch)
+    {
+        ArgumentNullException.ThrowIfNull(launch);
+        if (!launch.Requested) return;
+        SelectedWorkspaceIndex = 5;
+        // Explicit offline launch shows the OFFLINE_RECIPE_MANAGEMENT inner tab;
+        // ordinary --master/--slave startup keeps the legacy Core ROI tab selected.
+        OfflineProduct.ProductRoiTabIndex = 1;
+        OfflineProduct.EntryPath = launch.EntryPath;
+        if (!string.IsNullOrWhiteSpace(launch.OperatorId)) OfflineProduct.OperatorId = launch.OperatorId;
+        if (launch.Error is not null)
+        {
+            OfflineProduct.ReportLaunchFailure(launch.Error);
+            return;
+        }
+        OfflineProduct.AttachEntry();
+    }
+
+    private void SelectChannelById(string channelId)
+    {
+        var tile = Channels.FirstOrDefault(x =>
+            string.Equals(x.ChannelId, channelId, StringComparison.Ordinal));
+        if (tile is not null) SelectedChannel = tile;
     }
 
     public CommunityToolkit.Mvvm.Input.IRelayCommand<ChannelTile?> SelectChannelCommand { get; }
@@ -126,6 +165,7 @@ public partial class MainWindowViewModel : ObservableObject
     partial void OnSelectedChannelChanged(ChannelTile? value)
     {
         foreach (var channel in Channels) channel.IsSelected = ReferenceEquals(channel, value);
+        OfflineProduct.SyncSelectedChannel(value?.ChannelId);
         SelectedDescription = value is null ? "未选择通道" :
             $"{value.ChannelId} · {value.StationDetails} · {value.Owner} · PLC {value.PlcAddress} · {value.Group}";
         OnPropertyChanged(nameof(SelectedChannelName));
@@ -468,6 +508,10 @@ public partial class MainWindowViewModel : ObservableObject
             SelectedPreview?.Dispose();
             SelectedPreview = bitmap;
             PreviewNotice = notice;
+            if (bitmap is not null)
+                OfflineProduct.ReportVerifiedImage(channelId,
+                    bitmap.PixelSize.Width, bitmap.PixelSize.Height,
+                    "Core 已验证无损 PNG · 工件 " + workpieceId.ToString("N")[..8]);
         });
     }
 
