@@ -176,20 +176,28 @@ public sealed class ReleaseAbComparer
             string.Equals(x.Value, File.Exists(Path.Combine(imageRoot, x.Key))
                 ? HashFile(Path.Combine(imageRoot, x.Key)) : null, StringComparison.Ordinal));
 
+        // Reports are committed as public evidence: keep machine names and absolute
+        // developer paths out by default. Operators can opt in for local-only runs.
+        string shownDatabase = request.IncludeAbsolutePaths
+            ? databasePath : Path.GetFileName(databasePath);
+        string shownImages = request.IncludeAbsolutePaths
+            ? imageRoot : Path.GetFileName(imageRoot);
+        string shownOutput = request.IncludeAbsolutePaths ? outputRoot : ".";
+
         var manifest = new AbCompareManifest(
             ToolName,
             ModeName,
             DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture),
-            Environment.MachineName + " / " + System.Runtime.InteropServices.RuntimeInformation.OSDescription,
+            System.Runtime.InteropServices.RuntimeInformation.OSDescription,
             Cv2.GetVersionString() ?? "unknown",
             Environment.Version.ToString(),
-            databasePath,
+            shownDatabase,
             databaseShaBefore,
             databaseShaAfter,
             HashFile(snapshotPath),
             string.Equals(databaseShaBefore, databaseShaAfter, StringComparison.Ordinal),
-            imageRoot,
-            outputRoot,
+            shownImages,
+            shownOutput,
             request.LineMapping.ToString(),
             request.Epoch,
             DescribeRelease(releaseA),
@@ -199,6 +207,7 @@ public sealed class ReleaseAbComparer
             channels.Where(c => !c.Changed).Select(c => c.ChannelId).ToArray(),
             channels,
             inputsUnchanged,
+            request.IncludeAbsolutePaths,
             NotVerified(request.LineMapping));
 
         WriteEvidence(manifest, outputRoot, inputHashes);
@@ -225,7 +234,19 @@ public sealed class ReleaseAbComparer
             return AbChannelSide.Unavailable(status, "PUBLISHED_PLAN_REJECTED: " + ex.Message);
         }
 
-        var (side, png) = Evaluate(definition, settings, pixels);
+        AbChannelSide side;
+        byte[]? png;
+        try
+        {
+            (side, png) = Evaluate(definition, settings, pixels);
+        }
+        catch (Exception ex) when (IsPolicyFailure(ex))
+        {
+            // Native decode/encode or ROI failures must degrade to a reported ERROR,
+            // never abort the whole comparison and never become a silent OK.
+            return AbChannelSide.Unavailable(AbChannelStatus.Error,
+                "INSPECTION_IMAGE_ERROR: " + ex.GetType().Name + ": " + ex.Message);
+        }
         if (png is null) return side;
         var relative = label + "/" + definition.PhysicalDeviceId + "/" + definition.ChannelId + ".png";
         var absolute = Path.Combine(outputRoot, label, definition.PhysicalDeviceId,
@@ -378,20 +399,27 @@ public sealed class ReleaseAbComparer
 
     private static string SnapshotDatabase(string databasePath, string outputRoot, string expectedSha)
     {
+        // A live WAL (or its -shm) is NOT a certified offline snapshot: copying the
+        // .db file alone would silently drop committed-but-not-checkpointed rows, and
+        // copying .db/-wal/-shm as three files is not one consistent transaction. Fail
+        // closed and require a checkpointed export instead. The source is never touched.
+        foreach (var suffix in new[] { "-wal", "-shm" })
+        {
+            if (File.Exists(databasePath + suffix))
+                throw new InvalidOperationException(
+                    "SOURCE_WAL_PRESENT: " + suffix + " exists next to the A6 database, so it is not a " +
+                    "stable offline snapshot. Checkpoint/export a copy (clean shutdown or SQLite backup) " +
+                    "and compare that file. This tool never deletes or rewrites WAL/SHM.");
+        }
         var folder = Path.Combine(outputRoot, "_db-snapshot");
         Directory.CreateDirectory(folder);
         var snapshot = Path.Combine(folder, Path.GetFileName(databasePath));
         File.Copy(databasePath, snapshot, overwrite: false);
-        foreach (var suffix in new[] { "-wal", "-shm" })
-        {
-            var sidecar = databasePath + suffix;
-            if (File.Exists(sidecar))
-                File.Copy(sidecar, snapshot + suffix, overwrite: false);
-        }
         var actual = HashFile(snapshot);
         if (!string.Equals(actual, expectedSha, StringComparison.Ordinal))
             throw new InvalidOperationException(
-                "DATABASE_SNAPSHOT_MISMATCH: the copied database is not byte-identical.");
+                "DATABASE_SNAPSHOT_MISMATCH: the copied database is not byte-identical, so the source " +
+                "was written while copying. Re-run against a stable offline snapshot.");
         return snapshot;
     }
 
@@ -410,10 +438,12 @@ public sealed class ReleaseAbComparer
     private static AbReleaseInfo DescribeRelease(PublishedRelease release)
     {
         var recomputed = SolutionSafety.Sha256(WireFormat.Serialize(release.Manifest.Canonical()));
+        var stations = release.Manifest.Stations;
+        var channels = stations.SelectMany(s => s.ChannelIds).Distinct(StringComparer.Ordinal).Count();
         return new AbReleaseInfo(release.ReleaseId, release.ContentSha256, recomputed,
             string.Equals(recomputed, release.ContentSha256, StringComparison.Ordinal),
             release.Manifest.SolutionId, release.Manifest.ProfileId, release.Manifest.ProfileVersion,
-            release.PublishedAtUtc, release.Actor, release.Manifest.Stations.Count);
+            release.PublishedAtUtc, release.Actor, stations.Count, channels);
     }
 
     private static string Describe(AbChannelSide a, AbChannelSide b)
@@ -433,12 +463,48 @@ public sealed class ReleaseAbComparer
 
     private static void RequireIsolatedOutput(string outputRoot, string imageRoot, string databasePath)
     {
-        if (IsSameOrInside(outputRoot, imageRoot) || IsSameOrInside(imageRoot, outputRoot))
+        // Resolve real targets (symlink hops and `..` aliases) before comparing, so a
+        // benign-looking report path cannot land in the image fixture or the A6 run folder.
+        var realOutput = ResolveRealPath(outputRoot);
+        var realImages = ResolveRealPath(imageRoot);
+        var realDatabase = ResolveRealPath(databasePath);
+        if (IsSameOrInside(realOutput, realImages) || IsSameOrInside(realImages, realOutput))
             throw new InvalidOperationException(
                 "OUTPUT_ROOT_INSIDE_IMAGE_TREE: reports must never be written into the image fixture.");
-        if (IsSameOrInside(databasePath, outputRoot))
+        if (IsSameOrInside(realDatabase, realOutput))
             throw new InvalidOperationException(
                 "DATABASE_INSIDE_OUTPUT_ROOT: never host the A6 database in a report folder.");
+        var runRoot = Path.GetDirectoryName(realDatabase);
+        if (!string.IsNullOrEmpty(runRoot) &&
+            !string.Equals(runRoot, Path.GetPathRoot(realDatabase), StringComparison.OrdinalIgnoreCase) &&
+            IsSameOrInside(realOutput, runRoot))
+            throw new InvalidOperationException(
+                "OUTPUT_ROOT_INSIDE_DATABASE_RUN_ROOT: reports must not be written into the A6 run folder (" +
+                runRoot + "); export the report to a separate directory.");
+    }
+
+    /// <summary>Resolves an existing path through symlinks; a not-yet-created tail is
+    /// appended to the resolved real ancestor so alias escapes are still detected.</summary>
+    private static string ResolveRealPath(string path)
+    {
+        var full = Path.GetFullPath(path);
+        var tail = new List<string>();
+        var current = full;
+        while (!File.Exists(current) && !Directory.Exists(current))
+        {
+            var parent = Path.GetDirectoryName(current);
+            if (string.IsNullOrEmpty(parent)) return full;
+            tail.Insert(0, Path.GetFileName(current));
+            current = parent;
+        }
+        string resolved;
+        if (Directory.Exists(current))
+            resolved = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true)?.FullName
+                ?? current;
+        else
+            resolved = new FileInfo(current).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? current;
+        foreach (var part in tail) resolved = Path.Combine(resolved, part);
+        return Path.GetFullPath(resolved);
     }
 
     private static bool IsSameOrInside(string candidate, string parent) =>
@@ -447,7 +513,7 @@ public sealed class ReleaseAbComparer
 
     private static bool IsPolicyFailure(Exception ex) =>
         ex is NotSupportedException or InvalidDataException or InvalidOperationException
-            or ArgumentException or IOException or OverflowException;
+            or ArgumentException or IOException or OverflowException or OpenCVException;
 
     private static string HashFile(string path)
     {

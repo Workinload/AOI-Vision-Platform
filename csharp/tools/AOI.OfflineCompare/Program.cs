@@ -22,11 +22,16 @@ static int Run(string[] args)
 
               --compare --db <solutions.sqlite> --images <fixture-dir> --out <new-report-dir>
                         --release-a <ReleaseIdA> --release-b <ReleaseIdB>
-                        [--epoch 1] [--line-mapping demo|legacy]
+                        [--epoch 1] [--line-mapping demo|legacy] [--include-absolute-paths]
 
               --scaffold-fixture-db <new .sqlite path> [--with-unsupported-release]
               --make-fixture-images <new image dir>
               --all-in-one <new scratch dir>
+
+            The database must be a stable offline/checkpointed snapshot: a live -wal or
+            -shm next to it is rejected. The report folder must be new and must not sit
+            inside the image fixture or inside the database's run folder. Reports record
+            file/folder names only unless --include-absolute-paths is given.
 
             Fixture images: CH01.png..CH07.png (7 area) and LINE-S-8.png / LINE-M-2.png
             (2 shared line-scan parents, one parent per two logical channels).
@@ -59,8 +64,7 @@ static int Run(string[] args)
 static int MakeFixtureImages(string directory)
 {
     AbFixtureImages.Write(directory);
-    var root = Path.GetFullPath(directory);
-    Console.WriteLine("OFFLINE_ONLY fixture images written: " + root);
+    Console.WriteLine("OFFLINE_ONLY fixture images written: " + Show(directory));
     foreach (var file in AbFixtureImages.Files)
         Console.WriteLine("  " + file);
     return 0;
@@ -69,7 +73,7 @@ static int MakeFixtureImages(string directory)
 static int ScaffoldFixtureDatabase(string databasePath, bool withUnsupported)
 {
     var releases = AbFixtureSolution.ScaffoldDatabase(databasePath, withUnsupported);
-    Console.WriteLine("A6 fixture database created: " + Path.GetFullPath(databasePath));
+    Console.WriteLine("A6 fixture database created: " + Show(databasePath));
     Console.WriteLine("  release A: " + releases.ReleaseA);
     Console.WriteLine("  release B: " + releases.ReleaseB);
     if (releases.UnsupportedRelease is not null)
@@ -89,7 +93,8 @@ static int Compare(Dictionary<string, string> options)
             ? long.Parse(epoch, CultureInfo.InvariantCulture) : 1,
         options.TryGetValue("--line-mapping", out var mapping) &&
             mapping.Equals("legacy", StringComparison.OrdinalIgnoreCase)
-            ? LineScanRowMapping.LegacySkipFirstRow : LineScanRowMapping.DemoEvenOdd);
+            ? LineScanRowMapping.LegacySkipFirstRow : LineScanRowMapping.DemoEvenOdd,
+        options.ContainsKey("--include-absolute-paths"));
     var manifest = new ReleaseAbComparer().Compare(request);
     Print(manifest);
     return 0;
@@ -98,12 +103,14 @@ static int Compare(Dictionary<string, string> options)
 static int AllInOne(string scratchRoot)
 {
     var root = Path.GetFullPath(scratchRoot);
-    var images = Path.Combine(root, "images");
-    var database = Path.Combine(root, "fixture-solutions.sqlite");
-    var report = Path.Combine(root, "report");
+    // Separate run folder (database), fixture folder and report folder: a report is
+    // never written into the A6 run folder or the image tree.
+    var images = Path.Combine(root, "fixtures", "images");
+    var database = Path.Combine(root, "run", "fixture-solutions.sqlite");
+    var report = Path.Combine(root, "reports", "ab");
     AbFixtureImages.Write(images);
     var releases = AbFixtureSolution.ScaffoldDatabase(database);
-    Console.WriteLine("OFFLINE_ONLY fixtures: " + root);
+    Console.WriteLine("OFFLINE_ONLY fixtures: " + Show(root));
     var manifest = new ReleaseAbComparer().Compare(new AbCompareRequest(
         database, images, report, releases.ReleaseA, releases.ReleaseB));
     Print(manifest);
@@ -133,6 +140,17 @@ static void Print(AbCompareManifest manifest)
     Console.WriteLine("changed channels: " + (manifest.ChangedChannels.Count == 0
         ? "(none)" : string.Join(",", manifest.ChangedChannels)));
     Console.WriteLine("report: " + manifest.OutputRoot);
+}
+
+// Console evidence may be committed, so never print a developer machine path.
+static string Show(string path)
+{
+    var full = Path.GetFullPath(path);
+    var relative = Path.GetRelativePath(Environment.CurrentDirectory, full);
+    if (!Path.IsPathRooted(relative) && !relative.StartsWith("..", StringComparison.Ordinal))
+        return relative;
+    var leaf = Path.GetFileName(full);
+    return string.IsNullOrEmpty(leaf) ? full : leaf;
 }
 
 static (string? Positional, Dictionary<string, string> Options) ParseOptions(

@@ -1,7 +1,7 @@
 AOI.OfflineCompare - OFFLINE_ONLY / NOT_PRODUCTION
 A SIMREL-2ca12c1cf86ac8d73607ceea3dd3e242  sha256=2ca12c1cf86ac8d73607ceea3dd3e2422ca52102c6d4b9f382b401934928f74f
 B SIMREL-e0d05786f8fe9fbfc857231d3cb8a07a  sha256=e0d05786f8fe9fbfc857231d3cb8a07a0048ebca284383f39ac95c557c6049be
-images D:\codex\AOI-dshb-154-scratch\evidence\images  (unchanged=True)
+images images  (unchanged=True)
 database sha256 unchanged=True
 
 channel  device       A           B           changed  detail

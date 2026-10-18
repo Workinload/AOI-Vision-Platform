@@ -77,6 +77,7 @@ public sealed record AbReleaseInfo(
     int ProfileVersion,
     DateTimeOffset PublishedAtUtc,
     string Actor,
+    int StationCount,
     int ChannelCount);
 
 public sealed record AbCompareManifest(
@@ -102,6 +103,7 @@ public sealed record AbCompareManifest(
     IReadOnlyList<string> UnchangedChannels,
     IReadOnlyList<AbChannelResult> Channels,
     bool InputImagesUnchanged,
+    bool AbsolutePathsIncluded,
     IReadOnlyList<string> NotVerified);
 
 /// <summary>Explicit offline request. Nothing here can reach a PLC, camera or production WAL.</summary>
@@ -112,7 +114,8 @@ public sealed record AbCompareRequest(
     string ReleaseIdA,
     string ReleaseIdB,
     long Epoch = 1,
-    LineScanRowMapping LineMapping = LineScanRowMapping.DemoEvenOdd)
+    LineScanRowMapping LineMapping = LineScanRowMapping.DemoEvenOdd,
+    bool IncludeAbsolutePaths = false)
 {
     public static JsonSerializerOptions Json { get; } = new()
     {
