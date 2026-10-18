@@ -370,6 +370,8 @@ def main():
                         help='Replay actual 8-bit disk PNG inputs; CH06 deliberately NG')
     parser.add_argument('--with-product', action='store_true',
                         help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
+    parser.add_argument('--with-published-contour', action='store_true',
+                        help='Change published CH06 from legacy pixel fraction to actual OpenCV contour with the same PNG')
     parser.add_argument('--legacy-shadow', action='store_true',
                         help='Exercise real FINS D1999/D1011/D1016/D2099 in station-triggered PLC shadow')
     parser.add_argument('--st05-order', choices=['REQUEST_FIRST', 'FRAME_FIRST'],
@@ -387,6 +389,8 @@ def main():
         parser.error('CI supports 3..60 virtual items and optional deterministic fault token=3')
     if args.legacy_shadow and not args.with_images:
         parser.error('P0 physical shadow requires --with-images so there is no synthetic frame fallback')
+    if args.with_published_contour and not (args.with_product and args.legacy_shadow and args.with_images):
+        parser.error('A0 contour publish proof requires dual-A6 release, actual PNG and legacy FINS path')
     if args.line_row_mapping != 'DEMO_EVEN_ODD' and not args.legacy_shadow:
         parser.error('Legacy row layout requires opt-in external PLC shadow mode')
     if args.missing_frame_token and not (args.legacy_shadow and args.with_images and
@@ -436,6 +440,11 @@ def main():
             return p.stdout
         recipe('bootstrap', evidence, 'SIM_PRODUCT_A', 'Test SIM product A', 'sim_engineer')
         recipe('tune', evidence, 'SIM_PRODUCT_A', 'ST05', 1, 110, 0.1, 'sim_engineer')
+        if args.with_published_contour:
+            # ST05 draft revision became 2 at tune. This operator A6 edit
+            # must change the IMMUTABLE Release and actual Master CH06 result.
+            recipe('algorithm-param', evidence, 'SIM_PRODUCT_A', 'CH06', 2,
+                   'opencv.contour', 'minimumContourAreaPixels', 8, 'sim_engineer')
         published = recipe('publish', evidence, 'SIM_PRODUCT_A', 'sim_engineer')
         product_release = published.split('release=')[1].split()[0]
         assert product_release.startswith('SIMREL-')
@@ -779,13 +788,24 @@ def main():
                     # nine physical devices, not just A6's API unit test.
                     assert master_log.count('SIM_PUBLISHED_CAPTURE_PLAN ') == args.count * 4
                     assert slave_log.count('SIM_PUBLISHED_CAPTURE_PLAN ') == args.count * 5
-                    assert 'algorithm=legacy.sim.brightness.v1' in master_log
+                    assert ('algorithm=opencv.contour' if args.with_published_contour
+                            else 'algorithm=legacy.sim.brightness.v1') in master_log
                     assert 'algorithm=legacy.sim.brightness.v1' in slave_log
+                    # Identical real PNG pixels: CH06's exact persisted verdict
+                    # changes ONLY when an A6 issued Release selects contour,
+                    # not from UI ROI drafts or a fabricated algorithm mock.
+                    first_item = query(evidence / 'master/production.db',
+                        'SELECT workpiece_id FROM workpieces ORDER BY created_utc LIMIT 1')[0][0]
+                    ch06 = json.loads(query(evidence / 'master/production.db',
+                        'SELECT result_json FROM channel_results WHERE workpiece_id=? AND channel_id=?',
+                        (first_item, 'CH06'))[0][0])
+                    assert ch06['outcome'] == ('ng' if args.with_published_contour else 'ok'), ch06
                     assert 'physical_field_verified=0' in master_log
                     assert 'PUBLISHED_PLAN_NOT_READY' not in master_log
                     assert 'PUBLISHED_PLAN_NOT_READY' not in slave_log
                     print('A0_PUBLISHED_A6_REAL_FINS_9_CAMERA_PASS physical_triggers=' +
                           str(args.count * 9) + ' release=' + product_release +
+                          ' published_ch06_contour=' + str(args.with_published_contour).lower() +
                           ' native_legacy_brightness=1 one_parent_two_line_channels=1 '
                           'no_mutable_roi_draft=1 real_hardware_writes=0', flush=True)
             else:
