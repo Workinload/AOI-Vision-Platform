@@ -2,6 +2,8 @@
   <PropertyGroup><OutputType>Exe</OutputType><AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault></PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="../AOI.Ui.Client/AOI.Ui.Client.csproj" />
+    <!-- A0 route B: offline product management reuses the existing A6 library directly. -->
+    <ProjectReference Include="../AOI.Solutions/AOI.Solutions.csproj" />
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
