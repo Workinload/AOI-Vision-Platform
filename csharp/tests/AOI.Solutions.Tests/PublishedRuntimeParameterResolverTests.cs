@@ -283,4 +283,36 @@ public sealed class PublishedRuntimeParameterResolverTests
         Assert.Throws<InvalidDataException>(() =>
             PublishedRuntimeParameterResolver.ResolveChannel(bound3, "CH06", "HIK-M-2"));
     }
+    [Test]
+    public void A0PhysicalTriggerMustMatchWorkpieceOwnerPlcAddressAndLineChildOrder()
+    {
+        var db = NewProduct();
+        var release = db.Publish("A6_PRODUCT", "operator");
+        var registered = WorkpieceIdentity.New("DUPLICATE-CODE", 1, release.ReleaseId);
+        var bound = new PublishedParameterSnapshot(release, 1).Bind(registered);
+        var verified = PublishedRuntimeParameterResolver.ResolveForTrigger(
+            bound, registered, "LINE-S-8", MachineRole.Slave, "D1013",
+            ["CH08", "CH09"]);
+        Assert.That(verified.Capture.WorkpieceId, Is.EqualTo(registered.WorkpieceId));
+        Assert.That(verified.Inspections.Select(c => c.ChannelId),
+            Is.EqualTo(new[] { "CH08", "CH09" }));
+
+        Assert.Throws<InvalidOperationException>(() =>
+            PublishedRuntimeParameterResolver.ResolveForTrigger(
+                bound, WorkpieceIdentity.New("DUPLICATE-CODE", 1, release.ReleaseId),
+                "LINE-S-8", MachineRole.Slave, "D1013", ["CH08", "CH09"]));
+        Assert.Throws<InvalidOperationException>(() =>
+            PublishedRuntimeParameterResolver.ResolveForTrigger(
+                bound, registered, "LINE-S-8", MachineRole.Master,
+                "D1013", ["CH08", "CH09"]));
+        Assert.Throws<InvalidOperationException>(() =>
+            PublishedRuntimeParameterResolver.ResolveForTrigger(
+                bound, registered, "LINE-S-8", MachineRole.Slave,
+                "D1014", ["CH08", "CH09"]));
+        Assert.Throws<InvalidOperationException>(() =>
+            PublishedRuntimeParameterResolver.ResolveForTrigger(
+                bound, registered, "LINE-S-8", MachineRole.Slave,
+                "D1013", ["CH09", "CH08"]));
+    }
+
 }
