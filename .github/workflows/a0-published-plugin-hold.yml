@@ -1,0 +1,56 @@
+name: A0 Published Plugin Fail-Closed Real FINS
+on:
+  pull_request:
+    paths:
+      - 'csharp/src/AOI.Host/LegacyPhysicalCapture.cs'
+      - 'csharp/src/AOI.Host/PublishedReleaseInspector.cs'
+      - 'csharp/scripts/e2e_sim_full.py'
+      - 'csharp/scripts/e2e_a0_published_unknown_hold.py'
+      - '.github/workflows/a0-published-plugin-hold.yml'
+  push:
+    branches: ['migration/csharp-avalonia-20261016']
+    paths:
+      - 'csharp/src/AOI.Host/LegacyPhysicalCapture.cs'
+      - 'csharp/src/AOI.Host/PublishedReleaseInspector.cs'
+      - 'csharp/scripts/e2e_sim_full.py'
+      - 'csharp/scripts/e2e_a0_published_unknown_hold.py'
+      - '.github/workflows/a0-published-plugin-hold.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  published-unknown-plugin-hold:
+    name: published-unknown-plugin-hold (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 19
+    defaults:
+      run:
+        working-directory: csharp
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Compile complete .NET AOI including Host OpenCV and A6 release
+        shell: bash
+        run: |
+          unset PLATFORM
+          dotnet restore AOI.slnx --source https://api.nuget.org/v3/index.json -p:NuGetAudit=false
+          dotnet build AOI.slnx --no-restore -c Debug
+      - name: Invalid published A6 plugin fails closed per item on real five-process FINS
+        run: python scripts/e2e_a0_published_unknown_hold.py --evidence-root .artifacts/a0-unknown-plugin
+      - name: Preserve evidence for failed native five-process experiment
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a0-unknown-plugin-${{ matrix.os }}-${{ github.run_id }}
+          path: csharp/.artifacts/a0-unknown-plugin/
+          retention-days: 14
+          if-no-files-found: warn

@@ -372,6 +372,8 @@ def main():
                         help='Bootstrap/tune/publish/dual-activate an A6 immutable SIM_ONLY recipe before running')
     parser.add_argument('--with-published-contour', action='store_true',
                         help='Change published CH06 from legacy pixel fraction to actual OpenCV contour with the same PNG')
+    parser.add_argument('--with-published-unsupported', action='store_true',
+                        help='Strict negative: publish a valid-but-uninstalled CH06 inspection plugin to prove no false GOOD or FINS CamDone')
     parser.add_argument('--legacy-shadow', action='store_true',
                         help='Exercise real FINS D1999/D1011/D1016/D2099 in station-triggered PLC shadow')
     parser.add_argument('--st05-order', choices=['REQUEST_FIRST', 'FRAME_FIRST'],
@@ -391,6 +393,9 @@ def main():
         parser.error('P0 physical shadow requires --with-images so there is no synthetic frame fallback')
     if args.with_published_contour and not (args.with_product and args.legacy_shadow and args.with_images):
         parser.error('A0 contour publish proof requires dual-A6 release, actual PNG and legacy FINS path')
+    if args.with_published_unsupported and (args.with_published_contour or
+        not (args.with_product and args.legacy_shadow and args.with_images)):
+        parser.error('Unknown-published-plugin negative needs real PNG/PLC/A6 and no conflicting contour choice')
     if args.line_row_mapping != 'DEMO_EVEN_ODD' and not args.legacy_shadow:
         parser.error('Legacy row layout requires opt-in external PLC shadow mode')
     if args.missing_frame_token and not (args.legacy_shadow and args.with_images and
@@ -445,6 +450,13 @@ def main():
             # must change the IMMUTABLE Release and actual Master CH06 result.
             recipe('algorithm-param', evidence, 'SIM_PRODUCT_A', 'CH06', 2,
                    'opencv.contour', 'minimumContourAreaPixels', 8, 'sim_engineer')
+        elif args.with_published_unsupported:
+            # A6 deliberately stores a future plugin name in an immutable Release;
+            # A0 must HOLD just this workpiece on its real physical trigger.
+            # Unknown plugins must never silently become contour/brightness/GOOD.
+            recipe('algorithm-param', evidence, 'SIM_PRODUCT_A', 'CH06', 2,
+                   'vendor.future.not.installed', 'minimumContourAreaPixels',
+                   8, 'sim_engineer')
         published = recipe('publish', evidence, 'SIM_PRODUCT_A', 'sim_engineer')
         product_release = published.split('release=')[1].split()[0]
         assert product_release.startswith('SIMREL-')
