@@ -829,6 +829,7 @@
                           <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="7">
                             <ComboBox ItemsSource="{Binding OfflineProduct.Channels}"
                                       SelectedItem="{Binding OfflineProduct.SelectedChannel, Mode=TwoWay}"
+                                      AutomationProperties.AutomationId="ChannelSelector"
                                       HorizontalAlignment="Stretch">
                               <ComboBox.ItemTemplate>
                                 <DataTemplate><TextBlock Text="{Binding Display}"/></DataTemplate>
@@ -905,19 +906,23 @@
                           <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
                             <StackPanel>
                               <TextBlock Text="X" FontSize="11"/>
-                              <TextBox Text="{Binding OfflineProduct.RoiX}"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiX}"
+                                       AutomationProperties.AutomationId="RoiXBox"/>
                             </StackPanel>
                             <StackPanel Grid.Column="1">
                               <TextBlock Text="Y" FontSize="11"/>
-                              <TextBox Text="{Binding OfflineProduct.RoiY}"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiY}"
+                                       AutomationProperties.AutomationId="RoiYBox"/>
                             </StackPanel>
                             <StackPanel Grid.Column="2">
                               <TextBlock Text="宽" FontSize="11"/>
-                              <TextBox Text="{Binding OfflineProduct.RoiWidth}"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiWidth}"
+                                       AutomationProperties.AutomationId="RoiWidthBox"/>
                             </StackPanel>
                             <StackPanel Grid.Column="3">
                               <TextBlock Text="高" FontSize="11"/>
-                              <TextBox Text="{Binding OfflineProduct.RoiHeight}"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiHeight}"
+                                       AutomationProperties.AutomationId="RoiHeightBox"/>
                             </StackPanel>
                           </Grid>
                           <Border Background="#F2F6FB" CornerRadius="7" Padding="9">
@@ -925,6 +930,7 @@
                               <TextBlock Text="参考图像尺寸（只读 run-root；解决干净 root 暂无采集图）"
                                          FontSize="12" FontWeight="SemiBold" Foreground="#2B5A7E"/>
                               <TextBox Text="{Binding OfflineProduct.ReferenceRunRoot, Mode=TwoWay}"
+                                       AutomationProperties.AutomationId="ReferenceRunRoot"
                                        PlaceholderText="例如 D:\runs\sim-full-data（含 master/slave/vision 资产）"/>
                               <Button Content="从参考 run-root 载入已验证图像尺寸（只读）"
                                       Command="{Binding OfflineProduct.LoadReferenceFramesCommand}"
