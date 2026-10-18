@@ -7,10 +7,10 @@ namespace AOI.Solutions;
 public sealed class SolutionRepository
 {
     private readonly SqliteSupport _db;
-    public SolutionRepository(string path)
+    public SolutionRepository(string path, bool readOnly = false)
     {
-        _db = new(path);
-        _db.Initialize("""
+        _db = new(path, readOnly);
+        if (!readOnly) _db.Initialize("""
             CREATE TABLE IF NOT EXISTS profiles(id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS solutions(id TEXT PRIMARY KEY, profile_id TEXT NOT NULL, name TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS drafts(solution_id TEXT NOT NULL, station_id TEXT NOT NULL,

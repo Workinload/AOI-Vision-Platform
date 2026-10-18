@@ -41,7 +41,41 @@ try
         Console.WriteLine($"SIM_ROI_SAMPLE_OK png={path} image=64x64 native_opencv=1");
         return 0;
     }
-    var repository = new SolutionRepository(Path.Combine(root, "solutions.sqlite"));
+    // Every MUTATING offline A6 command must own both Master/Slave OS run
+    // leases through its LAST SQLite commit. A Core may never start between
+    // this safety check and an A6 write. Read-only previews/status remain
+    // available without acquiring a writer lease.
+    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or
+        "import-roi" or "camera-target" or "algorithm-param";
+    using OfflineCoreOperationGate.OfflineLease? stoppedCores = mutating
+        ? OfflineCoreOperationGate.AcquireStoppedCores(root)
+        : null;
+    if (mode == "activate")
+        stoppedCores!.RequireCleanActivationRoot();
+
+    // Status must never create a repository or repair node state while either
+    // Core owns its lifetime lease. Missing or malformed evidence stays missing.
+    if (mode == "status")
+    {
+        if (args.Length != 2) throw new ArgumentException("status requires only root");
+        var masterPath = Path.Combine(root, "master", "sim-product-node.sqlite");
+        var slavePath = Path.Combine(root, "slave", "sim-product-node.sqlite");
+        bool hasMaster = File.Exists(masterPath), hasSlave = File.Exists(slavePath);
+        if (!hasMaster && !hasSlave)
+            Console.WriteLine("SIM_PRODUCT_NOT_ACTIVATED");
+        else
+        {
+            if (!hasMaster || !hasSlave)
+                throw new InvalidDataException("SIM_PRODUCT_STATUS_INCOMPLETE: preserve the original node evidence.");
+            var master = new SimChangeoverNode(masterPath, "master", MachineRole.Master, readOnly: true).Snapshot();
+            var slave = new SimChangeoverNode(slavePath, "slave", MachineRole.Slave, readOnly: true).Snapshot();
+            Console.WriteLine($"SIM_PRODUCT_STATUS master={master.ActiveReleaseId} m_epoch={master.ActiveEpoch} m_phase={master.Phase} " +
+                $"slave={slave.ActiveReleaseId} s_epoch={slave.ActiveEpoch} s_phase={slave.Phase} real_writes=0");
+        }
+        return 0;
+    }
+
+    var repository = new SolutionRepository(Path.Combine(root, "solutions.sqlite"), readOnly: !mutating);
     if (mode == "bootstrap")
     {
         if (args.Length != 5) throw new ArgumentException("bootstrap requires root, ID, name, actor");
@@ -234,25 +268,6 @@ try
         if (status.Phase != ChangeoverPhase.Committed)
             throw new InvalidOperationException("ACTIVATION_HOLD: " + status.Phase + " " + status.Detail);
         Console.WriteLine($"SIM_PRODUCT_DUAL_COMMITTED_HOLD release={release.ReleaseId} epoch={status.NextEpoch} nodes=2 real_writes=0");
-    }
-    else if (mode == "status")
-    {
-        if (args.Length != 2) throw new ArgumentException("status requires only root");
-        var files = new[] {
-            Path.Combine(root, "master", "sim-product-node.sqlite"),
-            Path.Combine(root, "slave", "sim-product-node.sqlite")
-        };
-        if (!files.All(File.Exists))
-        {
-            Console.WriteLine("SIM_PRODUCT_NOT_ACTIVATED");
-        }
-        else
-        {
-            var master = new SimChangeoverNode(files[0], "master", MachineRole.Master).Snapshot();
-            var slave = new SimChangeoverNode(files[1], "slave", MachineRole.Slave).Snapshot();
-            Console.WriteLine($"SIM_PRODUCT_STATUS master={master.ActiveReleaseId} m_epoch={master.ActiveEpoch} m_phase={master.Phase} " +
-                $"slave={slave.ActiveReleaseId} s_epoch={slave.ActiveEpoch} s_phase={slave.Phase} real_writes=0");
-        }
     }
     return 0;
 }

@@ -2,6 +2,7 @@ using AOI.Contracts;
 using AOI.Diagnostics;
 using AOI.Domain;
 using AOI.Runtime;
+using AOI.Solutions;
 using AOI.Runtime.Agent01;
 using AOI.Host;
 using System.Net;
@@ -116,6 +117,13 @@ Console.CancelKeyPress += (_, ev) => { ev.Cancel = true; cancelled.Cancel(); };
 Console.WriteLine($"AOI_HOST role={role} mode=SIM_LIGHT channels={(allEleven ? 11 : 2)} real_plc_writes=DISABLED");
 try
 {
+    // A0: hold a real cross-process OS lease for the ENTIRE Core lifetime.
+    // Offline A6 publish/changeover must atomically own BOTH complementary
+    // leases before opening shared A6 SQLite; a TCP 'not responding' probe
+    // alone is not proof that these Cores were stopped.
+    using IDisposable? coreLifetimeLease = role is "master" or "slave"
+        ? AcquireHostLifetimeLease(dataRoot, role)
+        : null;
     var requestedMode = Environment.GetEnvironmentVariable("AOI_SIM_MODE");
     if (requestedMode == "SIM_FULL")
     {
@@ -146,6 +154,27 @@ catch (Exception ex)
 {
     Console.Error.WriteLine($"AOI_HOST_FATAL {role} {ex}");
     return 1;
+}
+
+// Preserve the historic fail-closed restart diagnostic understood by A0/A5
+// five-process WAL acceptance, even though an OS lease now rejects duplicate
+// Core processes before either can reopen a single SQLite connection.
+static IDisposable AcquireHostLifetimeLease(string dataRoot, string role)
+{
+    try
+    {
+        return OfflineCoreOperationGate.HoldCoreForLifetime(dataRoot,
+            role == "master" ? MachineRole.Master : MachineRole.Slave);
+    }
+    catch (IOException ex)
+    {
+        string tag = Environment.GetEnvironmentVariable("AOI_SIM_MODE") == "SIM_FULL"
+            ? "SIM_FULL_RESTART_HOLD"
+            : "SIM_LIGHT_CORE_RUNNING_HOLD";
+        throw new InvalidOperationException(
+            tag + ": exclusive Core lifetime lease is held; existing Core " +
+            role + " may still be running. Never replay uncertain final PLC output.", ex);
+    }
 }
 
 static async Task RunSlaveAsync(string root, bool allEleven, CancellationToken ct)
