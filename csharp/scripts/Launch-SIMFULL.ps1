@@ -208,6 +208,10 @@ if (-not [string]::IsNullOrWhiteSpace($ImageRoot)) {
 Write-Log 'SIM_ONLY enforced: 127.0.0.1 only, real PLC/camera writes disabled, 5 items max 3 in flight'
 
 # ---------------------------------------------------------------- start
+# Any unexpected PowerShell/Start-Process exception must fail closed and tear
+# down only children started by this attempt. Otherwise a failed Slave/UI
+# spawn can strand a live vPLC/Master with misleading operator state.
+try {
 $sw = [Diagnostics.Stopwatch]::StartNew()
 $vplc = Start-AoiProcess -Name 'vPLC' -FilePath $hostExe -Arguments ('vplc --data "' + $script:Data + '"') -WorkingDirectory (Join-Path $script:Base 'Host')
 Start-Sleep -Milliseconds 1500
@@ -254,3 +258,10 @@ Write-Log ('data   : ' + $script:Data)
 Write-Log ('log    : ' + $script:LogPath)
 Write-Log 'Real PLC and camera control remain DISABLED. This is SIM_ONLY local validation.'
 exit 0
+}
+catch {
+    Write-Log ('AOI_SIM_FULL_LAUNCH_ERROR unexpected start exception: ' +
+        $_.Exception.GetType().Name + ': ' + $_.Exception.Message) 'ERROR'
+    Stop-StartedProcesses
+    exit 6
+}
