@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="../../src/AOI.Ui.Client/AOI.Ui.Client.csproj" />
     <ProjectReference Include="../../src/AOI.Ui.Avalonia/AOI.Ui.Avalonia.csproj" />
+    <ProjectReference Include="../../src/AOI.Runtime/AOI.Runtime.csproj" />
     <PackageReference Include="NUnit" />
     <PackageReference Include="NUnit3TestAdapter" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />

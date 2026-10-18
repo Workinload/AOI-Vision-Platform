@@ -259,6 +259,10 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     [ObservableProperty] private string publishedSha = "";
     [ObservableProperty] private string releaseProvenance = "尚未从 A6 数据库回读任何 Release。";
     [ObservableProperty] private string activationState = OfflineA6Dependency.ActivationUnavailable;
+    // Read-only reference run root holding REAL captured frames used only to resolve ROI
+    // pixel mapping while the operator edits a different, clean product root.
+    [ObservableProperty] private string referenceRunRoot = "";
+    [ObservableProperty] private string referenceFrameState = "未载入参考图像尺寸：改 ROI 仍 fail closed。";
     [ObservableProperty] private bool activationConfirmed;
     [ObservableProperty] private string activatedRelease = "未激活";
     [ObservableProperty] private string activatedEpoch = "";
@@ -816,6 +820,40 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             ActivationProof = "";
             ActivationState = "激活未提交（保持 HOLD，禁止物理写入）：" + ex.Message;
             Status = ActivationState;
+        }
+    }
+
+    /// <summary>
+    /// Loads REAL captured frame sizes from a reference run root's verified vision ledger,
+    /// read-only. A clean product root has no images yet, so this is how an operator can edit
+    /// ROI against true pixel dimensions without running a Core (which the write lease forbids).
+    /// </summary>
+    [RelayCommand]
+    public void LoadReferenceFrames()
+    {
+        if (string.IsNullOrWhiteSpace(ReferenceRunRoot))
+        {
+            ReferenceFrameState = "请填写参考 run-root（只读；含 master/slave vision 资产）。";
+            Status = ReferenceFrameState;
+            return;
+        }
+        try
+        {
+            var loaded = OfflineVerifiedFrameSource.LoadFromRunRoot(ReferenceRunRoot.Trim());
+            foreach (var reference in loaded)
+                ReportVerifiedImage(reference.ChannelId, reference.Size.Width, reference.Size.Height,
+                    reference.Provenance);
+            ReferenceFrameState = loaded.Count == 0
+                ? "参考 run-root 中没有可验证的通道 PNG：改 ROI 仍 fail closed。"
+                : "已载入 " + loaded.Count + " 个通道的真实图像尺寸（只读，未写参考库）：" +
+                  string.Join("、", loaded.Select(x => x.ChannelId + "=" + x.Size.Width + "×" + x.Size.Height));
+            Status = ReferenceFrameState;
+        }
+        catch (Exception ex) when (ex is IOException or DirectoryNotFoundException
+            or UnauthorizedAccessException or ArgumentException or InvalidDataException)
+        {
+            ReferenceFrameState = "载入参考图像失败（未写任何文件）：" + ex.Message;
+            Status = ReferenceFrameState;
         }
     }
 

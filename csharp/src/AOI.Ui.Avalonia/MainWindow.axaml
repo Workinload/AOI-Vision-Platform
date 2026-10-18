@@ -920,6 +920,19 @@
                               <TextBox Text="{Binding OfflineProduct.RoiHeight}"/>
                             </StackPanel>
                           </Grid>
+                          <Border Background="#F2F6FB" CornerRadius="7" Padding="9">
+                            <StackPanel Spacing="6">
+                              <TextBlock Text="参考图像尺寸（只读 run-root；解决干净 root 暂无采集图）"
+                                         FontSize="12" FontWeight="SemiBold" Foreground="#2B5A7E"/>
+                              <TextBox Text="{Binding OfflineProduct.ReferenceRunRoot, Mode=TwoWay}"
+                                       PlaceholderText="例如 D:\runs\sim-full-data（含 master/slave/vision 资产）"/>
+                              <Button Content="从参考 run-root 载入已验证图像尺寸（只读）"
+                                      Command="{Binding OfflineProduct.LoadReferenceFramesCommand}"
+                                      HorizontalAlignment="Stretch"/>
+                              <TextBlock Text="{Binding OfflineProduct.ReferenceFrameState}" FontSize="11"
+                                         Foreground="#4C6B57" TextWrapping="Wrap"/>
+                            </StackPanel>
+                          </Border>
                           <TextBlock Text="{Binding OfflineProduct.RoiImageState}" FontSize="11"
                                      Foreground="#39718C" TextWrapping="Wrap"/>
                           <TextBlock Text="{Binding OfflineProduct.RoiPixelPreviewText}" FontSize="11"
