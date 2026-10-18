@@ -1,4 +1,5 @@
 using AOI.Contracts;
+using AOI.Diagnostics;
 using AOI.Domain;
 using AOI.Runtime;
 using AOI.Runtime.Agent01;
@@ -6,10 +7,10 @@ using AOI.Host;
 using System.Net;
 using System.Net.Sockets;
 
-if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc" or "inspect"))
+if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc" or "inspect" or "cross-ledger"))
 {
     Console.Error.WriteLine(
-        "Usage: AOI.Host [master|slave|vplc|inspect] [--data /path] (SIM_ONLY; inspect is read-only)");
+        "Usage: AOI.Host [master|slave|vplc|inspect|cross-ledger] --data /path [--workpiece D-UUID] (SIM_ONLY; inspections are read-only)");
     return 2;
 }
 
@@ -34,6 +35,38 @@ if (role == "inspect")
         return 1;
     }
 }
+// A0 operator triage of ALREADY STOPPED Core. A7 copies A1/A7 SQLite
+// DB+WAL+SHM into a temporary evidence snapshot and never touches live
+// PLC/camera/network state. CONFIRMED means two FINS steps proven, NOT that
+// hardware ejection was field-certified or production may restart.
+if (role == "cross-ledger")
+{
+    if (args.Length != 5 || args[1] != "--data" || args[3] != "--workpiece" ||
+        !Guid.TryParseExact(args[4], "D", out Guid workpieceId) ||
+        workpieceId == Guid.Empty)
+    {
+        Console.Error.WriteLine(
+            "Usage: AOI.Host cross-ledger --data STOPPED_RUN_ROOT --workpiece UUID");
+        return 2;
+    }
+    try
+    {
+        var report = CrossLedgerReadOnlyReconciliation.Capture(dataRoot, workpieceId);
+        Console.WriteLine("AOI_CROSS_LEDGER_INSPECT_JSON=" + WireFormat.Serialize(report));
+        Console.WriteLine("AOI_CROSS_LEDGER_INSPECT_STATUS=" + report.Status +
+            " manual_reconciliation=" + report.RequiresManualReconciliation +
+            " real_plc_writes=DISABLED physical_ejection_proven=" +
+            report.PhysicalEjectionVerified);
+        return report.Status == CrossLedgerStatus.CONFIRMED &&
+            !report.RequiresManualReconciliation ? 0 : 3;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("AOI_CROSS_LEDGER_INSPECT_FAILED " + ex);
+        return 1;
+    }
+}
+
 using var cancelled = new CancellationTokenSource();
 Console.CancelKeyPress += (_, ev) => { ev.Cancel = true; cancelled.Cancel(); };
 Console.WriteLine($"AOI_HOST role={role} mode=SIM_LIGHT channels={(allEleven ? 11 : 2)} real_plc_writes=DISABLED");
