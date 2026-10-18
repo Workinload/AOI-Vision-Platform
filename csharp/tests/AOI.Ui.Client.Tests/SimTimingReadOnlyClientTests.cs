@@ -55,8 +55,8 @@ public sealed class SimTimingReadOnlyClientTests
         });
         var result = await new SimTimingReadOnlyClient(port).ReadAsync(item);
         Assert.That(await request, Is.EqualTo("TIMING|" + item.ToString("D")));
-        Assert.That(result.Events.Single().FinsSid, Is.EqualTo(49));
-        Assert.That(result.Events.Single().OperationId, Is.EqualTo(op));
+        Assert.That(result.Events.Single(e => e.Stage == "CamDoneAcknowledged").FinsSid, Is.EqualTo(49));
+        Assert.That(result.Events.Single(e => e.Stage == "CamDoneAcknowledged").OperationId, Is.EqualTo(op));
         Assert.That(St05(result).CamDoneEvidence, Does.Contain("ACK已观测"));
         Assert.That(St05(result).CamDoneEvidence, Does.Contain("SID=49"));
     }
