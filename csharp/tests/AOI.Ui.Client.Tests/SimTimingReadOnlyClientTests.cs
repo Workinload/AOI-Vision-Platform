@@ -11,7 +11,7 @@ namespace AOI.Ui.Client.Tests;
 [TestFixture]
 public sealed class SimTimingReadOnlyClientTests
 {
-    private static OperatorTimingMilestone Milestone(Guid workpiece, Guid capture,
+    private static SimTimingMilestone Milestone(Guid workpiece, Guid capture,
         string stage, Guid? operation = null, byte? sid = null,
         ushort? value = null, int attempt = 1, string device = "HIK-M-2",
         string? channel = "CH06", string origin = "DIRECT_OBSERVATION",
@@ -21,11 +21,11 @@ public sealed class SimTimingReadOnlyClientTests
             capture, device, channel, attempt, frame, operation, null,
             address, value, sid, "ACTUAL_FINS_UDP_ACK");
 
-    private static OperatorTimingReply Reply(Guid id,
-        params OperatorTimingMilestone[] milestones) =>
+    private static SimTimingReply Reply(Guid id,
+        params SimTimingMilestone[] milestones) =>
         new(true, "SIM_ONLY_READ_ONLY", id, true, false, milestones, []);
 
-    private static CaptureDebugRow St05(OperatorTimingReply reply) =>
+    private static CaptureDebugRow St05(SimTimingReply reply) =>
         OperatorTimingProjection.Apply(
             CaptureDebugProjection.ForWorkpiece(
                 MonitorProjection.Offline(MachineRole.Master), reply.WorkpieceId), reply)
@@ -121,7 +121,7 @@ public sealed class SimTimingReadOnlyClientTests
         var capture = Guid.NewGuid();
         var wrong = Reply(id, Milestone(Guid.NewGuid(), capture,
             "CamDoneAcknowledged", Guid.NewGuid(), 3, 2));
-        Assert.Throws<InvalidDataException>(() => wrong.Validate(id));
+        Assert.Throws<InvalidDataException>(() => wrong.Validate());
         var legacy = Reply(id, Milestone(id, capture,
             "CamDoneAcknowledged", Guid.NewGuid(), 3, 2, origin: "CORE_WAL_LEGACY"));
         Assert.That(St05(legacy).CamDoneEvidence, Does.Not.Contain("ACK已观测"));
@@ -135,13 +135,13 @@ public sealed class SimTimingReadOnlyClientTests
     {
         var id = Guid.NewGuid();
         Assert.Throws<InvalidDataException>(() =>
-            (Reply(id) with { IsSimulation = false }).Validate(id));
+            (Reply(id) with { IsSimulation = false }).Validate());
         Assert.Throws<InvalidDataException>(() =>
             Reply(id, Enumerable.Repeat(Milestone(id, Guid.NewGuid(), "FrameArrived"),
-                121).ToArray()).Validate(id));
+                121).ToArray()).Validate());
         var withFault = Reply(id) with
         {
-            Findings = [new OperatorTimingFinding(
+            Findings = [new SimTimingFinding(
                 "FRAME_REUSED_ACROSS_WORKPIECES", "ERROR", "Frame reused")]
         };
         var projected = OperatorTimingProjection.Display(withFault);
