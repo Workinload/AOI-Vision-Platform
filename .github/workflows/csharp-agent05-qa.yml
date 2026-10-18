@@ -39,6 +39,12 @@ jobs:
             exit 1
           }
           Write-Host 'A5_WINDOWS_OPERATOR_SMOKE_SYNTAX_PASS'
+      - name: A0 actual Windows launcher negative exit-code and orphan-process regression
+        if: matrix.os == 'windows-2025'
+        shell: pwsh
+        run: |
+          powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LauncherDiagnostics.ps1 -EvidenceRoot .artifacts/launcher-diagnostics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Independent virtual FINS fault-fixture Python unit tests
         run: python -m unittest discover -s qa -p 'test_*.py' -v
       - name: Restore pinned dependencies
@@ -123,6 +129,8 @@ jobs:
           dotnet publish tools/AOI.Vision.Cli/AOI.Vision.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/VisionLab
           cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
           cp scripts/Launch-SIMFULL.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.cmd
+          cp scripts/Launch-SIMFULL.ps1 .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.ps1
+          cp scripts/Sim-Product-Release-Smoke.ps1 .artifacts/dist/AOI_SIM11_Windows/Sim-Product-Release-Smoke.ps1
           cp scripts/Launch-SIMFULL-Images.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           cp scripts/Configure-SIM-Recipe.cmd .artifacts/dist/AOI_SIM11_Windows/Configure-SIM-Recipe.cmd
           cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
@@ -132,6 +140,8 @@ jobs:
           test -f .artifacts/dist/AOI_SIM11_Windows/Windows-Operator-Smoke.ps1
           test -f .artifacts/dist/AOI_SIM11_Windows/Run-Windows-Operator-Smoke.cmd
           test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
+          test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.ps1
+          test -f .artifacts/dist/AOI_SIM11_Windows/Sim-Product-Release-Smoke.ps1
           test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.exe
@@ -154,6 +164,27 @@ jobs:
             exit 1
           }
           Write-Host 'A5_WINDOWS_INTERACTIVE_DESKTOP_PASS: real native seven-page GUI and 1080p evidence'
+      - name: A0 real Windows published Release dual-Core activation and five-process IPC screenshot evidence
+        if: matrix.os == 'windows-2025'
+        shell: pwsh
+        run: |
+          $src = (Resolve-Path '.artifacts/dist/AOI_SIM11_Windows').Path
+          $target = Join-Path (Resolve-Path '.artifacts').Path 'release-smoke-package'
+          New-Item -ItemType Directory -Force -Path $target | Out-Null
+          foreach ($name in @('Host', 'UI', 'Recipes', 'Launch-SIMFULL.ps1', 'Sim-Product-Release-Smoke.ps1')) {
+            Copy-Item -LiteralPath (Join-Path $src $name) -Destination $target -Recurse -Force
+          }
+          powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/Sim-Product-Release-Smoke.ps1 -PackageRoot $target -EvidenceRoot .artifacts/a0-release-smoke -ProductionTimeoutSeconds 120
+          if ($LASTEXITCODE -ne 0) { throw ('A0_REAL_WINDOWS_RELEASE_SMOKE_FAILED exit=' + $LASTEXITCODE) }
+          foreach ($name in @('release-smoke.json', 'launch.log', 'desktop.png')) {
+            $file = Join-Path '.artifacts/a0-release-smoke' $name
+            if (-not (Test-Path $file) -or (Get-Item $file).Length -eq 0) { throw ('A0_RELEASE_EVIDENCE_MISSING: ' + $file) }
+          }
+          $audit = Get-Content -Raw '.artifacts/a0-release-smoke/release-smoke.json' | ConvertFrom-Json
+          if ($audit.result -ne 'PASS' -or $audit.simulationMode -ne 'SIM_FULL' -or $audit.realWritesEnabled -ne $false -or $audit.productionTotal -lt 5 -or $audit.releasesSeen.Count -ne 1 -or $audit.releasesSeen[0] -ne $audit.releaseId) {
+            throw 'A0_RELEASE_MANIFEST_NOT_CAUSALLY_CONFIRMED'
+          }
+          Write-Host 'A0_ACTUAL_WINDOWS_RELEASE_DUAL_CORE_5_PROCESS_SMOKE_PASS release=1 distinct=5 simulated_only=1 screenshots=1'
       - name: Upload Windows x64 SIM_ONLY preview package
         if: matrix.os == 'windows-2025'
         uses: actions/upload-artifact@v4
