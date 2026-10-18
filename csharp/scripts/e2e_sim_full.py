@@ -164,12 +164,12 @@ def verify_timing_ipc(evidence, workpiece_id):
           'other_workpiece_leak=0 writable_actions=0', flush=True)
 
 
-def query(path, statement):
+def query(path, statement, args=()):
     if not path.is_file():
         return None
     try:
         with sqlite3.connect(path.resolve().as_uri() + '?mode=ro', uri=True, timeout=1) as db:
-            return db.execute(statement).fetchall()
+            return db.execute(statement, args).fetchall()
     except sqlite3.OperationalError as exc:
         if 'no such table' in str(exc) or 'unable to open database' in str(exc):
             return None
