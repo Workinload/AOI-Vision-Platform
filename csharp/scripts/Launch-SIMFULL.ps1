@@ -197,7 +197,11 @@ foreach ($wal in $previousEvidence) {
 Write-Log ('previous production WAL: none under ' + $script:Data)
 
 $udpPort = 19600
-$tcpPorts = @(19610, 19621, 19622, 19651, 19652)
+# Legacy SIM_LIGHT serves 19610/19621/19622/19651 but intentionally has
+# no Master persisted A7 timing IPC on 19652. An unrelated local program
+# using 19652 must NOT block the SIM11 legacy operator profile.
+$tcpPorts = @(19610, 19621, 19622, 19651)
+if ($SimMode -eq 'SIM_FULL') { $tcpPorts += 19652 }
 $busy = @()
 foreach ($p in $tcpPorts) { if (-not (Test-TcpPortFree $p)) { $busy += $p } }
 if ($busy.Count -gt 0) {
