@@ -1,4 +1,5 @@
 using AOI.Domain;
+using AOI.Runtime;
 using AOI.Runtime.Vision;
 using AOI.Solutions;
 using NUnit.Framework;
