@@ -108,6 +108,40 @@ $kept = ((Test-Path $orphan) -and
     ((Get-Content $orphan -Raw) -match 'orphaned-previous-wire-evidence'))
 Add-Result 'orphan SQLite WAL cannot be mistaken for fresh data' 3 $r.ExitCode ($r.ExitCode -eq 3 -and $kept) ('raw WAL intact=' + $kept)
 
+
+# ---- Case 5: SIM11 profile (SIM_LIGHT, sim-data) missing Diagnostics executable
+$sb = New-Sandbox 'case5-sim11-missing-diagnostics'
+$r = Invoke-Launcher $sb @('-SimMode', 'SIM_LIGHT', '-DataRoot', 'sim-data', '-ItemCount', '1', '-MaxInFlight', '1', '-AdditionalRequired', 'Diagnostics\AOI.Diagnostics.Cli.exe')
+Add-Result 'SIM11 missing Diagnostics executable' 2 $r.ExitCode ($r.ExitCode -eq 2) 'SIM_LIGHT profile'
+
+# ---- Case 6: SIM11 profile holds on its own sim-data WAL and never touches sim-full-data
+$sb = New-Sandbox 'case6-sim11-wal-hold'
+New-Item -ItemType Directory -Force -Path (Join-Path $sb 'Diagnostics') | Out-Null
+Set-Content -Path (Join-Path $sb 'Diagnostics\AOI.Diagnostics.Cli.exe') -Value 'dummy' -Encoding ascii
+$simData = Join-Path $sb 'sim-data\master'
+New-Item -ItemType Directory -Force -Path $simData | Out-Null
+$wal = Join-Path $simData 'production.db'
+Set-Content -Path $wal -Value 'sim-light-evidence' -Encoding ascii
+$fullMarker = Join-Path $sb 'sim-full-data\master'
+New-Item -ItemType Directory -Force -Path $fullMarker | Out-Null
+Set-Content -Path (Join-Path $fullMarker 'production.db') -Value 'sim-full-evidence' -Encoding ascii
+$r = Invoke-Launcher $sb @('-SimMode', 'SIM_LIGHT', '-DataRoot', 'sim-data', '-ItemCount', '1', '-MaxInFlight', '1', '-AdditionalRequired', 'Diagnostics\AOI.Diagnostics.Cli.exe')
+$keptSim = ((Get-Content $wal -Raw) -match 'sim-light-evidence')
+$keptFull = ((Get-Content (Join-Path $fullMarker 'production.db') -Raw) -match 'sim-full-evidence')
+Add-Result 'SIM11 sim-data WAL hold is isolated from sim-full-data' 3 $r.ExitCode ($r.ExitCode -eq 3 -and $keptSim -and $keptFull) ('sim-data intact=' + $keptSim + ' sim-full-data intact=' + $keptFull)
+
+# ---- Case 7: SIM11 profile refuses a busy Core port exactly like SIM_FULL
+$sb = New-Sandbox 'case7-sim11-port-busy'
+New-Item -ItemType Directory -Force -Path (Join-Path $sb 'Diagnostics') | Out-Null
+Set-Content -Path (Join-Path $sb 'Diagnostics\AOI.Diagnostics.Cli.exe') -Value 'dummy' -Encoding ascii
+$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 19622)
+$listener.Start()
+try {
+    $r = Invoke-Launcher $sb @('-SimMode', 'SIM_LIGHT', '-DataRoot', 'sim-data', '-ItemCount', '1', '-MaxInFlight', '1', '-AdditionalRequired', 'Diagnostics\AOI.Diagnostics.Cli.exe')
+    Add-Result 'SIM11 requires free Slave IPC port' 4 $r.ExitCode ($r.ExitCode -eq 4) 'port 19622 busy'
+}
+finally { $listener.Stop() }
+
 $failed = @($results | Where-Object { -not $_.Pass })
 $summary = Join-Path $evidence 'launcher-diagnostics.json'
 $results | ConvertTo-Json -Depth 4 | Set-Content -Path $summary -Encoding UTF8
