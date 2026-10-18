@@ -7,10 +7,10 @@ using AOI.Host;
 using System.Net;
 using System.Net.Sockets;
 
-if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc" or "inspect" or "cross-ledger"))
+if (args.Length < 1 || args[0] is not ("master" or "slave" or "vplc" or "inspect" or "cross-ledger" or "cross-ledger-batch"))
 {
     Console.Error.WriteLine(
-        "Usage: AOI.Host [master|slave|vplc|inspect|cross-ledger] --data /path [--workpiece D-UUID] (SIM_ONLY; inspections are read-only)");
+        "Usage: AOI.Host [master|slave|vplc|inspect|cross-ledger|cross-ledger-batch] --data /path [--workpiece UUID|--limit N] (SIM_ONLY; read-only)");
     return 2;
 }
 
@@ -63,6 +63,50 @@ if (role == "cross-ledger")
     catch (Exception ex)
     {
         Console.Error.WriteLine("AOI_CROSS_LEDGER_INSPECT_FAILED " + ex);
+        return 1;
+    }
+}
+
+// A0 offline batch query: a single consistent stopped-Core A1/A7 snapshot,
+// keyed by immutable WorkpieceId even when multiple barcodes are identical.
+// The A7 limit guard never exposes a truncated or partly unverified run as
+// complete. This mode has no PLC, camera, PeerLink or write/reset endpoint.
+if (role == "cross-ledger-batch")
+{
+    if (args.Length is not (3 or 5) || args[1] != "--data" ||
+        (args.Length == 5 && (args[3] != "--limit" ||
+        !int.TryParse(args[4], System.Globalization.NumberStyles.None,
+            System.Globalization.CultureInfo.InvariantCulture, out _))))
+    {
+        Console.Error.WriteLine(
+            "Usage: AOI.Host cross-ledger-batch --data STOPPED_RUN_ROOT [--limit 1..1000]");
+        return 2;
+    }
+    int limit = args.Length == 5
+        ? int.Parse(args[4], System.Globalization.CultureInfo.InvariantCulture) : 200;
+    if (limit is < 1 or > 1000)
+    {
+        Console.Error.WriteLine("CrossLedger batch limit must be between 1 and 1000.");
+        return 2;
+    }
+    try
+    {
+        var batch = CrossLedgerReadOnlyReconciliation.CaptureAll(dataRoot, limit);
+        Console.WriteLine("AOI_CROSS_LEDGER_BATCH_JSON=" + WireFormat.Serialize(batch));
+        bool safelyAudited = !batch.Truncated && batch.Workpieces.Length > 0 &&
+            batch.OverallStatus == CrossLedgerStatus.CONFIRMED &&
+            batch.Workpieces.All(x => x.Status == CrossLedgerStatus.CONFIRMED &&
+                !x.RequiresManualReconciliation && x.SimOnly &&
+                !x.RealPlcWriteAuthorized && !x.PhysicalEjectionVerified);
+        Console.WriteLine("AOI_CROSS_LEDGER_BATCH_STATUS=" + batch.OverallStatus +
+            " count=" + batch.Workpieces.Length + " truncated=" + batch.Truncated +
+            " all_evidence_confirmed=" + safelyAudited +
+            " real_plc_writes=DISABLED physical_ejection_proven=false");
+        return safelyAudited ? 0 : 3;
+    }
+    catch (Exception ex)
+    {
+        Console.Error.WriteLine("AOI_CROSS_LEDGER_BATCH_FAILED " + ex);
         return 1;
     }
 }
