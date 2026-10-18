@@ -148,9 +148,11 @@ public static class CrossLedgerReadOnlyReconciliation
                         "INVALID_LEDGER_EVIDENCE", "This workpiece has malformed evidence.");
                 }
             }).ToArray();
-        CrossLedgerStatus overall = truncated ? CrossLedgerStatus.INCOMPLETE :
-            reports.Length == 0 ? CrossLedgerStatus.AUDIT_MISSING :
-            reports.MaxBy(r => Rank(r.Status))!.Status;
+        CrossLedgerStatus overall = reports.Length == 0
+            ? CrossLedgerStatus.AUDIT_MISSING
+            : reports.MaxBy(r => Rank(r.Status))!.Status;
+        if (truncated && overall == CrossLedgerStatus.CONFIRMED)
+            overall = CrossLedgerStatus.INCOMPLETE;
         return new CrossLedgerBatch(DateTimeOffset.UtcNow, reports, truncated, overall);
     }
 
