@@ -83,10 +83,15 @@ public sealed class OfflineWriteGate : IDisposable
         if (lease is null || string.IsNullOrWhiteSpace(databasePath)) return false;
         string? dbRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath));
         if (string.IsNullOrEmpty(dbRoot)) return false;
-        string held = Path.GetFullPath(DataRoot)
-            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        string actual = dbRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-        return string.Equals(held, actual, StringComparison.OrdinalIgnoreCase);
+        // A reparse/symlink alias could resolve to a different physical store than the one that
+        // was locked, so it is rejected instead of silently authorising writes.
+        if (IsReparsePoint(dbRoot) || IsReparsePoint(DataRoot)) return false;
+        // Case-insensitive only where the filesystem actually is: on Linux runA and RUNa are
+        // two different physical roots, so an OrdinalIgnoreCase match there would be fail-open.
+        StringComparison comparison = OperatingSystem.IsWindows()
+            ? StringComparison.OrdinalIgnoreCase
+            : StringComparison.Ordinal;
+        return string.Equals(Canonical(DataRoot), Canonical(databasePath is null ? "" : dbRoot), comparison);
     }
 
     public void Arm(string dataRoot)
@@ -119,6 +124,23 @@ public sealed class OfflineWriteGate : IDisposable
         DataRoot = "";
         Reason = isolatedTest ? Reason : OfflineA6Dependency.ClosedReason;
         held?.Dispose();
+    }
+
+    private static string Canonical(string path) => Path.GetFullPath(path)
+        .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+    internal static bool IsReparsePoint(string path)
+    {
+        try
+        {
+            var info = new DirectoryInfo(path);
+            if (!info.Exists) return false;
+            return (info.Attributes & FileAttributes.ReparsePoint) != 0;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return true; // cannot prove it is a real directory -> fail closed
+        }
     }
 
     public void Dispose() => Release();
@@ -370,7 +392,9 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
         catch (Exception ex) when (ex is ArgumentException or InvalidDataException or IOException
             or InvalidOperationException or KeyNotFoundException or DbException)
         {
-            ResetAttachment("启用离线方案管理失败：" + ex.Message);
+            // Never strand the OS handles on a failed switch: fail closed and release.
+            gate.Release();
+            ResetAttachment("启用离线方案管理失败（已释放双锁）：" + ex.Message);
         }
     }
 
@@ -425,6 +449,11 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     public void DisableOfflineWrites()
     {
         gate.Release();
+        // A written-through manager and its revision/release evidence must not survive the
+        // session: invalidate them and fall back to a clean (detached) state.
+        ResetAttachment("写入会话已关闭，已丢弃可写连接与修订证据：" + gate.Reason);
+        manager = null;
+        edit = null;
         WriteState = "写入会话已关闭：" + gate.Reason;
         Status = WriteState;
     }
@@ -795,7 +824,7 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
 
     private bool RequireWrites(string action)
     {
-        if (gate.A6WritesAllowed) return true;
+        if (gate.A6WritesAllowed && gate.CoversDatabase(databasePath)) return true;
         Status = action + " 已 fail closed：" + gate.Reason;
         ValidationMessage = Status;
         return false;

@@ -687,9 +687,9 @@
               <StackPanel Spacing="8">
                 <TextBlock Text="OFFLINE_RECIPE_MANAGEMENT · 离线产品 / ROI 编辑（A6 真实数据库）"
                            FontSize="17" FontWeight="SemiBold" Foreground="#7A4A12"/>
-                <TextBlock Text="显式入口：A6 solutions.sqlite 或 run-root + 操作员。A0 #149 双 Core 停止门禁未合并时 A6 写入/发布 fail closed；激活始终不可用。"
+                <TextBlock Text="显式入口：A6 solutions.sqlite 或 run-root + 操作员。写入受双 Core 独占锁保护：未开启写入会话时 A6 只读；开启后仅可写租期内且属于该 run-root 的数据库。"
                            Foreground="#8A6528" FontSize="11" TextWrapping="Wrap"/>
-                <Grid ColumnDefinitions="2.2*,1.1*,Auto,Auto" ColumnSpacing="9">
+                <Grid ColumnDefinitions="2.2*,1.1*" ColumnSpacing="9">
                   <StackPanel>
                     <TextBlock Text="A6 路径（solutions.sqlite 或 run-root）" FontSize="11"/>
                     <TextBox Text="{Binding OfflineProduct.EntryPath}"/>
@@ -698,15 +698,18 @@
                     <TextBlock Text="操作员" FontSize="11"/>
                     <TextBox Text="{Binding OfflineProduct.OperatorId}"/>
                   </StackPanel>
-                  <Button Grid.Column="2" Content="启用离线方案管理"
-                          Command="{Binding OfflineProduct.AttachEntryCommand}" VerticalAlignment="Bottom"/>
-                  <Button Grid.Column="3" Content="重新读取数据库"
-                          Command="{Binding OfflineProduct.RefreshCommand}" VerticalAlignment="Bottom"/>
-                  <Button Grid.Column="4" Content="开启离线写入会话（双 Core 独占锁）"
-                          Command="{Binding OfflineProduct.EnableOfflineWritesCommand}" VerticalAlignment="Bottom"/>
-                  <Button Grid.Column="5" Content="关闭写入会话（释放双锁）"
-                          Command="{Binding OfflineProduct.DisableOfflineWritesCommand}" VerticalAlignment="Bottom"/>
                 </Grid>
+                <!-- Wrap so all four actions stay visible and clickable at 1250x760 and 1920x1080. -->
+                <WrapPanel Orientation="Horizontal">
+                  <Button Content="启用离线方案管理" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.AttachEntryCommand}"/>
+                  <Button Content="重新读取数据库" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.RefreshCommand}"/>
+                  <Button Content="开启离线写入会话（双 Core 独占锁）" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.EnableOfflineWritesCommand}"/>
+                  <Button Content="关闭写入会话（释放双锁）" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.DisableOfflineWritesCommand}"/>
+                </WrapPanel>
                 <TextBlock Text="{Binding OfflineProduct.WriteState}" FontSize="12"
                            Foreground="#A23D2A" TextWrapping="Wrap"/>
                 <TextBlock Text="{Binding OfflineProduct.DatabasePathLabel}" FontSize="11"
