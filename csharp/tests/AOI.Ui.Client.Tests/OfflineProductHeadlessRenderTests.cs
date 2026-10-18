@@ -21,7 +21,8 @@ public sealed class OfflineProductHeadlessRenderTests
 {
     private sealed record RenderResult(
         string[] Texts, bool CoreRoiSaveButtonVisible, bool CoreRoiSaveButtonEnabled,
-        int VisibleRoiEditors, bool OfflineEntryBarVisible, bool OfflineEditorVisible);
+        IReadOnlyList<Rect> RoiEditorRects, Rect? SaveButtonRect, Size ClientSize,
+        bool OfflineEntryBarVisible, bool OfflineEditorVisible);
 
     [Test]
     public void ProductRoiNavigationRendersInAvaloniaHeadless()
@@ -53,13 +54,28 @@ public sealed class OfflineProductHeadlessRenderTests
             Assert.That(normal.CoreRoiSaveButtonVisible, Is.True,
                 "the existing Core ROI save button must stay visible by default");
             Assert.That(normal.CoreRoiSaveButtonEnabled, Is.True);
-            Assert.That(normal.VisibleRoiEditors, Is.GreaterThanOrEqualTo(4),
+            Assert.That(normal.RoiEditorRects, Has.Count.GreaterThanOrEqualTo(4),
                 "four real Core ROI editors must remain usable on the default page");
             Assert.That(normal.OfflineEntryBarVisible, Is.False,
                 "the large offline DB entry bar is hidden on the Core ROI sub-page");
             Assert.That(normal.OfflineEditorVisible, Is.False);
             Assert.That(normal.Texts.Any(t => t.Contains("校验并持久保存 SIM_ONLY ROI 草稿")),
                 Is.True);
+            AssertBoundsInsideWindow(normal, "1920x1080");
+
+            // 1b) Real minimum window size: the same controls must lie inside the actual
+            // client bounds, not merely report IsEffectivelyVisible (the native failure was
+            // clipped by the tab viewport). Layout bounds are checked on a 1250x760 window.
+            var shortVm = new MainWindowViewModel("master", true);
+            shortVm.SelectedWorkspaceIndex = 5;
+            var shortWindow = Render(shortVm, Path.Combine(root,
+                "product-roi-CORE_ROI_SHORT_1250x760.png"), 1250, 760);
+            Assert.That(shortVm.OfflineProduct.ProductRoiTabIndex, Is.EqualTo(0));
+            Assert.That(shortWindow.CoreRoiSaveButtonVisible, Is.True);
+            Assert.That(shortWindow.RoiEditorRects, Has.Count.GreaterThanOrEqualTo(4));
+            Assert.That(shortWindow.ClientSize.Width, Is.EqualTo(1250));
+            Assert.That(shortWindow.ClientSize.Height, Is.EqualTo(760));
+            AssertBoundsInsideWindow(shortWindow, "1250x760");
 
             // 2) Explicit --offline-recipe-management (isolated test gate): new editor selected.
             var testVm = new MainWindowViewModel("master", true, OfflineWriteGate.IsolatedTestDatabase);
@@ -94,9 +110,33 @@ public sealed class OfflineProductHeadlessRenderTests
         }
     }
 
-    private static RenderResult Render(MainWindowViewModel vm, string outputPath)
+    private static void AssertBoundsInsideWindow(RenderResult result, string label)
     {
-        var window = new MainWindow(vm);
+        Assert.That(result.SaveButtonRect, Is.Not.Null, label + " save button missing");
+        var save = result.SaveButtonRect!.Value;
+        Assert.That(save.Left, Is.GreaterThanOrEqualTo(0), label + " save button left clipped");
+        Assert.That(save.Top, Is.GreaterThanOrEqualTo(0), label + " save button top clipped");
+        Assert.That(save.Right, Is.LessThanOrEqualTo(result.ClientSize.Width + 0.5),
+            label + " save button right clipped");
+        Assert.That(save.Bottom, Is.LessThanOrEqualTo(result.ClientSize.Height + 0.5),
+            label + " save button bottom clipped");
+        Assert.That(result.RoiEditorRects, Has.Count.GreaterThanOrEqualTo(4),
+            label + " ROI editors missing");
+        foreach (var edit in result.RoiEditorRects)
+        {
+            Assert.That(edit.Left, Is.GreaterThanOrEqualTo(0), label + " ROI editor left clipped");
+            Assert.That(edit.Top, Is.GreaterThanOrEqualTo(0), label + " ROI editor top clipped");
+            Assert.That(edit.Right, Is.LessThanOrEqualTo(result.ClientSize.Width + 0.5),
+                label + " ROI editor right clipped");
+            Assert.That(edit.Bottom, Is.LessThanOrEqualTo(result.ClientSize.Height + 0.5),
+                label + " ROI editor bottom clipped");
+        }
+    }
+
+    private static RenderResult Render(MainWindowViewModel vm, string outputPath,
+        int width = 1920, int height = 1080)
+    {
+        var window = new MainWindow(vm) { Width = width, Height = height };
         window.Show();
         Dispatcher.UIThread.RunJobs();
         AvaloniaHeadlessPlatform.ForceRenderTimerTick(2);
@@ -109,8 +149,11 @@ public sealed class OfflineProductHeadlessRenderTests
         var saveButton = controls.OfType<Button>().FirstOrDefault(x =>
             string.Equals(x.Content as string, "校验并持久保存 SIM_ONLY ROI 草稿",
                 StringComparison.Ordinal));
-        int visibleEditors = controls.OfType<TextBox>()
-            .Count(x => x.IsEffectivelyVisible && x.Bounds.Width > 26);
+        var editorRects = controls.OfType<TextBox>()
+            .Where(x => x.IsEffectivelyVisible && x.Bounds.Width > 26)
+            .Select(x => ControlRect(x, window))
+            .Where(x => x is not null).Select(x => x!.Value).ToArray();
+        Rect? saveRect = saveButton is null ? null : ControlRect(saveButton, window);
         var entryHeader = controls.OfType<TextBlock>().FirstOrDefault(x =>
             (x.Text ?? "").StartsWith("OFFLINE_RECIPE_MANAGEMENT", StringComparison.Ordinal));
         var offlineEditor = controls.OfType<TextBlock>().FirstOrDefault(x =>
@@ -119,10 +162,16 @@ public sealed class OfflineProductHeadlessRenderTests
         var result = new RenderResult(texts,
             saveButton?.IsEffectivelyVisible == true,
             saveButton?.IsEffectivelyVisible == true && saveButton.IsEnabled,
-            visibleEditors,
+            editorRects, saveRect, window.Bounds.Size,
             entryHeader?.IsEffectivelyVisible == true,
             offlineEditor?.IsEffectivelyVisible == true);
         window.Close();
         return result;
+    }
+
+    private static Rect? ControlRect(Control control, Window window)
+    {
+        var origin = control.TranslatePoint(new Point(0, 0), window);
+        return origin is null ? null : new Rect(origin.Value, control.Bounds.Size);
     }
 }

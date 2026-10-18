@@ -734,36 +734,46 @@
                       </ListBox>
                     </Grid>
                   </Border>
-                  <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
-                    <StackPanel Spacing="12">
-                      <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
-                      <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#587187" TextWrapping="Wrap"/>
-                      <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                               Height="95" BorderThickness="0" Background="#F4F8FC">
+                  <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="14">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                      <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="17"
+                                 FontWeight="SemiBold" Foreground="#1E4263"/>
+                      <TextBlock Grid.Row="1" Text="{Binding SelectedDescription}" FontSize="11"
+                                 Foreground="#587187" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <ListBox Grid.Row="2" ItemsSource="{Binding Channels}"
+                               SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                               Height="72" BorderThickness="0" Background="#F4F8FC">
                         <ListBox.ItemsPanel>
                           <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
                         </ListBox.ItemsPanel>
                         <ListBox.ItemTemplate>
                           <DataTemplate>
-                            <TextBlock Text="{Binding ChannelId}" Margin="10" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding ChannelId}" Margin="10,6" FontWeight="SemiBold"/>
                           </DataTemplate>
                         </ListBox.ItemTemplate>
                       </ListBox>
-                      <Border Background="#122D44" Padding="8" CornerRadius="8">
-                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="245"/>
+                      <Border Grid.Row="3" Background="#122D44" Padding="6" CornerRadius="8">
+                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform"/>
                       </Border>
-                      <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#65819A" TextWrapping="Wrap"/>
-                      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
-                        <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
-                        <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
-                        <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
-                        <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+                      <TextBlock Grid.Row="4" Text="{Binding PreviewNotice}" FontSize="10"
+                                 Foreground="#65819A" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <Grid Grid.Row="5" ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <StackPanel><TextBlock Text="X" FontSize="10"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+                        <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="10"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="10"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+                        <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="10"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
                       </Grid>
-                      <Button Content="校验并持久保存 SIM_ONLY ROI 草稿" Command="{Binding ValidateRoiCommand}"/>
-                      <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#96652C" TextWrapping="Wrap"/>
-                      <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
-                                 TextWrapping="Wrap" Foreground="#637C92"/>
-                    </StackPanel>
+                      <Button Grid.Row="6" Content="校验并持久保存 SIM_ONLY ROI 草稿"
+                              Command="{Binding ValidateRoiCommand}"/>
+                      <TextBlock Grid.Row="7" Text="{Binding RoiFeedback}" FontSize="11"
+                                 Foreground="#96652C" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Row="8" Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。"
+                                 FontSize="10" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis" Foreground="#637C92"/>
+                    </Grid>
                   </Border>
                 </Grid>
               </TabItem>
