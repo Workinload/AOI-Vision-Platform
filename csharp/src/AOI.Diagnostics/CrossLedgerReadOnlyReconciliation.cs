@@ -26,6 +26,10 @@ public sealed record CrossLedgerStepEvidence(
     string? ReadRequestSha256, string? ReadResponseSha256,
     ushort? ReadbackValue, bool BothLedgersConfirmed);
 
+public sealed record CrossLedgerBatch(
+    DateTimeOffset QueriedUtc, CrossLedgerReport[] Workpieces,
+    bool Truncated, CrossLedgerStatus OverallStatus);
+
 public sealed record CrossLedgerReport(
     Guid WorkpieceId, CrossLedgerStatus Status, Guid? A1IntentId,
     Guid? A7AttemptId, Guid? TraceId, long? Epoch, string? ReleaseId,
@@ -107,6 +111,47 @@ public static class CrossLedgerReadOnlyReconciliation
             return Failure(workpieceId, CrossLedgerStatus.CONFLICT,
                 "INVALID_SQLITE_SNAPSHOT", "The copied WAL pair could not be read consistently.");
         }
+    }
+
+    /// <summary>
+    /// Bounded operator/offline batch: copy the original DB+WAL+SHM ONCE,
+    /// reconcile distinct physical WorkpieceIds (not barcodes) in the same
+    /// stopped run, and never report a truncated batch as a complete run.
+    /// Requires the same stopped-Core lease as Capture().
+    /// </summary>
+    public static CrossLedgerBatch CaptureAll(string dataRoot, int limit = 200)
+    {
+        if (limit is < 1 or > 1000)
+            throw new ArgumentOutOfRangeException(nameof(limit));
+        using var snapshot = CrossLedgerSqliteSnapshot.Capture(dataRoot);
+        var ids = new List<Guid>();
+        using (var db = OpenCopied(snapshot.A1Path))
+        using (var cmd = db.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT DISTINCT workpiece_id FROM a1_final_output_events
+                 ORDER BY workpiece_id LIMIT $limit
+                """;
+            cmd.Parameters.AddWithValue("$limit", limit + 1);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+                ids.Add(Guid.Parse(reader.GetString(0)));
+        }
+        bool truncated = ids.Count > limit;
+        var reports = ids.Take(limit)
+            .Select(id =>
+            {
+                try { return Inspect(snapshot.CopiedRoot, snapshot.A1Path, id); }
+                catch (Exception ex) when (ex is InvalidDataException or JsonException or SqliteException)
+                {
+                    return Failure(id, CrossLedgerStatus.CONFLICT,
+                        "INVALID_LEDGER_EVIDENCE", "This workpiece has malformed evidence.");
+                }
+            }).ToArray();
+        CrossLedgerStatus overall = truncated ? CrossLedgerStatus.INCOMPLETE :
+            reports.Length == 0 ? CrossLedgerStatus.AUDIT_MISSING :
+            reports.MaxBy(r => Rank(r.Status))!.Status;
+        return new CrossLedgerBatch(DateTimeOffset.UtcNow, reports, truncated, overall);
     }
 
     private static CrossLedgerReport Failure(Guid id, CrossLedgerStatus status,
