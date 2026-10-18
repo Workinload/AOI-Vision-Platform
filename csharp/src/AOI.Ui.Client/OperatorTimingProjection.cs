@@ -93,14 +93,22 @@ public static class OperatorTimingProjection
                 e.Stage == "FrameArrived" && e.FrameId is not null);
             // For a "CamDone acknowledged" assertion we require the actual
             // direct FINS operation identity, SID, DM and acknowledged value.
-            var ack = sameCapture.LastOrDefault(e =>
+            var ackCandidates = sameCapture.Where(e =>
                 e.Stage == "CamDoneAcknowledged" &&
                 e.PlcDmAddress == row.PlcAddress &&
-                e.PlcValue is 2 or 3 && e.OperationId is not null && e.FinsSid is not null);
-            var sent = sameCapture.LastOrDefault(e =>
+                e.PlcValue is 2 or 3 && e.OperationId is not null && e.FinsSid is not null)
+                .ToArray();
+            var sentCandidates = sameCapture.Where(e =>
                 e.Stage == "CamDoneSent" &&
                 e.PlcDmAddress == row.PlcAddress &&
-                e.OperationId is not null && e.FinsSid is not null);
+                e.PlcValue is 2 or 3 &&
+                e.OperationId is not null && e.FinsSid is not null).ToArray();
+            var ack = ackCandidates.LastOrDefault(a =>
+                sentCandidates.Any(s => s.OperationId == a.OperationId &&
+                    s.FinsSid == a.FinsSid && s.PlcDmAddress == a.PlcDmAddress &&
+                    s.PlcValue == a.PlcValue));
+            var unmatchedAck = ackCandidates.LastOrDefault();
+            var sent = sentCandidates.LastOrDefault();
             var inspection = sameCapture.LastOrDefault(e =>
                 e.Stage == "InspectionCompleted" &&
                 e.ChannelId == row.ChannelId && e.FrameId is not null);
@@ -118,10 +126,14 @@ public static class OperatorTimingProjection
                 ? "FINS CamDone ACK已观测 D=" + ack.PlcValue +
                   " · SID=" + ack.FinsSid + " · Op=" + Short(ack.OperationId) +
                   " · " + Utc(ack)
+                : sent is not null && unmatchedAck is not null
+                    ? "ACK与本件发送OperationId/SID不匹配，不能确认 CamDone"
                 : sent is not null
                     ? "CamDone 已发送但未确认 ACK · SID=" + sent.FinsSid +
                       " · Op=" + Short(sent.OperationId)
-                    : latest is null ? "Core无CamDone事件" : "CamDone ACK未被证实";
+                : unmatchedAck is not null
+                    ? "ACK单点观测，但缺少相同OperationId/SID的发送证据"
+                : latest is null ? "Core无CamDone事件" : "CamDone ACK未被证实";
             string result = inspection is null ? row.InspectionResult :
                 "InspectionCompleted " + (inspection.Status ?? "状态未报告") +
                 " · Attempt " + inspection.AttemptNo;
