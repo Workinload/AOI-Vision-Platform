@@ -381,6 +381,71 @@ public sealed class CrossLedgerReconciliationTests
             "same_barcode=1 confirmed=1 ack_unknown=1 snapshot_count=1 truncation_safe=1");
     }
 
+    [Test]
+    public void DetachedEvidenceWithRealUncheckpointedSqliteWalAndShmIsReadWithoutTouchingSource()
+    {
+        var item = Item();
+        var s = Started(item, LegacyExitScenario.Normal, FinalDisposition.Good, token: 1);
+        using (s.A1)
+        {
+            Step(s.A1, s.A7, s.Intent, s.Attempt, 75);
+            Step(s.A1, s.A7, s.Intent, s.Attempt, 76);
+        }
+        // Keep actual SQLite WAL/SHM sidecars alive while capturing a complete,
+        // unchanging DETACHED copy. The detached copy is the stopped evidence
+        // source for the tested reconciler (the live DB is never opened by it).
+        string detached = Path.Combine(_root, "detached");
+        string destination = Path.Combine(detached, "master");
+        Directory.CreateDirectory(destination);
+        using (var a1Pin = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = A1Path, Mode = SqliteOpenMode.ReadWrite, Pooling = false
+        }.ToString()))
+        using (var a7Pin = new SqliteConnection(new SqliteConnectionStringBuilder
+        {
+            DataSource = A7Path, Mode = SqliteOpenMode.ReadWrite, Pooling = false
+        }.ToString()))
+        {
+            a1Pin.Open();
+            a7Pin.Open();
+            static void ForceWal(SqliteConnection db)
+            {
+                using var cmd = db.CreateCommand();
+                cmd.CommandText = """
+                    PRAGMA journal_mode=WAL;
+                    PRAGMA wal_autocheckpoint=0;
+                    CREATE TABLE IF NOT EXISTS detached_test_marker (id INTEGER);
+                    INSERT INTO detached_test_marker VALUES (1);
+                    """;
+                cmd.ExecuteNonQuery();
+            }
+            ForceWal(a1Pin);
+            ForceWal(a7Pin);
+            string[] originals =
+            [
+                A1Path, A1Path + "-wal", A1Path + "-shm",
+                A7Path, A7Path + "-wal", A7Path + "-shm",
+                A1Path + ".writer-lock"
+            ];
+            Assert.That(originals.All(File.Exists), Is.True,
+                "Fixture must genuinely contain both SQLite WAL and SHM sidecars.");
+            foreach (string path in originals)
+                File.Copy(path, Path.Combine(destination, Path.GetFileName(path)));
+        }
+
+        var detachedFiles = Directory.GetFiles(destination);
+        var before = detachedFiles.ToDictionary(f => f,
+            f => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(f))));
+        var report = CrossLedgerReadOnlyReconciliation.Capture(detached, item.WorkpieceId);
+        Assert.That(report.Status, Is.EqualTo(CrossLedgerStatus.CONFIRMED),
+            string.Join(",", report.Findings.Select(f => f.Code)));
+        foreach (var file in detachedFiles)
+            Assert.That(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(file))),
+                Is.EqualTo(before[file]), "Original detached WAL evidence was modified.");
+        TestContext.Progress.WriteLine("A7_CROSS_LEDGER_WAL_SIDECAR_PASS " +
+            "two_sqlite_wals=2 shms=2 source_files_unchanged=7");
+    }
+
     private static void Update(string dbPath, string sql,
         params (string Key, string Value)[] args)
     {
