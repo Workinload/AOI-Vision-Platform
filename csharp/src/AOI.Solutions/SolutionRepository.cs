@@ -229,6 +229,11 @@ public sealed class SolutionRepository
             profile.CatalogSha256, stations).Canonical();
         manifest.Validate();
         foreach (var station in manifest.Stations) RoiReleaseWorkflow.ValidateStationRois(station);
+        // Installed-plugin / algorithm capability must be proven BEFORE any row is written.
+        // Previously the CLI validated only AFTER the INSERT, so an unsupported algorithm could
+        // leave a committed Release behind.
+        if (preCommitValidation is not null)
+            foreach (var station in manifest.Stations) preCommitValidation(station);
         var digest = SolutionSafety.Sha256(WireFormat.Serialize(manifest));
         var release = new PublishedRelease("SIMREL-" + digest[..32], digest,
             manifest, DateTimeOffset.UtcNow, actor);
