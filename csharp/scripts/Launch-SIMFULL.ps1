@@ -29,12 +29,20 @@
 param(
     [string]$ImageRoot = $env:AOI_SIM_IMAGE_ROOT,
     [ValidateRange(5, 600)][int]$ReadyTimeoutSeconds = 45,
-    [ValidateRange(1, 60)][int]$UiAliveSeconds = 5
+    [ValidateRange(1, 60)][int]$UiAliveSeconds = 5,
+    # Profile. SIM_FULL keeps the continuous multi-piece conveyor; SIM_LIGHT is the legacy
+    # single-piece SIM11 launcher (sim-data, one workpiece per data directory).
+    [ValidateSet('SIM_FULL', 'SIM_LIGHT')][string]$SimMode = 'SIM_FULL',
+    [string]$DataRoot = 'sim-full-data',
+    [ValidateRange(1, 50)][int]$ItemCount = 5,
+    [ValidateRange(1, 10)][int]$MaxInFlight = 3,
+    # Extra package executables that must exist (SIM11 also ships Diagnostics).
+    [string[]]$AdditionalRequired = @()
 )
 
 $ErrorActionPreference = 'Stop'
 $script:Base = $PSScriptRoot
-$script:Data = Join-Path $script:Base 'sim-full-data'
+$script:Data = Join-Path $script:Base $DataRoot
 $script:Started = New-Object System.Collections.ArrayList
 $script:LogPath = $null
 
@@ -159,14 +167,16 @@ Write-Log ('log     : ' + $script:LogPath)
 
 $hostExe = Join-Path $script:Base 'Host\AOI.Host.exe'
 $uiExe = Join-Path $script:Base 'UI\AOI.Ui.Avalonia.exe'
-foreach ($required in @($hostExe, $uiExe)) {
+$requiredFiles = @($hostExe, $uiExe)
+foreach ($extra in $AdditionalRequired) { $requiredFiles += (Join-Path $script:Base $extra) }
+foreach ($required in $requiredFiles) {
     if (-not (Test-Path $required)) {
         Write-Log ('package incomplete, missing: ' + $required) 'ERROR'
         Write-Log 'Extract the entire Windows x64 package; a partial copy cannot start.' 'ERROR'
         exit 2
     }
 }
-Write-Log 'dependency check passed: Host\AOI.Host.exe + UI\AOI.Ui.Avalonia.exe present'
+Write-Log ('dependency check passed: ' + (($requiredFiles | ForEach-Object { Split-Path $_ -Leaf }) -join ' + ') + ' present')
 
 # A dangling SQLite WAL/SHM without its main DB is still ORIGINAL production
 # evidence, never a signal that the directory is safe to reuse.
@@ -180,14 +190,18 @@ foreach ($wal in $previousEvidence) {
     if (Test-Path $wal) {
         Write-Log ('previous SIM_FULL WAL present: ' + $wal) 'ERROR'
         Write-Log 'SIM_FULL_RESTART_HOLD: nothing was started and nothing was deleted.' 'ERROR'
-        Write-Log 'Archive or move sim-full-data manually before starting a new independent batch.' 'ERROR'
+        Write-Log ('Archive or move ' + $DataRoot + ' manually before starting a new independent batch.') 'ERROR'
         exit 3
     }
 }
 Write-Log ('previous production WAL: none under ' + $script:Data)
 
 $udpPort = 19600
-$tcpPorts = @(19610, 19621, 19622, 19651, 19652)
+# Legacy SIM_LIGHT serves 19610/19621/19622/19651 but intentionally has
+# no Master persisted A7 timing IPC on 19652. An unrelated local program
+# using 19652 must NOT block the SIM11 legacy operator profile.
+$tcpPorts = @(19610, 19621, 19622, 19651)
+if ($SimMode -eq 'SIM_FULL') { $tcpPorts += 19652 }
 $busy = @()
 foreach ($p in $tcpPorts) { if (-not (Test-TcpPortFree $p)) { $busy += $p } }
 if ($busy.Count -gt 0) {
@@ -201,9 +215,9 @@ if (-not (Test-ImageFolder -Root $ImageRoot)) { exit 7 }
 
 if (-not (Test-Path $script:Data)) { New-Item -ItemType Directory -Force -Path $script:Data | Out-Null }
 
-$env:AOI_SIM_MODE = 'SIM_FULL'
-$env:AOI_SIM_ITEM_COUNT = '5'
-$env:AOI_SIM_MAX_IN_FLIGHT = '3'
+$env:AOI_SIM_MODE = $SimMode
+$env:AOI_SIM_ITEM_COUNT = [string]$ItemCount
+$env:AOI_SIM_MAX_IN_FLIGHT = [string]$MaxInFlight
 $env:AOI_SIM_CHANNEL_SET = 'ALL_11'
 if (-not $env:AOI_SIM_CONFIG_TOKEN) { $env:AOI_SIM_CONFIG_TOKEN = [guid]::NewGuid().ToString('N') }
 if (-not [string]::IsNullOrWhiteSpace($ImageRoot)) {
@@ -213,7 +227,7 @@ if (-not [string]::IsNullOrWhiteSpace($ImageRoot)) {
     $env:AOI_SIM_LINE_ROW_MAPPING = 'LEGACY_DROP_ROW0'
     Write-Log 'real PNG profile: LEGACY_PLC_SHADOW, line row mapping LEGACY_DROP_ROW0 (FIELD_PENDING)'
 }
-Write-Log 'SIM_ONLY enforced: 127.0.0.1 only, real PLC/camera writes disabled, 5 items max 3 in flight'
+Write-Log ('SIM_ONLY enforced: 127.0.0.1 only, real PLC/camera writes disabled, mode=' + $SimMode + ', ' + $ItemCount + ' items max ' + $MaxInFlight + ' in flight')
 
 # ---------------------------------------------------------------- start
 # Any unexpected PowerShell/Start-Process exception must fail closed and tear
@@ -242,9 +256,16 @@ if (-not (Wait-TcpReady -Port 19651 -TimeoutSeconds $ReadyTimeoutSeconds -Label 
     Write-Log ('Master report IPC 19651 not ready within ' + $ReadyTimeoutSeconds + 's') 'ERROR'
     Stop-StartedProcesses; exit 5
 }
-if (-not (Wait-TcpReady -Port 19652 -TimeoutSeconds $ReadyTimeoutSeconds -Label 'Master persisted timing IPC')) {
-    Write-Log ('Master A7 timing IPC 19652 not ready within ' + $ReadyTimeoutSeconds + 's') 'ERROR'
-    Stop-StartedProcesses; exit 5
+# 19652 is A7 persisted-timing IPC and is only served by the SIM_FULL host (SimFullHost).
+# The legacy SIM_LIGHT host serves 19651 only, so requiring 19652 there would fail a
+# perfectly healthy SIM11 launch. The probe set follows the profile, not the mode name.
+if ($SimMode -eq 'SIM_FULL') {
+    if (-not (Wait-TcpReady -Port 19652 -TimeoutSeconds $ReadyTimeoutSeconds -Label 'Master persisted timing IPC')) {
+        Write-Log ('Master A7 timing IPC 19652 not ready within ' + $ReadyTimeoutSeconds + 's') 'ERROR'
+        Stop-StartedProcesses; exit 5
+    }
+} else {
+    Write-Log 'SIM_LIGHT profile: A7 persisted timing IPC 19652 is not served by this host; probe skipped'
 }
 Assert-Alive -Process $master -Name 'Master Core' -ExitCode 6
 Write-Log ('both Cores ready after ' + [math]::Round($sw.Elapsed.TotalSeconds, 1) + 's')
@@ -260,7 +281,11 @@ Write-Log ('both UIs alive after ' + $UiAliveSeconds + 's')
 
 $final = @($slave, $master, $masterUi, $slaveUi, $vplc) | Where-Object { $_ -and -not $_.HasExited }
 Write-Log ''
-Write-Log ('AOI_SIM_FULL_LAUNCH_PASS processes=' + $final.Count + '/5 elapsed=' + [math]::Round($sw.Elapsed.TotalSeconds, 1) + 's')
+# Legacy SIM_FULL keeps its historical marker so existing smoke assertions stay valid;
+# SIM_LIGHT is reported with its own marker instead of claiming SIM_FULL.
+$marker = 'AOI_SIM_LAUNCH_PASS'
+if ($SimMode -eq 'SIM_FULL') { $marker = 'AOI_SIM_FULL_LAUNCH_PASS' }
+Write-Log ($marker + ' mode=' + $SimMode + ' processes=' + $final.Count + '/5 elapsed=' + [math]::Round($sw.Elapsed.TotalSeconds, 1) + 's')
 foreach ($entry in $script:Started) {
     $state = 'alive'
     if ($entry.Process.HasExited) { $state = 'EXITED code ' + $entry.Process.ExitCode }
