@@ -524,6 +524,22 @@ public sealed class LegacyPlcShadowUdp
             UdpReceiveResult request;
             try { request = await udp.ReceiveAsync(ct); }
             catch (OperationCanceledException) when (ct.IsCancellationRequested) { break; }
+            catch (SocketException ex) when (!ct.IsCancellationRequested &&
+                    OperatingSystem.IsWindows() &&
+                    ex.SocketErrorCode == SocketError.ConnectionReset)
+            {
+                // Windows reports an ICMP Port Unreachable from a now-closed
+                // ephemeral UDP client as WSAECONNRESET on the *server's next*
+                // ReceiveAsync. This is NOT a failure of the persistent vPLC
+                // listener, and there is no FINS request/reply associated with
+                // this receive error. Never synthesize an ACK or reset PLC state.
+                // Keep all other socket/protocol errors visible to the supervisor.
+                Console.Error.WriteLine(
+                    "SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE " +
+                    "socket_error=ConnectionReset ignored_orphan_icmp=1 " +
+                    "no_fins_ack_invented=1");
+                continue;
+            }
             if (!IPAddress.IsLoopback(request.RemoteEndPoint.Address)) continue;
             byte[] response = _shadow.Handle(request.Buffer);
             if (response.Length != 0)
