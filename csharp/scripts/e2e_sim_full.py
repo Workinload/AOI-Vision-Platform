@@ -129,7 +129,12 @@ def verify_timing_ipc(evidence, workpiece_id):
                     'captureId', 'physicalDeviceId', 'channelId',
                     'attemptNo', 'frameId', 'operationId', 'messageId',
                     'plcDmAddress', 'plcValue', 'finsSid', 'status'):
-            assert row[key] == witness[key], (key, row, witness)
+            expected = witness[key]
+            if key == 'stage':
+                # A7's persisted enum JSON is camelCase; the operator DTO
+                # explicitly returns the CLR milestone name in PascalCase.
+                expected = expected[0].upper() + expected[1:]
+            assert row[key] == expected, (key, row, witness)
 
     def stages(name):
         return [event for event in events if event['stage'] == name]
