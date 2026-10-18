@@ -756,7 +756,7 @@
               </StackPanel>
             </Border>
             <Border Grid.Row="1" Background="#E8F2F9" CornerRadius="9" Padding="10">
-              <TextBlock Text="良率分母：已完工 GOOD+NG；HOLD 与进行中单列，不混入已完成品良率。历史工件以 WorkpieceId 唯一归档，同条码不合并。CSV 保存在本机 Documents/AOI-Vision-Reports。"
+              <TextBlock Text="良率分母：已完工 GOOD+NG；HOLD 与进行中单列，不混入已完成品良率。历史工件以 WorkpieceId 唯一归档，同条码不合并。导出 CSV 时由系统原生保存对话框选择保存位置与文件名，取消则不会写入任何文件。"
                          Foreground="#526D85" FontSize="11" TextWrapping="Wrap"/>
             </Border>
             <Border Grid.Row="2" Background="White" Padding="14" CornerRadius="10">
