@@ -6,7 +6,7 @@ using System.Globalization;
 if (args.Length < 2 || args[0] is not
     ("bootstrap" or "tune" or "publish" or "activate" or "status" or
      "import-roi" or "roi-preview" or "roi-diff" or "roi-sample" or
-     "camera-target" or "algorithm-param" or "params-draft" or "params-release"))
+     "camera-target" or "algorithm-param" or "params-draft" or "params-release" or "runtime-plan"))
 {
     Console.Error.WriteLine("""
         AOI.Solutions.Cli - SIM_ONLY local offline product editor
@@ -23,6 +23,7 @@ if (args.Length < 2 || args[0] is not
           algorithm-param <root> <solutionId> <channelId> <expectedStationRevision> <algorithmId> <numericKey> <numericValue> <actor>
           params-draft <root> <solutionId> <channelId>
           params-release <root> <releaseId> <epoch> <channelId>
+          runtime-plan <root> <releaseId> <epoch> <physicalDeviceId> (read-only resolved capture + 1/2 channel algorithms)
           ROI edits import as product drafts only; publish + activate separately.
         DANGER: No command touches physical PLC or clears A6 changeover SafeHold.
         """);
@@ -167,6 +168,17 @@ try
         if (args.Length != 4) throw new ArgumentException("params-draft requires solutionId channelId");
         var draft = SolutionParameterEditor.ReadDraft(repository, args[2], args[3]);
         Console.WriteLine("SIM_CHANNEL_DRAFT " + WireFormat.Serialize(draft));
+    }
+    else if (mode == "runtime-plan")
+    {
+        if (args.Length != 5)
+            throw new ArgumentException("runtime-plan requires releaseId epoch physicalDeviceId");
+        var release = repository.RequireRelease(args[2]);
+        var epoch = long.Parse(args[3], CultureInfo.InvariantCulture);
+        var preview = WorkpieceIdentity.New("SIM_CONFIG_PREVIEW", epoch, release.ReleaseId);
+        var bound = new PublishedParameterSnapshot(release, epoch).Bind(preview);
+        var plan = PublishedRuntimeParameterResolver.Resolve(bound, args[4]);
+        Console.WriteLine("SIM_PUBLISHED_RUNTIME_PLAN_NO_DEVICE_IO " + WireFormat.Serialize(plan));
     }
     else if (mode == "params-release")
     {

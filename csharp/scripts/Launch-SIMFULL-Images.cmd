@@ -25,9 +25,19 @@ if exist "%BASE%sim-full-data\master\production.db" goto previous
 if exist "%BASE%sim-full-data\slave\production.db" goto previous
 set "AOI_SIM_IMAGE_ROOT=%IMAGES%"
 set "AOI_SIM_IMAGE_LAYOUT=FLAT"
+rem Real PNG inputs must run the event-driven legacy PLC shadow, not FIFO_DEMO.
+rem Strict LOCAL FINS/UDP, no physical PLC or SDK connection.
+set "AOI_SIM_PLC_PROFILE=LEGACY_PLC_SHADOW"
+rem Old line parent convention: rows [1::2] and [2::2].
+rem Field camera transforms and D1013 alias still require site acceptance.
+set "AOI_SIM_LINE_ROW_MAPPING=LEGACY_DROP_ROW0"
 echo.
 echo SIM_ONLY real PNG folder: %AOI_SIM_IMAGE_ROOT%
 echo CH01..CH07 + LINE-S-8 + LINE-M-2 validated.
+echo Legacy FINS/UDP loopback: D1999, camera D1006..D1014, final D1016/D2099.
+echo Nine physical frame requests, eleven logical OpenCV channel results.
+echo Legacy row1/row2 stride2 split; camera mapping D1013 remains FIELD_PENDING.
+echo A1 one-time output claims and A7 actual UDP ACK/readback audit enabled.
 echo 5 virtual pieces will each inspect these 9 actual PNG inputs.
 echo Real OpenCV contour defects can produce NG / simulated REJECT.
 echo No actual camera/PLC operation; do not use for factory production.

@@ -111,10 +111,18 @@ folder: CH01.png ... CH07.png, LINE-S-8.png, LINE-M-2.png.
 Drag that FOLDER onto Launch-SIMFULL-Images.cmd, or double-click it and enter
 the folder path when prompted. The script confirms file names and launches
 the existing five-process virtual conveyor with AOI_SIM_IMAGE_ROOT+FLAT.
+Unlike the plain FIFO demo launcher, this PNG entry point explicitly selects
+AOI_SIM_PLC_PROFILE=LEGACY_PLC_SHADOW (strict loopback FINS/UDP). Each virtual
+sensor drives a D1006..D1014 camera request/CamDone ACK/readback; historical
+D1999 load and D1016/D2099 final handshakes use real simulated UDP packets,
+with A1 durable one-time ClaimId and A7 SID/hash/ACK evidence.
+One physical line frame produces two channels using row[1::2] and row[2::2].
+D1013 and vendor camera transforms still require REAL field verification.
 Use NEW empty sim-full-data for each independent run (archive old evidence).
 The UI map/gallery shows real Core-verified frames; CH06 NG will cause simulated
 REJECT, not false GOOD, for a real contour defect meeting current threshold.
-Line scan uses parent image even/odd row splitting. This is offline inspection
+This one-click legacy mode skips line parent row0 before interleaving.
+This is offline inspection
 and does not connect physical cameras or PLC outputs.
 For inspecting arbitrary images one at a time without launching a conveyor,
 run VisionLab/AOI.Vision.Cli.exe --help.
