@@ -1,3 +1,4 @@
+using AOI.Contracts;
 using AOI.Ui.Client;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -14,7 +15,7 @@ namespace AOI.Ui.Avalonia;
 public partial class MainWindowViewModel
 {
     private Guid? _captureTimingWorkpiece;
-    private OperatorTimingReply? _captureTimingReply;
+    private SimTimingReply? _captureTimingReply;
     private CancellationTokenSource? _captureTimingCancellation;
     private int _captureTimingGeneration;
 
