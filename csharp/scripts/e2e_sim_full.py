@@ -79,6 +79,91 @@ def core_report():
             return json.loads(result)
 
 
+def core_timing(workpiece_id):
+    """Read the actual A0 Master operator IPC, not either Core DB directly."""
+    with socket.create_connection(('127.0.0.1', 19652), timeout=4) as sock:
+        sock.settimeout(4)
+        sock.sendall(('TIMING|' + workpiece_id + '\n').encode('ascii'))
+        with sock.makefile('r', encoding='utf-8') as reader:
+            answer = reader.readline()
+            assert answer, 'Missing live Master timing IPC response'
+            return json.loads(answer)
+
+
+def verify_timing_ipc(evidence, workpiece_id):
+    """A0 E2E: same real WorkpieceId, A7 event rows, physical capture and SID.
+
+    This is an actual live TCP request to the production Core's SIM_ONLY
+    operator endpoint. SQLite is used only as an independent witness to
+    each returned event, never as the UI transport itself.
+    """
+    reply = core_timing(workpiece_id)
+    assert reply['accepted'] is True and reply['error'] == 'SIM_ONLY_READ_ONLY', reply
+    assert reply['isSimulation'] is True and reply['workpieceId'] == workpiece_id, reply
+    assert reply['truncated'] is False, 'IPC omitted actual camera/FINS milestones'
+    events = reply['events']
+    assert 0 < len(events) <= 120
+    assert all(e['workpieceId'] == workpiece_id and
+               e['origin'] == 'DIRECT_OBSERVATION' and e['traceId'] and
+               e['epoch'] == 1 and e['releaseId'] and
+               e['processRunId'] and e['monotonicTick'] is not None
+               for e in events), 'Legacy/mock event represented as actual physical observation'
+
+    # Two Core journals independently attest to the exact serialized facts.
+    persisted = {}
+    for node in ('master', 'slave'):
+        rows = query(evidence / node / 'timing-events.sqlite',
+                     'SELECT sequence,event_json FROM timing_events '
+                     'WHERE workpiece_id=? ORDER BY sequence', (workpiece_id,))
+        assert rows, ('Core missing timing rows', node, workpiece_id)
+        for seq, raw in rows:
+            source = json.loads(raw)
+            assert source['nodeId'] == node and source['workpieceId'] == workpiece_id
+            assert (node, seq) not in persisted
+            persisted[(node, seq)] = source
+    assert len(events) == len(persisted), 'IPC dropped or invented A7 milestone'
+    for row in events:
+        witness = persisted[(row['nodeId'], row['sequence'])]
+        for key in ('nodeId', 'origin', 'stage', 'workpieceId', 'traceId',
+                    'epoch', 'releaseId', 'processRunId', 'monotonicTick',
+                    'captureId', 'physicalDeviceId', 'channelId',
+                    'attemptNo', 'frameId', 'operationId', 'messageId',
+                    'plcDmAddress', 'plcValue', 'finsSid', 'status'):
+            assert row[key] == witness[key], (key, row, witness)
+
+    def stages(name):
+        return [event for event in events if event['stage'] == name]
+
+    for stage, expected in (
+        ('HardwareTriggerObserved', 9),
+        ('PlcCaptureRequestObserved', 9),
+        ('FrameReady', 9),
+        ('CamDoneAcknowledged', 9),
+        ('InspectionCompleted', 11),
+    ):
+        assert len(stages(stage)) == expected, (stage, len(stages(stage)), expected)
+
+    acks = stages('CamDoneAcknowledged')
+    assert len({e['captureId'] for e in acks}) == 9, 'One CamDone ACK per physical camera'
+    assert {e['plcDmAddress'] for e in acks} == {
+        'D' + str(dm) for dm in range(1006, 1015)}, 'Missing physical PLC DM handshake'
+    assert all(e['operationId'] and e['finsSid'] is not None and
+               e['status'] == 'ACTUAL_FINS_UDP_ACK' and e['plcValue'] == 2
+               for e in acks), 'An actual FINS ACK was replaced by a predicted event'
+
+    # Another WorkpieceId must not see the selected item's real timeline.
+    foreign = '00000000-0000-4000-8000-000000000001'
+    assert foreign != workpiece_id
+    absent = core_timing(foreign)
+    assert absent['accepted'] is True and absent['isSimulation'] is True
+    assert absent['workpieceId'] == foreign and absent['events'] == []
+    print('A0_ACTUAL_TIMING_OPERATOR_IPC_PASS workpiece=' + workpiece_id +
+          ' physical_camdone_ack=9 logical_results=11 source_A7_rows=' +
+          str(len(events)) +
+          ' real_plc_request_and_frame_ready=9 exact_sid_operation=1 ' +
+          'other_workpiece_leak=0 writable_actions=0', flush=True)
+
+
 def query(path, statement):
     if not path.is_file():
         return None
@@ -618,6 +703,8 @@ def main():
         # NOT a UI-side path to a local SQLite file.
         first = query(evidence / 'master/production.db',
                       'SELECT workpiece_id FROM workpieces ORDER BY created_utc LIMIT 1')[0][0]
+        if args.legacy_shadow:
+            verify_timing_ipc(evidence, first)
         master_frame = json.loads(query(evidence / 'master/production.db',
             "SELECT result_json FROM channel_results WHERE workpiece_id='" + first +
             "' AND channel_id='CH06'")[0][0])
