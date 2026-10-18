@@ -448,12 +448,14 @@ public static class CrossLedgerReadOnlyReconciliation
                 notSent is null && ackUnknown is null && readUnknown is null));
         }
 
-        if (authority.Any(e => e.StepIndex is < -1 or > 1))
+        if (authority.Skip(1).Any(e => e.StepIndex is not (0 or 1)))
             Add(CrossLedgerStatus.CONFLICT, "A1_STEP_INDEX_INVALID",
-                "A1 output events contain a step other than 0/1.");
-        if (events.Any(e => e.StepNumber is < 0 or > 2))
+                "Every non-intent A1 effect must belong to physical step index 0 or 1.");
+        if (events.Any(e => e.Phase is FinalOutputAuditPhase.ScannerRequestVerified
+                     or FinalOutputAuditPhase.PeerMessageLinked
+                ? e.StepNumber != 0 : e.StepNumber is not (1 or 2)))
             Add(CrossLedgerStatus.CONFLICT, "A7_STEP_NUMBER_INVALID",
-                "A7 output events contain an unknown step.");
+                "A7 scanner/peer records use step 0; FINS outputs use step 1 or 2.");
         if (result.Any(s => !s.BothLedgersConfirmed) && notes.Count == 0)
             Add(CrossLedgerStatus.INCOMPLETE, "OUTPUT_NOT_CONFIRMED",
                 "Both complete, independent output steps have not been established.");
