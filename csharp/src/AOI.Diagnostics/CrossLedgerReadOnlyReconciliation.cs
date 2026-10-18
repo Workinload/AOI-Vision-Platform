@@ -222,7 +222,7 @@ public static class CrossLedgerReadOnlyReconciliation
                 "D2099 scanner request or raw packet hashes are malformed or repeated.");
 
         var claims = authority.Where(e => e.Kind == "writeClaimed").ToArray();
-        if (claims.Any(e => e.ClaimId is null or { } && e.ClaimId == Guid.Empty) ||
+        if (claims.Any(e => e.ClaimId is null || e.ClaimId == Guid.Empty) ||
             claims.Where(e => e.ClaimId is not null).Select(e => e.ClaimId).Distinct().Count()
                 != claims.Length)
             Add(CrossLedgerStatus.CONFLICT, "A1_CLAIM_REUSED",
