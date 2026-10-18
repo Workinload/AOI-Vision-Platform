@@ -199,7 +199,16 @@ public sealed class SolutionRepository
         return new(solutionId, recipe.StationId, next, canonical, actor);
     }
 
-    public PublishedRelease Publish(string solutionId, string actor)
+        /// <summary>
+    /// Publishes with an extra pre-commit validator (installed plugin / algorithm capability).
+    /// It runs BEFORE any row is written, so an unsupported algorithm can never leave a committed
+    /// Release behind. The CLI previously validated only AFTER the INSERT.
+    /// </summary>
+    public PublishedRelease Publish(string solutionId, string actor) =>
+        Publish(solutionId, actor, null);
+
+    public PublishedRelease Publish(string solutionId, string actor,
+        Action<StationRecipe>? preCommitValidation)
     {
         SolutionSafety.RequireActor(actor);
         using var db = _db.Open();
