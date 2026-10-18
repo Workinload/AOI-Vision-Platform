@@ -142,6 +142,22 @@ try {
 }
 finally { $listener.Stop() }
 
+# ---- Case 10: SIM_LIGHT deliberately does NOT bind 19652 (SIM_FULL A7).
+# If this unrelated port is occupied, SIM11 must advance past preflight.
+# Dummy Host.exe will then fail with exit 6, proving the port was skipped.
+$sb = New-Sandbox 'case10-sim11-timing-port-not-required'
+New-Item -ItemType Directory -Force -Path (Join-Path $sb 'Diagnostics') | Out-Null
+Set-Content -Path (Join-Path $sb 'Diagnostics\AOI.Diagnostics.Cli.exe') -Value 'dummy' -Encoding ascii
+$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 19652)
+$listener.Start()
+try {
+    $r = Invoke-Launcher $sb @('-SimMode', 'SIM_LIGHT', '-DataRoot', 'sim-data', '-ItemCount', '1', '-MaxInFlight', '1', '-AdditionalRequired', 'Diagnostics\AOI.Diagnostics.Cli.exe')
+    $ok = ($r.ExitCode -eq 6 -and $r.Output -match 'AOI_SIM_FULL_LAUNCH_ERROR' -and
+        $r.Output -notmatch 'local ports already in use')
+    Add-Result 'SIM_LIGHT does not require non-existent 19652 endpoint' 6 $r.ExitCode $ok '19652 held by unrelated process, dummy child fails safely'
+}
+finally { $listener.Stop() }
+
 $failed = @($results | Where-Object { -not $_.Pass })
 $summary = Join-Path $evidence 'launcher-diagnostics.json'
 $results | ConvertTo-Json -Depth 4 | Set-Content -Path $summary -Encoding UTF8
