@@ -235,40 +235,10 @@ try
     else if (mode == "activate")
     {
         if (args.Length != 4) throw new ArgumentException("activate requires root, releaseId, actor");
-        var release = repository.RequireRelease(args[2]);
-        foreach (var station in release.Manifest.Stations) RequireSafeRule(station);
-        var forbidden = new[]
-        {
-            Path.Combine(root, "master", "production.db"),
-            Path.Combine(root, "slave", "production.db"),
-            Path.Combine(root, "master", "sim-full-cycle.db"),
-            Path.Combine(root, "slave", "sim-full-cycle.db")
-        };
-        if (forbidden.Any(File.Exists))
-            throw new InvalidOperationException(
-                "ACTIVATION_BLOCKED: production WAL or virtual conveyor evidence exists; do not reconfigure an active/unknown line.");
-        var master = new SimChangeoverNode(Path.Combine(root, "master", "sim-product-node.sqlite"),
-            "master", MachineRole.Master);
-        var slave = new SimChangeoverNode(Path.Combine(root, "slave", "sim-product-node.sqlite"),
-            "slave", MachineRole.Slave);
-        var beforeMaster = master.Snapshot();
-        var beforeSlave = slave.Snapshot();
-        if (beforeMaster.ActiveEpoch != beforeSlave.ActiveEpoch ||
-            beforeMaster.ActiveReleaseId != beforeSlave.ActiveReleaseId ||
-            !beforeMaster.SafeHold || !beforeSlave.SafeHold ||
-            beforeMaster.Phase is not (NodeChangeoverPhase.Idle or NodeChangeoverPhase.CommittedHold) ||
-            beforeSlave.Phase is not (NodeChangeoverPhase.Idle or NodeChangeoverPhase.CommittedHold))
-            throw new InvalidOperationException("ACTIVATION_BLOCKED: nodes not jointly idle in safe hold.");
-        var coordinator = new ChangeoverCoordinator(Path.Combine(root, "sim-product-coordinator.sqlite"));
-        var request = new ChangeoverRequest(Guid.NewGuid(), release,
-            beforeMaster.ActiveEpoch, beforeMaster.ActiveReleaseId,
-            checked(beforeMaster.ActiveEpoch + 1), args[3]);
-        // This evidence is for purely offline SQLite node emulators ONLY.
-        // Neither hardware output nor remote PLC connectivity exists here.
-        var status = coordinator.Execute(request, master, slave, SimInterlocks.AllSafeForOfflineTest);
-        if (status.Phase != ChangeoverPhase.Committed)
-            throw new InvalidOperationException("ACTIVATION_HOLD: " + status.Phase + " " + status.Detail);
-        Console.WriteLine($"SIM_PRODUCT_DUAL_COMMITTED_HOLD release={release.ReleaseId} epoch={status.NextEpoch} nodes=2 real_writes=0");
+        // One shared implementation with the operator GUI: same rule validation, same
+        // clean-root requirement, same durable two-node changeover and read-back.
+        var outcome = OfflineDualActivation.ActivateUnderLease(root, args[2], args[3], stoppedCores!);
+        Console.WriteLine($"SIM_PRODUCT_DUAL_COMMITTED_HOLD release={outcome.ReleaseId} epoch={outcome.NextEpoch} nodes=2 real_writes=0");
     }
     return 0;
 }

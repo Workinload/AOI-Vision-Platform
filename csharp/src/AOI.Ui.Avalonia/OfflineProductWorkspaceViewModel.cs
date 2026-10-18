@@ -74,6 +74,13 @@ public sealed class OfflineWriteGate : IDisposable
     /// is held and writes stay closed.
     /// </summary>
     /// <summary>
+    /// The lease object this session physically holds, or null when writes are closed. Dual
+    /// activation must run under EXACTLY this lease so a Core cannot start between the safety
+    /// check and the durable changeover commit.
+    /// </summary>
+    internal OfflineCoreOperationGate.OfflineLease? HeldLease => lease;
+
+    /// <summary>
     /// True only when the A6 database belongs to the run root this gate physically holds.
     /// A lease for root A must never authorise writes against root B.
     /// </summary>
@@ -252,6 +259,10 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     [ObservableProperty] private string publishedSha = "";
     [ObservableProperty] private string releaseProvenance = "尚未从 A6 数据库回读任何 Release。";
     [ObservableProperty] private string activationState = OfflineA6Dependency.ActivationUnavailable;
+    [ObservableProperty] private bool activationConfirmed;
+    [ObservableProperty] private string activatedRelease = "未激活";
+    [ObservableProperty] private string activatedEpoch = "";
+    [ObservableProperty] private string activationProof = "";
     [ObservableProperty] private int releaseCount;
     [ObservableProperty] private string revisionsSnapshotLabel = "尚未确认全站草稿版本快照";
     // 0 = existing Core ROI editor (default, keeps the native operator-smoke path),
@@ -741,6 +752,70 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             PublishedSha = "";
             ReleaseProvenance = ex.Message;
             Status = "发布失败（禁止显示成功）：" + ex.Message;
+        }
+    }
+
+    /// <summary>
+    /// Explicit operator activation of the currently read-back immutable Release. It runs only
+    /// while this session physically holds BOTH stopped-Core OS leases, re-verifies the release
+    /// SHA and rules, requires a clean activation root, and then performs the durable two-node
+    /// changeover. A non-committed outcome keeps both nodes in safe HOLD and never fakes success.
+    /// </summary>
+    [RelayCommand]
+    public void Activate()
+    {
+        if (!RequireWrites("激活")) return;
+        if (!ActivationConfirmed)
+        {
+            ActivationState = "未激活：需要先勾选「我确认激活该 Release（双 Core 必须停止）」。";
+            Status = ActivationState;
+            return;
+        }
+        if (string.IsNullOrWhiteSpace(PublishedRelease) ||
+            PublishedRelease is "未发布" or "未回读")
+        {
+            ActivationState = "未激活：请先发布或从 A6 数据库回读一个不可变 Release。";
+            Status = ActivationState;
+            return;
+        }
+        OfflineCoreOperationGate.OfflineLease? held = gate.HeldLease;
+        if (held is null)
+        {
+            ActivationState = "未激活：当前写入会话没有真实的双 Core 独占锁。";
+            Status = ActivationState;
+            return;
+        }
+        string? runRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath));
+        if (string.IsNullOrEmpty(runRoot))
+        {
+            ActivationState = "未激活：无法从 A6 数据库路径确定 run-root。";
+            Status = ActivationState;
+            return;
+        }
+        try
+        {
+            OfflineDualActivationResult result =
+                OfflineDualActivation.ActivateUnderLease(runRoot, PublishedRelease, operatorName, held);
+            ActivatedRelease = result.ReleaseId;
+            ActivatedEpoch = result.NextEpoch.ToString(CultureInfo.InvariantCulture);
+            ActivationProof = "master=" + result.Master.Phase + " epoch=" + result.Master.ActiveEpoch +
+                " · slave=" + result.Slave.Phase + " epoch=" + result.Slave.ActiveEpoch +
+                " · sha256=" + result.ContentSha256;
+            ActivationState = "已双机激活（COMMITTED_HOLD）：Release " + result.ReleaseId +
+                " · epoch " + result.NextEpoch + " · real_writes=0";
+            ActivationConfirmed = false;
+            PublishState = "已发布不可变 Release（数据库回读通过）；已激活。";
+            Status = ActivationState;
+            RefreshReleaseCount();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidDataException
+            or ArgumentException or KeyNotFoundException or IOException or DbException)
+        {
+            ActivatedRelease = "未激活";
+            ActivatedEpoch = "";
+            ActivationProof = "";
+            ActivationState = "激活未提交（保持 HOLD，禁止物理写入）：" + ex.Message;
+            Status = ActivationState;
         }
     }
 
