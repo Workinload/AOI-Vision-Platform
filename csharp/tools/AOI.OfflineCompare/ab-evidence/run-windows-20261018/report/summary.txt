@@ -1,0 +1,20 @@
+AOI.OfflineCompare - OFFLINE_ONLY / NOT_PRODUCTION
+A SIMREL-2ca12c1cf86ac8d73607ceea3dd3e242  sha256=2ca12c1cf86ac8d73607ceea3dd3e2422ca52102c6d4b9f382b401934928f74f
+B SIMREL-e0d05786f8fe9fbfc857231d3cb8a07a  sha256=e0d05786f8fe9fbfc857231d3cb8a07a0048ebca284383f39ac95c557c6049be
+images images  (unchanged=True)
+database sha256 unchanged=True
+
+channel  device       A           B           changed  detail
+CH01     HIK-M-1      Positioning Positioning no       IDENTICAL
+CH02     HIK-S-2      Ok          Ng          YES      status Ok->Ng; defects 0->1; threshold 180->90
+CH03     HIK-S-1      Ok          Ok          no       IDENTICAL
+CH04     HIK-S-4      Ng          Ng          no       IDENTICAL
+CH05     HIK-S-3      Ok          Ok          no       IDENTICAL
+CH06     HIK-M-2      Ok          Ng          YES      status Ok->Ng; defects 0->1; roi 600x800@0,0->1200x800@0,0
+CH07     HIK-M-3      Ok          Ok          no       IDENTICAL
+CH08     LINE-S-8     Ok          Ok          no       IDENTICAL
+CH09     LINE-S-8     Ng          Ng          no       IDENTICAL
+CH10     LINE-M-2     Ng          Ng          no       IDENTICAL
+CH11     LINE-M-2     Ok          Ok          no       IDENTICAL
+
+changed: CH02,CH06
