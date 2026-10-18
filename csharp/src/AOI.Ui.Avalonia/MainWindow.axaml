@@ -702,6 +702,10 @@
                           Command="{Binding OfflineProduct.AttachEntryCommand}" VerticalAlignment="Bottom"/>
                   <Button Grid.Column="3" Content="重新读取数据库"
                           Command="{Binding OfflineProduct.RefreshCommand}" VerticalAlignment="Bottom"/>
+                  <Button Grid.Column="4" Content="开启离线写入会话（双 Core 独占锁）"
+                          Command="{Binding OfflineProduct.EnableOfflineWritesCommand}" VerticalAlignment="Bottom"/>
+                  <Button Grid.Column="5" Content="关闭写入会话（释放双锁）"
+                          Command="{Binding OfflineProduct.DisableOfflineWritesCommand}" VerticalAlignment="Bottom"/>
                 </Grid>
                 <TextBlock Text="{Binding OfflineProduct.WriteState}" FontSize="12"
                            Foreground="#A23D2A" TextWrapping="Wrap"/>

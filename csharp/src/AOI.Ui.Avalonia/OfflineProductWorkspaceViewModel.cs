@@ -73,10 +73,27 @@ public sealed class OfflineWriteGate : IDisposable
     /// clean. Throws if a Core is running or if prior evidence is unusable; in that case nothing
     /// is held and writes stay closed.
     /// </summary>
+    /// <summary>
+    /// True only when the A6 database belongs to the run root this gate physically holds.
+    /// A lease for root A must never authorise writes against root B.
+    /// </summary>
+    public bool CoversDatabase(string databasePath)
+    {
+        if (isolatedTest) return true;
+        if (lease is null || string.IsNullOrWhiteSpace(databasePath)) return false;
+        string? dbRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath));
+        if (string.IsNullOrEmpty(dbRoot)) return false;
+        string held = Path.GetFullPath(DataRoot)
+            .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        string actual = dbRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+        return string.Equals(held, actual, StringComparison.OrdinalIgnoreCase);
+    }
+
     public void Arm(string dataRoot)
     {
         if (isolatedTest) return;
-        if (lease is not null) return;
+        // Re-arming for a different root must release the previous handles first.
+        Release();
         ArgumentException.ThrowIfNullOrWhiteSpace(dataRoot);
         OfflineCoreOperationGate.OfflineLease acquired =
             OfflineCoreOperationGate.AcquireStoppedCores(dataRoot);
@@ -321,8 +338,18 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             string db = OfflineProductEntry.ResolveSolutionsDatabase(solutionsDbPathOrRunRoot);
             if (!File.Exists(db))
                 throw new FileNotFoundException("A6 solutions.sqlite 不存在；不会创建新数据库。", db);
-            // Read-only in the production gate: never initialise/repair/create the A6 store.
-            manager = OfflineProductManager.Open(db, actor, readOnly: !gate.A6WritesAllowed);
+            // The writer lease is bound to ONE run root. Opening a different database while a
+            // lease is held would be a fail-open write authorisation, so fail closed and drop
+            // the mismatched lease instead of writing into an unlocked store.
+            bool leaseCoversDb = gate.CoversDatabase(db);
+            if (gate.A6WritesAllowed && !leaseCoversDb)
+            {
+                gate.Release();
+                WriteState = "写入会话已失效：它绑定的是 " + gate.DataRoot +
+                             "，当前数据库属于 " + (Path.GetDirectoryName(db) ?? "?") + "；本次以只读附加。";
+            }
+            bool writable = gate.A6WritesAllowed && gate.CoversDatabase(db);
+            manager = OfflineProductManager.Open(db, actor, readOnly: !writable);
             operatorName = actor;
             databasePath = db;
             OperatorId = actor;
@@ -361,20 +388,35 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             WriteState = "开启写入会话失败：请先填写运行根目录。";
             return;
         }
+        string actor = string.IsNullOrWhiteSpace(OperatorId) ? operatorName : OperatorId;
+        string db;
         try
         {
-            gate.Arm(entry);
+            // Resolve the EXISTING database first, then derive the run root from it. The operator
+            // may legitimately give either the run root or .../solutions.sqlite.
+            db = OfflineProductEntry.ResolveSolutionsDatabase(entry);
+            if (!File.Exists(db))
+                throw new FileNotFoundException("A6 solutions.sqlite 不存在；不会创建新数据库。", db);
+            SolutionSafety.RequireActor(actor);
+            string runRoot = Path.GetDirectoryName(Path.GetFullPath(db))!;
+            gate.Arm(runRoot);
         }
         catch (Exception ex) when (ex is IOException or InvalidOperationException
-            or UnauthorizedAccessException or ArgumentException)
+            or UnauthorizedAccessException or ArgumentException or FileNotFoundException)
         {
             gate.Release();
             WriteState = "开启写入会话失败（写入保持关闭，未创建/修复数据库）：" + ex.Message;
             Status = WriteState;
             return;
         }
-        string actor = string.IsNullOrWhiteSpace(OperatorId) ? operatorName : OperatorId;
         Attach(entry, actor);
+        // Transactional result: only claim success when the writer is genuinely bound to THIS db.
+        if (!IsOfflineMode || manager is null || !gate.CoversDatabase(databasePath))
+        {
+            gate.Release();
+            WriteState = "开启写入会话失败（已在失败后释放双锁）：" + Status;
+            return;
+        }
         WriteState = "写入会话已开启：" + gate.Reason;
     }
 
@@ -1060,6 +1102,11 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     /// <summary>Clears the whole attachment so a failed/replaced database leaves no old evidence.</summary>
     private void ResetAttachment(string status)
     {
+        // Switching databases must not leak ROI dimension/provenance evidence across run roots.
+        verifiedFrames.Clear();
+        verifiedFrameSources.Clear();
+        readSnapshot = null;
+        confirmedSnapshot = null;
         manager = null;
         operatorName = "";
         databasePath = "";
