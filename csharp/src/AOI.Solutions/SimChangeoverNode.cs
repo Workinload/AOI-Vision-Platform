@@ -10,13 +10,13 @@ public sealed class SimChangeoverNode : ISimChangeoverNode
     public string NodeId { get; }
     public MachineRole Role { get; }
 
-    public SimChangeoverNode(string path, string nodeId, MachineRole role)
+    public SimChangeoverNode(string path, string nodeId, MachineRole role, bool readOnly = false)
     {
         if (nodeId != (role == MachineRole.Master ? "master" : "slave"))
             throw new ArgumentException("Node ID and role mismatch.");
         NodeId = nodeId; Role = role;
-        _db = new SqliteSupport(path);
-        _db.Initialize("""
+        _db = new SqliteSupport(path, readOnly);
+        if (!readOnly) _db.Initialize("""
             CREATE TABLE IF NOT EXISTS active(
               slot INTEGER PRIMARY KEY CHECK(slot=1), epoch INTEGER NOT NULL,
               release_id TEXT, pending_id TEXT, pending_release TEXT,
