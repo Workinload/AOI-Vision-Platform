@@ -1,0 +1,25 @@
+  正在确定要还原的项目…
+  所有项目均是最新的，无法还原。
+  AOI.Domain -> D:\codex\AOI-dshb-154\csharp\src\AOI.Domain\bin\Debug\net10.0\AOI.Domain.dll
+  AOI.Contracts -> D:\codex\AOI-dshb-154\csharp\src\AOI.Contracts\bin\Debug\net10.0\AOI.Contracts.dll
+  AOI.Solutions -> D:\codex\AOI-dshb-154\csharp\src\AOI.Solutions\bin\Debug\net10.0\AOI.Solutions.dll
+  AOI.Runtime -> D:\codex\AOI-dshb-154\csharp\src\AOI.Runtime\bin\Debug\net10.0\AOI.Runtime.dll
+  AOI.OfflineCompare -> D:\codex\AOI-dshb-154\csharp\tools\AOI.OfflineCompare\bin\Debug\net10.0\AOI.OfflineCompare.dll
+  AOI.Tests -> D:\codex\AOI-dshb-154\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll
+D:\codex\AOI-dshb-154\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll (.NETCoreApp,Version=v10.0)的测试运行
+总共 1 个测试文件与指定模式相匹配。
+NUnit Adapter 6.3.1.0: Test execution started
+Running selected tests in D:\codex\AOI-dshb-154\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll
+   NUnit3TestExecutor discovered 7 of 7 NUnit test cases using Current Discovery mode, Non-Explicit run
+  已通过 LineScanParentFeedsTwoLogicalChannelsWithExplicitRowMapping [539 ms]
+  已通过 MissingPngAndUnsupportedPluginNeverBecomeOk [482 ms]
+  已通过 PositioningChannelIsNeverReportedAsInspectionOk [259 ms]
+  已通过 ReportRootIsNeverReusedOrPlacedInsideTheImageFixture [240 ms]
+  已通过 SameImmutablePngs_TwoPersistedReleases_ChangeOnlyRoiAndThresholdChannels [240 ms]
+  已通过 TamperedReleaseDigestInDatabaseIsRejected [143 ms]
+  已通过 UnknownReleaseAndIdenticalReleasesAreRejected [124 ms]
+
+测试运行成功。
+测试总数: 7
+     通过数: 7
+总时间: 2.6180 秒
