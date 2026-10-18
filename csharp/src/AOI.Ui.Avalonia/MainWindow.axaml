@@ -681,57 +681,312 @@
           </TabControl>
         </TabItem>
         <TabItem Header="产品ROI">
-          <Grid Margin="4" ColumnDefinitions="1*,1*" ColumnSpacing="12">
-            <Border Background="White" CornerRadius="10" Padding="18">
-              <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
-                <TextBlock Text="当前已发布产品方案" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
-                <TextBlock Grid.Row="1" Text="{Binding ActiveProductLabel}" FontSize="14" Foreground="#277295" TextWrapping="Wrap"/>
-                <TextBlock Grid.Row="2" Text="{Binding ActiveProductRelease}" FontSize="12" Foreground="#6B8195" TextWrapping="Wrap"/>
-                <ListBox Grid.Row="3" ItemsSource="{Binding ProductStations}" Background="#F5F8FB" BorderThickness="0">
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <Grid ColumnDefinitions="90,*,95,110" Margin="10,12">
-                        <TextBlock Text="{Binding StationId}" FontWeight="Bold" FontSize="12"/>
-                        <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"/>
-                        <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
-                        <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
-                      </Grid>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-              </Grid>
-            </Border>
-            <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
-              <StackPanel Spacing="12">
-                <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
-                <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#587187" TextWrapping="Wrap"/>
-                <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                         Height="95" BorderThickness="0" Background="#F4F8FC">
-                  <ListBox.ItemsPanel>
-                    <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
-                  </ListBox.ItemsPanel>
-                  <ListBox.ItemTemplate>
-                    <DataTemplate>
-                      <TextBlock Text="{Binding ChannelId}" Margin="10" FontWeight="SemiBold"/>
-                    </DataTemplate>
-                  </ListBox.ItemTemplate>
-                </ListBox>
-                <Border Background="#122D44" Padding="8" CornerRadius="8">
-                  <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="245"/>
-                </Border>
-                <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#65819A" TextWrapping="Wrap"/>
-                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
-                  <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
-                  <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
-                  <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
-                  <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+          <Grid Margin="4" RowDefinitions="Auto,*" RowSpacing="10">
+            <Border Background="#FFF7EA" CornerRadius="10" Padding="15"
+                    IsVisible="{Binding OfflineProduct.IsOfflineEditorTab}">
+              <StackPanel Spacing="8">
+                <TextBlock Text="OFFLINE_RECIPE_MANAGEMENT · 离线产品 / ROI 编辑（A6 真实数据库）"
+                           FontSize="17" FontWeight="SemiBold" Foreground="#7A4A12"/>
+                <TextBlock Text="显式入口：A6 solutions.sqlite 或 run-root + 操作员。写入受双 Core 独占锁保护：未开启写入会话时 A6 只读；开启后仅可写租期内且属于该 run-root 的数据库。"
+                           Foreground="#8A6528" FontSize="11" TextWrapping="Wrap"/>
+                <Grid ColumnDefinitions="2.2*,1.1*" ColumnSpacing="9">
+                  <StackPanel>
+                    <TextBlock Text="A6 路径（solutions.sqlite 或 run-root）" FontSize="11"/>
+                    <TextBox Text="{Binding OfflineProduct.EntryPath}"/>
+                  </StackPanel>
+                  <StackPanel Grid.Column="1">
+                    <TextBlock Text="操作员" FontSize="11"/>
+                    <TextBox Text="{Binding OfflineProduct.OperatorId}"/>
+                  </StackPanel>
                 </Grid>
-                <Button Content="校验并持久保存 SIM_ONLY ROI 草稿" Command="{Binding ValidateRoiCommand}"/>
-                <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#96652C" TextWrapping="Wrap"/>
-                <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
-                           TextWrapping="Wrap" Foreground="#637C92"/>
+                <!-- Wrap so all four actions stay visible and clickable at 1250x760 and 1920x1080. -->
+                <WrapPanel Orientation="Horizontal">
+                  <Button Content="启用离线方案管理" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.AttachEntryCommand}"/>
+                  <Button Content="重新读取数据库" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.RefreshCommand}"/>
+                  <Button Content="开启离线写入会话（双 Core 独占锁）" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.EnableOfflineWritesCommand}"/>
+                  <Button Content="关闭写入会话（释放双锁）" Margin="0,0,9,8"
+                          Command="{Binding OfflineProduct.DisableOfflineWritesCommand}"/>
+                </WrapPanel>
+                <TextBlock Text="{Binding OfflineProduct.WriteState}" FontSize="12"
+                           Foreground="#A23D2A" TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding OfflineProduct.DatabasePathLabel}" FontSize="11"
+                           Foreground="#6E8297" TextWrapping="Wrap"/>
               </StackPanel>
             </Border>
+            <!-- Default is the existing Core ROI editor so ordinary master/slave
+                 startup keeps the native operator-smoke save button visible. The
+                 offline editor is selected only by explicit launch or operator choice. -->
+            <TabControl Grid.Row="1" SelectedIndex="{Binding OfflineProduct.ProductRoiTabIndex, Mode=TwoWay}">
+              <TabItem Header="Core ROI 草稿（现有）">
+                <Grid ColumnDefinitions="1*,1*" ColumnSpacing="12">
+                  <Border Background="White" CornerRadius="10" Padding="18">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+                      <TextBlock Text="当前已发布产品方案" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
+                      <TextBlock Grid.Row="1" Text="{Binding ActiveProductLabel}" FontSize="14" Foreground="#277295" TextWrapping="Wrap"/>
+                      <TextBlock Grid.Row="2" Text="{Binding ActiveProductRelease}" FontSize="12" Foreground="#6B8195" TextWrapping="Wrap"/>
+                      <ListBox Grid.Row="3" ItemsSource="{Binding ProductStations}" Background="#F5F8FB" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="90,*,95,110" Margin="10,12">
+                              <TextBlock Text="{Binding StationId}" FontWeight="Bold" FontSize="12"/>
+                              <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"/>
+                              <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
+                              <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                  </Border>
+                  <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="14">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto,Auto,Auto,Auto" RowSpacing="6">
+                      <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="17"
+                                 FontWeight="SemiBold" Foreground="#1E4263"/>
+                      <TextBlock Grid.Row="1" Text="{Binding SelectedDescription}" FontSize="11"
+                                 Foreground="#587187" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <ListBox Grid.Row="2" ItemsSource="{Binding Channels}"
+                               SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                               Height="72" BorderThickness="0" Background="#F4F8FC">
+                        <ListBox.ItemsPanel>
+                          <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding ChannelId}" Margin="10,6" FontWeight="SemiBold"/>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                      <Border Grid.Row="3" Background="#122D44" Padding="6" CornerRadius="8">
+                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform"/>
+                      </Border>
+                      <TextBlock Grid.Row="4" Text="{Binding PreviewNotice}" FontSize="10"
+                                 Foreground="#65819A" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <Grid Grid.Row="5" ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                        <StackPanel><TextBlock Text="X" FontSize="10"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+                        <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="10"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="10"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+                        <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="10"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+                      </Grid>
+                      <Button Grid.Row="6" Content="校验并持久保存 SIM_ONLY ROI 草稿"
+                              Command="{Binding ValidateRoiCommand}"/>
+                      <TextBlock Grid.Row="7" Text="{Binding RoiFeedback}" FontSize="11"
+                                 Foreground="#96652C" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis"/>
+                      <TextBlock Grid.Row="8" Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。"
+                                 FontSize="10" TextWrapping="Wrap" MaxLines="2"
+                                 TextTrimming="CharacterEllipsis" Foreground="#637C92"/>
+                    </Grid>
+                  </Border>
+                </Grid>
+              </TabItem>
+              <TabItem Header="离线产品编辑">
+                <Grid ColumnDefinitions="1.08*,1*" ColumnSpacing="12">
+                  <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="10">
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Text="A6 产品方案（真实列表）" FontSize="16"
+                                       FontWeight="SemiBold" Foreground="#1E4263"/>
+                            <TextBlock Grid.Column="1" Text="{Binding OfflineProduct.ReleaseSummary}"
+                                       FontSize="11" Foreground="#6E8297"/>
+                          </Grid>
+                          <ComboBox ItemsSource="{Binding OfflineProduct.Solutions}"
+                                    SelectedItem="{Binding OfflineProduct.SelectedSolution, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate><TextBlock Text="{Binding Display}"/></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <Grid ColumnDefinitions="1*,1.4*,Auto" ColumnSpacing="7">
+                            <StackPanel>
+                              <TextBlock Text="新产品 ID" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.NewSolutionId}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                              <TextBlock Text="显示名称" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.NewSolutionName}"/>
+                            </StackPanel>
+                            <Button Grid.Column="2" Content="创建 SIM 产品草稿"
+                                    Command="{Binding OfflineProduct.CreateProductCommand}"
+                                    VerticalAlignment="Bottom"/>
+                          </Grid>
+                          <TextBlock Text="{Binding OfflineProduct.ChannelSummary}" FontSize="11"
+                                     Foreground="#39718C"/>
+                          <TextBlock Text="{Binding OfflineProduct.Status}" FontSize="11"
+                                     Foreground="#8A6528" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <TextBlock Text="通道草稿（CAS revision）" FontSize="16"
+                                     FontWeight="SemiBold" Foreground="#1E4263"/>
+                          <Grid ColumnDefinitions="2*,Auto,Auto" ColumnSpacing="7">
+                            <ComboBox ItemsSource="{Binding OfflineProduct.Channels}"
+                                      SelectedItem="{Binding OfflineProduct.SelectedChannel, Mode=TwoWay}"
+                                      HorizontalAlignment="Stretch">
+                              <ComboBox.ItemTemplate>
+                                <DataTemplate><TextBlock Text="{Binding Display}"/></DataTemplate>
+                              </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <Button Grid.Column="1" Content="读取通道草稿"
+                                    Command="{Binding OfflineProduct.LoadChannelCommand}"/>
+                            <Button Grid.Column="2" Content="校验（不写入）"
+                                    Command="{Binding OfflineProduct.ValidateCommand}"/>
+                          </Grid>
+                          <Grid ColumnDefinitions="Auto,Auto,Auto,*" ColumnSpacing="14">
+                            <TextBlock Text="工位：" FontSize="11"/>
+                            <TextBlock Grid.Column="1" Text="{Binding OfflineProduct.StationId}"
+                                       FontSize="12" FontWeight="SemiBold"/>
+                            <TextBlock Grid.Column="2" Text="草稿 revision：" FontSize="11"/>
+                            <TextBlock Grid.Column="3" Text="{Binding OfflineProduct.StationRevision}"
+                                       FontSize="12" FontWeight="SemiBold"/>
+                          </Grid>
+                          <TextBlock Text="{Binding OfflineProduct.RoiModeText}" FontSize="11"
+                                     Foreground="#6E8297"/>
+                          <TextBlock Text="{Binding OfflineProduct.ValidationMessage}" FontSize="11"
+                                     Foreground="#A23D2A" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <TextBlock Text="参数 / 已安装 SIM 插件" FontSize="16"
+                                     FontWeight="SemiBold" Foreground="#1E4263"/>
+                          <ComboBox ItemsSource="{Binding OfflineProduct.AlgorithmChoices}"
+                                    SelectedItem="{Binding OfflineProduct.SelectedAlgorithm, Mode=TwoWay}"
+                                    HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                              <DataTemplate><TextBlock Text="{Binding DisplayLabel}"/></DataTemplate>
+                            </ComboBox.ItemTemplate>
+                          </ComboBox>
+                          <Grid ColumnDefinitions="*,*" ColumnSpacing="9">
+                            <StackPanel>
+                              <TextBlock Text="站亮度阈值 (1..254 整数)" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.BrightThreshold, Mode=TwoWay}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                              <TextBlock Text="最小亮区比例 (0..1)" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.MinimumBrightFraction, Mode=TwoWay}"/>
+                            </StackPanel>
+                          </Grid>
+                          <StackPanel IsVisible="{Binding OfflineProduct.IsContourAlgorithm}" Spacing="7">
+                            <TextBlock Text="opencv.contour 数值参数" FontSize="12"
+                                       FontWeight="SemiBold" Foreground="#39718C"/>
+                            <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="7">
+                              <StackPanel>
+                                <TextBlock Text="二值阈值" FontSize="11"/>
+                                <TextBox Text="{Binding OfflineProduct.BinaryThresholdText}"/>
+                              </StackPanel>
+                              <StackPanel Grid.Column="1">
+                                <TextBlock Text="最小轮廓面积" FontSize="11"/>
+                                <TextBox Text="{Binding OfflineProduct.MinimumContourAreaText}"/>
+                              </StackPanel>
+                              <StackPanel Grid.Column="2">
+                                <TextBlock Text="最大缺陷数" FontSize="11"/>
+                                <TextBox Text="{Binding OfflineProduct.MaximumDetectionsText}"/>
+                              </StackPanel>
+                              <StackPanel Grid.Column="3">
+                                <TextBlock Text="找亮缺陷" FontSize="11"/>
+                                <CheckBox IsChecked="{Binding OfflineProduct.FindBrightDefects, Mode=TwoWay}"/>
+                              </StackPanel>
+                            </Grid>
+                          </StackPanel>
+                        </StackPanel>
+                      </Border>
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <TextBlock Text="ROI（归一化，关联实际图像尺寸）" FontSize="16"
+                                     FontWeight="SemiBold" Foreground="#1E4263"/>
+                          <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="8">
+                            <StackPanel>
+                              <TextBlock Text="X" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiX}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="1">
+                              <TextBlock Text="Y" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiY}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="2">
+                              <TextBlock Text="宽" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiWidth}"/>
+                            </StackPanel>
+                            <StackPanel Grid.Column="3">
+                              <TextBlock Text="高" FontSize="11"/>
+                              <TextBox Text="{Binding OfflineProduct.RoiHeight}"/>
+                            </StackPanel>
+                          </Grid>
+                          <TextBlock Text="{Binding OfflineProduct.RoiImageState}" FontSize="11"
+                                     Foreground="#39718C" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding OfflineProduct.RoiPixelPreviewText}" FontSize="11"
+                                     Foreground="#8A6528" TextWrapping="Wrap"/>
+                          <Button Content="校验并 CAS 保存草稿（不发布）"
+                                  Command="{Binding OfflineProduct.SaveDraftCommand}"
+                                  HorizontalAlignment="Stretch"/>
+                          <TextBlock Text="草稿保存不会改变已发布 Release / Active / Epoch；ROI 仅存在于产品草稿。"
+                                     FontSize="11" Foreground="#7A8FA3" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                  <ScrollViewer Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="10">
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <TextBlock Text="当前通道实际图像（Core 已验证 PNG）" FontSize="16"
+                                     FontWeight="SemiBold" Foreground="#1E4263"/>
+                          <TextBlock Text="{Binding OfflineProduct.SelectedChannel.Display}" FontSize="11"
+                                     Foreground="#587187"/>
+                          <Border Background="#122D44" CornerRadius="8" Padding="8">
+                            <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="300"/>
+                          </Border>
+                          <TextBlock Text="{Binding PreviewNotice}" FontSize="11"
+                                     Foreground="#65819A" TextWrapping="Wrap"/>
+                          <TextBlock Text="ROI 像素映射只使用这张已验证 PNG 的真实宽高；没有已验证图像时，改变 ROI 的保存会被拒绝。"
+                                     FontSize="11" Foreground="#8A6528" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                      <Border Background="White" CornerRadius="10" Padding="14">
+                        <StackPanel Spacing="8">
+                          <TextBlock Text="不可变发布 / 激活（严格区分）" FontSize="16"
+                                     FontWeight="SemiBold" Foreground="#1E4263"/>
+                          <CheckBox IsChecked="{Binding OfflineProduct.PublishConfirmed, Mode=TwoWay}"
+                                    Content="我确认发布不可变 Release（不可修改，需重新打开数据库核验）"/>
+                          <TextBlock Text="{Binding OfflineProduct.RevisionsSnapshotLabel}" FontSize="10"
+                                     Foreground="#6E8297" TextWrapping="Wrap"/>
+                          <Button Content="发布不可变 Release（需明确确认）"
+                                  Command="{Binding OfflineProduct.PublishCommand}"
+                                  HorizontalAlignment="Stretch"/>
+                          <Button Content="重新打开 A6 数据库回读 Release"
+                                  Command="{Binding OfflineProduct.ReopenPersistedReleaseCommand}"
+                                  HorizontalAlignment="Stretch"/>
+                          <TextBlock Text="{Binding OfflineProduct.PublishState}" FontSize="12"
+                                     FontWeight="SemiBold" Foreground="#1475A1" TextWrapping="Wrap"/>
+                          <TextBlock Text="ReleaseId" FontSize="11" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding OfflineProduct.PublishedRelease}" FontSize="12"
+                                     FontFamily="Consolas" TextWrapping="Wrap"/>
+                          <TextBlock Text="完整 SHA256（A6 数据库回读）" FontSize="11" FontWeight="SemiBold"/>
+                          <TextBlock Text="{Binding OfflineProduct.PublishedSha}" FontSize="11"
+                                     FontFamily="Consolas" TextWrapping="Wrap"/>
+                          <TextBlock Text="{Binding OfflineProduct.ReleaseProvenance}" FontSize="10"
+                                     Foreground="#6E8297" TextWrapping="Wrap"/>
+                          <Border Background="#FFF0E6" CornerRadius="7" Padding="9">
+                            <TextBlock Text="{Binding OfflineProduct.ActivationState}" FontSize="12"
+                                       Foreground="#A23D2A" TextWrapping="Wrap"/>
+                          </Border>
+                          <TextBlock Text="{Binding OfflineProduct.Status}" FontSize="11"
+                                     Foreground="#8A6528" TextWrapping="Wrap"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                </Grid>
+              </TabItem>
+            </TabControl>
           </Grid>
         </TabItem>
         <TabItem Header="日报周报">

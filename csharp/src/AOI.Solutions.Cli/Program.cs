@@ -225,7 +225,8 @@ try
     else if (mode == "publish")
     {
         if (args.Length != 4) throw new ArgumentException("publish requires root, solutionId, actor");
-        var release = repository.Publish(args[2], args[3]);
+        // Capability validation runs INSIDE the transaction, before the Release row exists.
+        var release = repository.Publish(args[2], args[3], RequireSafeRule);
         // Force validation of every station's actual pixel rule, not just digest.
         foreach (var station in release.Manifest.Stations)
             RequireSafeRule(station);
