@@ -168,7 +168,15 @@ foreach ($required in @($hostExe, $uiExe)) {
 }
 Write-Log 'dependency check passed: Host\AOI.Host.exe + UI\AOI.Ui.Avalonia.exe present'
 
-foreach ($wal in @((Join-Path $script:Data 'master\production.db'), (Join-Path $script:Data 'slave\production.db'))) {
+# A dangling SQLite WAL/SHM without its main DB is still ORIGINAL production
+# evidence, never a signal that the directory is safe to reuse.
+$previousEvidence = @()
+foreach ($role in @('master', 'slave')) {
+    foreach ($suffix in @('', '-wal', '-shm')) {
+        $previousEvidence += Join-Path $script:Data ($role + '\production.db' + $suffix)
+    }
+}
+foreach ($wal in $previousEvidence) {
     if (Test-Path $wal) {
         Write-Log ('previous SIM_FULL WAL present: ' + $wal) 'ERROR'
         Write-Log 'SIM_FULL_RESTART_HOLD: nothing was started and nothing was deleted.' 'ERROR'
@@ -179,7 +187,7 @@ foreach ($wal in @((Join-Path $script:Data 'master\production.db'), (Join-Path $
 Write-Log ('previous production WAL: none under ' + $script:Data)
 
 $udpPort = 19600
-$tcpPorts = @(19610, 19621, 19622, 19651)
+$tcpPorts = @(19610, 19621, 19622, 19651, 19652)
 $busy = @()
 foreach ($p in $tcpPorts) { if (-not (Test-TcpPortFree $p)) { $busy += $p } }
 if ($busy.Count -gt 0) {
@@ -232,6 +240,10 @@ if (-not (Wait-TcpReady -Port 19621 -TimeoutSeconds $ReadyTimeoutSeconds -Label 
 }
 if (-not (Wait-TcpReady -Port 19651 -TimeoutSeconds $ReadyTimeoutSeconds -Label 'Master report IPC')) {
     Write-Log ('Master report IPC 19651 not ready within ' + $ReadyTimeoutSeconds + 's') 'ERROR'
+    Stop-StartedProcesses; exit 5
+}
+if (-not (Wait-TcpReady -Port 19652 -TimeoutSeconds $ReadyTimeoutSeconds -Label 'Master persisted timing IPC')) {
+    Write-Log ('Master A7 timing IPC 19652 not ready within ' + $ReadyTimeoutSeconds + 's') 'ERROR'
     Stop-StartedProcesses; exit 5
 }
 Assert-Alive -Process $master -Name 'Master Core' -ExitCode 6
