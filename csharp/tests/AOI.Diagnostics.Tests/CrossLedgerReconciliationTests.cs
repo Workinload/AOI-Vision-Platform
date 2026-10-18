@@ -339,6 +339,48 @@ public sealed class CrossLedgerReconciliationTests
             $"files={evidence.Length} original_sha256_unchanged=1");
     }
 
+    [Test]
+    public void BatchQueryUsesOneSnapshotAndDoesNotDeduplicateIdenticalBarcodes()
+    {
+        var first = Item();
+        var second = Item(); // Same barcode, different immutable WorkpieceId.
+        var a = Started(first, LegacyExitScenario.Normal, FinalDisposition.Good, token: 1);
+        using (a.A1)
+        {
+            Step(a.A1, a.A7, a.Intent, a.Attempt, 80);
+            Step(a.A1, a.A7, a.Intent, a.Attempt, 81);
+        }
+        var b = Started(second, LegacyExitScenario.BarcodeMismatch,
+            FinalDisposition.Reject, token: 2);
+        using (b.A1)
+        {
+            var claim = Step(b.A1, b.A7, b.Intent, b.Attempt, 82, acknowledge: false);
+            b.A7.AckUnknown(b.Attempt, 1, claim.ClaimId, "UDP_TIMEOUT");
+            b.A1.MarkUnknown(claim.ClaimId, "FINS_ACK_OR_READBACK_UNKNOWN");
+        }
+        var batch = CrossLedgerReadOnlyReconciliation.CaptureAll(_root, 20);
+        Assert.Multiple(() =>
+        {
+            Assert.That(batch.Truncated, Is.False);
+            Assert.That(batch.Workpieces.Length, Is.EqualTo(2));
+            Assert.That(batch.Workpieces.Select(x => x.WorkpieceId).Distinct().Count(),
+                Is.EqualTo(2));
+            Assert.That(batch.Workpieces.Select(x => x.PhysicalToken),
+                Is.EquivalentTo(new ushort?[] { 1, 2 }));
+            Assert.That(batch.Workpieces.Single(x => x.WorkpieceId == first.WorkpieceId).Status,
+                Is.EqualTo(CrossLedgerStatus.CONFIRMED));
+            Assert.That(batch.Workpieces.Single(x => x.WorkpieceId == second.WorkpieceId).Status,
+                Is.EqualTo(CrossLedgerStatus.ACK_UNKNOWN));
+            Assert.That(batch.OverallStatus, Is.EqualTo(CrossLedgerStatus.ACK_UNKNOWN));
+        });
+        var bounded = CrossLedgerReadOnlyReconciliation.CaptureAll(_root, 1);
+        Assert.That(bounded.Truncated, Is.True);
+        Assert.That(bounded.Workpieces.Length, Is.EqualTo(1));
+        Assert.That(bounded.OverallStatus, Is.Not.EqualTo(CrossLedgerStatus.CONFIRMED));
+        TestContext.Progress.WriteLine("A7_CROSS_LEDGER_BATCH_PASS items=2 " +
+            "same_barcode=1 confirmed=1 ack_unknown=1 snapshot_count=1 truncation_safe=1");
+    }
+
     private static void Update(string dbPath, string sql,
         params (string Key, string Value)[] args)
     {
