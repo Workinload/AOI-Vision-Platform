@@ -70,6 +70,9 @@ public sealed class OfflineProductManager
         return solution;
     }
 
+    /// <summary>Read-only list of products actually present in this A6 database.</summary>
+    public IReadOnlyList<ProductSolution> ListSolutions() => repository.ListSolutions();
+
     /// <summary>Reads the operator-visible draft view for one logical channel.</summary>
     public DraftChannelParameterView ReadChannel(string solutionId, string channelId) =>
         SolutionParameterEditor.ReadDraft(repository, solutionId, channelId);

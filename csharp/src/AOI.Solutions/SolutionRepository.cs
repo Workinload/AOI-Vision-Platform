@@ -28,6 +28,21 @@ public sealed class SolutionRepository
         SqliteSupport.Run(db, tx, "INSERT INTO audit(utc,actor,action,detail) VALUES($t,$a,$k,$d)",
             ("$t", DateTimeOffset.UtcNow.ToString("O")), ("$a", actor), ("$k", action), ("$d", detail));
 
+    /// <summary>
+    /// Minimal read-only query added for the offline operator workspace: the UI must show the
+    /// products that genuinely exist in this A6 database, never an invented second list.
+    /// </summary>
+    public IReadOnlyList<ProductSolution> ListSolutions()
+    {
+        using var db = _db.Open();
+        using var cmd = SqliteSupport.Command(db, null, "SELECT id,profile_id,name FROM solutions ORDER BY id");
+        using var reader = cmd.ExecuteReader();
+        var list = new List<ProductSolution>();
+        while (reader.Read())
+            list.Add(new ProductSolution(reader.GetString(0), reader.GetString(1), reader.GetString(2)));
+        return list;
+    }
+
     public void RegisterProfile(MachineProfile profile, string actor)
     {
         profile.Validate();
