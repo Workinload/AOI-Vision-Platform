@@ -18,7 +18,7 @@
     0  activation + five-process run + evidence all verified
     10 bootstrap failed        11 publish failed       12 dual activation failed
     13 five-process launch failed   14 no production recorded   15 workpieces carried another release
-    16 package incomplete
+    16 package incomplete       17 GUI screenshot or evidence incomplete
 #>
 [CmdletBinding()]
 param(
@@ -121,6 +121,7 @@ while ((Get-Date) -lt $deadline) {
     try {
         $client = New-Object System.Net.Sockets.TcpClient
         $client.Connect('127.0.0.1', 19621)
+        $client.ReceiveTimeout = 2000
         $reader = New-Object IO.StreamReader($client.GetStream())
         $line = $reader.ReadLine()
         $client.Close()
@@ -161,6 +162,7 @@ if ($wrong.Count -gt 0) {
 }
 
 $shot = Join-Path $script:evidence 'desktop.png'
+$shotOk = $false
 try {
     Add-Type -AssemblyName System.Windows.Forms, System.Drawing
     $bnd = [System.Windows.Forms.SystemInformation]::VirtualScreen
@@ -168,10 +170,16 @@ try {
     $g = [System.Drawing.Graphics]::FromImage($bmp)
     $g.CopyFromScreen($bnd.Left, $bnd.Top, 0, 0, $bmp.Size)
     $bmp.Save($shot, [System.Drawing.Imaging.ImageFormat]::Png)
+    $shotOk = ((Test-Path $shot) -and (Get-Item $shot).Length -gt 0)
     $g.Dispose(); $bmp.Dispose()
     Say ('screenshot: ' + $shot)
 }
-catch { Say ('screenshot failed: ' + $_.Exception.Message) 'WARN' }
+catch { Say ('screenshot failed: ' + $_.Exception.Message) 'ERROR' }
+if (-not $shotOk) {
+    Say 'actual GUI screenshot was not persisted; do not claim a complete operator smoke PASS' 'ERROR'
+    if (-not $KeepRunning) { Stop-SmokeProcesses }
+    exit 17
+}
 
 $summary = [pscustomobject]@{
     result = 'PASS'
