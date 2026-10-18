@@ -10,6 +10,7 @@
   Case 2 previous SIM_FULL WAL present  -> 3  (and the WAL file must still exist afterwards)
   Case 3 required local port occupied   -> 4
   Case 4 real PNG folder incomplete     -> 7
+  Case 5 invalid executable create      -> 6 (unexpected Start-Process exception must not report success)
 #>
 [CmdletBinding()]
 param([string]$EvidenceRoot = (Join-Path $env:TEMP ('AOI_LauncherDiag_' + [guid]::NewGuid().ToString('N'))))
@@ -83,6 +84,16 @@ New-Item -ItemType Directory -Force -Path $img | Out-Null
 Set-Content -Path (Join-Path $img 'CH01.png') -Value 'x' -Encoding ascii
 $r = Invoke-Launcher $sb @('-ImageRoot', ('"' + $img + '"'))
 Add-Result 'invalid real PNG folder' 7 $r.ExitCode ($r.ExitCode -eq 7) 'only CH01.png present'
+
+# ---- Case 5: an executable file exists but is not a runnable native binary.
+# This tests the fail-closed exceptional cleanup path; it must exit 6,
+# never report AOI_SIM_FULL_LAUNCH_PASS and never leave any AOI child.
+$sb = New-Sandbox 'case5-broken-executable'
+$r = Invoke-Launcher $sb
+$ok = ($r.ExitCode -eq 6 -and
+    $r.Output -match 'AOI_SIM_FULL_LAUNCH_ERROR' -and
+    $r.Output -notmatch 'AOI_SIM_FULL_LAUNCH_PASS')
+Add-Result 'invalid native executable cannot strand launcher' 6 $r.ExitCode $ok 'exception translated to exit 6'
 
 $failed = @($results | Where-Object { -not $_.Pass })
 $summary = Join-Path $evidence 'launcher-diagnostics.json'
