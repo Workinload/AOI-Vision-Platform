@@ -20,9 +20,8 @@ for %%N in (01 02 03 04 05 06 07) do (
 )
 if not exist "%IMAGES%\LINE-S-8.png" goto missing
 if not exist "%IMAGES%\LINE-M-2.png" goto missing
-if not exist "%BASE%Launch-SIMFULL.cmd" goto unavailable
-if exist "%BASE%sim-full-data\master\production.db" goto previous
-if exist "%BASE%sim-full-data\slave\production.db" goto previous
+if not exist "%BASE%Launch-SIMFULL.ps1" goto unavailable
+
 set "AOI_SIM_IMAGE_ROOT=%IMAGES%"
 set "AOI_SIM_IMAGE_LAYOUT=FLAT"
 rem Real PNG inputs must run the event-driven legacy PLC shadow, not FIFO_DEMO.
@@ -41,15 +40,18 @@ echo A1 one-time output claims and A7 actual UDP ACK/readback audit enabled.
 echo 5 virtual pieces will each inspect these 9 actual PNG inputs.
 echo Real OpenCV contour defects can produce NG / simulated REJECT.
 echo No actual camera/PLC operation; do not use for factory production.
-call "%BASE%Launch-SIMFULL.cmd"
-exit /b %ERRORLEVEL%
-:previous
-echo Previous virtual production evidence found: sim-full-data.
-echo Archive the previous folder manually for a NEW independent offline batch.
-pause
-exit /b 3
+echo.
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "%BASE%Launch-SIMFULL.ps1" -ImageRoot "%IMAGES%"
+set "RC=%ERRORLEVEL%"
+if not "%RC%"=="0" (
+  echo.
+  echo AOI_SIM_FULL_IMAGE_LAUNCH_FAILED exitcode=%RC%
+  echo See sim-full-data\launch-logs for the full launch log.
+  pause
+)
+exit /b %RC%
 :unavailable
-echo Missing Launch-SIMFULL.cmd; extract the complete package.
+echo Missing Launch-SIMFULL.ps1; extract the complete package.
 pause
 exit /b 2
 :missing
@@ -57,4 +59,4 @@ echo Input image folder incomplete or unavailable.
 echo Require CH01.png to CH07.png plus LINE-S-8.png and LINE-M-2.png.
 echo 8-bit PNG expected. OpenCV will reject unsupported formats or broken PNG.
 pause
-exit /b 1
+exit /b 7

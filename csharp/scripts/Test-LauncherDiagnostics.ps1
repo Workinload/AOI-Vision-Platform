@@ -1,0 +1,94 @@
+#requires -Version 5.1
+<#
+.SYNOPSIS
+  Negative tests for the SIM_FULL launcher diagnostics.
+.DESCRIPTION
+  Every case builds an isolated sandbox copy of Launch-SIMFULL.ps1 with dummy package files
+  and asserts the documented exit code. No AOI Core, PLC or UI process is started by these
+  cases, and no production data is ever created, deleted or modified.
+  Case 1 missing UI executable          -> 2
+  Case 2 previous SIM_FULL WAL present  -> 3  (and the WAL file must still exist afterwards)
+  Case 3 required local port occupied   -> 4
+  Case 4 real PNG folder incomplete     -> 7
+#>
+[CmdletBinding()]
+param([string]$EvidenceRoot = (Join-Path $env:TEMP ('AOI_LauncherDiag_' + [guid]::NewGuid().ToString('N'))))
+
+$ErrorActionPreference = 'Stop'
+$script:source = Join-Path $PSScriptRoot 'Launch-SIMFULL.ps1'
+if (-not (Test-Path $script:source)) { throw ('launcher not found: ' + $script:source) }
+$evidence = [IO.Path]::GetFullPath($EvidenceRoot)
+New-Item -ItemType Directory -Force -Path $evidence | Out-Null
+
+$results = New-Object System.Collections.ArrayList
+function New-Sandbox {
+    param([string]$Name)
+    $dir = Join-Path $evidence $Name
+    New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    foreach ($sub in @('Host', 'UI')) {
+        New-Item -ItemType Directory -Force -Path (Join-Path $dir $sub) | Out-Null
+    }
+    Set-Content -Path (Join-Path $dir 'Host\AOI.Host.exe') -Value 'dummy' -Encoding ascii
+    Set-Content -Path (Join-Path $dir 'UI\AOI.Ui.Avalonia.exe') -Value 'dummy' -Encoding ascii
+    Copy-Item $script:source (Join-Path $dir 'Launch-SIMFULL.ps1') -Force
+    return $dir
+}
+function Invoke-Launcher {
+    param([string]$Sandbox, [string[]]$Extra = @())
+    $scriptPath = Join-Path $Sandbox 'Launch-SIMFULL.ps1'
+    $argList = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $scriptPath) + $Extra
+    $out = & powershell.exe @argList 2>&1 | Out-String
+    return [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $out }
+}
+function Add-Result {
+    param([string]$Case, [int]$Expected, [int]$Actual, [bool]$Pass, [string]$Note)
+    $null = $results.Add([pscustomobject]@{ Case = $Case; Expected = $Expected; Actual = $Actual; Pass = $Pass; Note = $Note })
+    $flag = 'FAIL'
+    if ($Pass) { $flag = 'PASS' }
+    Write-Host ('[' + $flag + '] ' + $Case + ' expected=' + $Expected + ' actual=' + $Actual + ' ' + $Note)
+}
+
+# ---- Case 1: incomplete package
+$sb = New-Sandbox 'case1-missing-ui'
+Remove-Item (Join-Path $sb 'UI\AOI.Ui.Avalonia.exe') -Force
+$r = Invoke-Launcher $sb
+Add-Result 'missing UI executable' 2 $r.ExitCode ($r.ExitCode -eq 2) 'package incomplete'
+$null = New-Item -ItemType Directory -Force -Path (Join-Path $evidence 'logs')
+
+# ---- Case 2: previous WAL hold
+$sb = New-Sandbox 'case2-wal-hold'
+$walDir = Join-Path $sb 'sim-full-data\master'
+New-Item -ItemType Directory -Force -Path $walDir | Out-Null
+$wal = Join-Path $walDir 'production.db'
+Set-Content -Path $wal -Value 'previous-evidence' -Encoding ascii
+$r = Invoke-Launcher $sb
+$walKept = Test-Path $wal
+Add-Result 'previous SIM_FULL WAL hold' 3 $r.ExitCode ($r.ExitCode -eq 3) ('wal kept=' + $walKept)
+if (-not $walKept) { throw 'launcher deleted previous production WAL - forbidden' }
+
+# ---- Case 3: port occupied
+$sb = New-Sandbox 'case3-port-busy'
+$listener = New-Object System.Net.Sockets.TcpListener([System.Net.IPAddress]::Loopback, 19621)
+$listener.Start()
+try {
+    $r = Invoke-Launcher $sb
+    Add-Result 'required port occupied' 4 $r.ExitCode ($r.ExitCode -eq 4) 'port 19621 busy'
+}
+finally { $listener.Stop() }
+
+# ---- Case 4: incomplete image folder
+$sb = New-Sandbox 'case4-bad-images'
+$img = Join-Path $evidence 'images-incomplete'
+New-Item -ItemType Directory -Force -Path $img | Out-Null
+Set-Content -Path (Join-Path $img 'CH01.png') -Value 'x' -Encoding ascii
+$r = Invoke-Launcher $sb @('-ImageRoot', ('"' + $img + '"'))
+Add-Result 'invalid real PNG folder' 7 $r.ExitCode ($r.ExitCode -eq 7) 'only CH01.png present'
+
+$failed = @($results | Where-Object { -not $_.Pass })
+$summary = Join-Path $evidence 'launcher-diagnostics.json'
+$results | ConvertTo-Json -Depth 4 | Set-Content -Path $summary -Encoding UTF8
+Write-Host ''
+Write-Host ('AOI_LAUNCHER_DIAGNOSTICS total=' + $results.Count + ' failed=' + $failed.Count)
+Write-Host ('evidence: ' + $summary)
+if ($failed.Count -gt 0) { exit 1 }
+exit 0
