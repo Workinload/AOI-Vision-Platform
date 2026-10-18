@@ -2,6 +2,7 @@ using AOI.Contracts;
 using AOI.Diagnostics;
 using AOI.Domain;
 using AOI.Runtime;
+using AOI.Solutions;
 using AOI.Runtime.Agent01;
 using AOI.Host;
 using System.Net;
@@ -116,6 +117,14 @@ Console.CancelKeyPress += (_, ev) => { ev.Cancel = true; cancelled.Cancel(); };
 Console.WriteLine($"AOI_HOST role={role} mode=SIM_LIGHT channels={(allEleven ? 11 : 2)} real_plc_writes=DISABLED");
 try
 {
+    // A0: hold a real cross-process OS lease for the ENTIRE Core lifetime.
+    // Offline A6 publish/changeover must atomically own BOTH complementary
+    // leases before opening shared A6 SQLite; a TCP 'not responding' probe
+    // alone is not proof that these Cores were stopped.
+    using IDisposable? coreLifetimeLease = role is "master" or "slave"
+        ? OfflineCoreOperationGate.HoldCoreForLifetime(dataRoot,
+            role == "master" ? MachineRole.Master : MachineRole.Slave)
+        : null;
     var requestedMode = Environment.GetEnvironmentVariable("AOI_SIM_MODE");
     if (requestedMode == "SIM_FULL")
     {
