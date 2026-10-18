@@ -773,6 +773,21 @@ def main():
                 assert master_log.count('SIM_ST05_REAL_FINS_CAM_DONE_PASS') == args.count
                 assert master_log.count('SIM_MASTER_SLAVE_TRIGGER_QUEUED') == args.count * 5
                 assert slave_log.count('SIM_SLAVE_TRIGGER_COMPLETED') == args.count * 5
+                if args.with_product:
+                    # Validate the ACTUAL external PLC -> one frame -> A6
+                    # release-bound A3 native inspector execution for all
+                    # nine physical devices, not just A6's API unit test.
+                    assert master_log.count('SIM_PUBLISHED_CAPTURE_PLAN ') == args.count * 4
+                    assert slave_log.count('SIM_PUBLISHED_CAPTURE_PLAN ') == args.count * 5
+                    assert 'algorithm=legacy.sim.brightness.v1' in master_log
+                    assert 'algorithm=legacy.sim.brightness.v1' in slave_log
+                    assert 'physical_field_verified=0' in master_log
+                    assert 'PUBLISHED_PLAN_NOT_READY' not in master_log
+                    assert 'PUBLISHED_PLAN_NOT_READY' not in slave_log
+                    print('A0_PUBLISHED_A6_REAL_FINS_9_CAMERA_PASS physical_triggers=' +
+                          str(args.count * 9) + ' release=' + product_release +
+                          ' native_legacy_brightness=1 one_parent_two_line_channels=1 '
+                          'no_mutable_roi_draft=1 real_hardware_writes=0', flush=True)
             else:
                 assert master_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
                 assert slave_log.count('SIM_IMAGE_REAL_IMPORTED') == args.count
