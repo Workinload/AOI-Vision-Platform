@@ -114,8 +114,8 @@ the existing five-process virtual conveyor with AOI_SIM_IMAGE_ROOT+FLAT.
 Unlike the plain FIFO demo launcher, this PNG entry point explicitly selects
 AOI_SIM_PLC_PROFILE=LEGACY_PLC_SHADOW (strict loopback FINS/UDP). Each virtual
 sensor drives a D1006..D1014 camera request/CamDone ACK/readback; historical
-D1999 load and D1016/D2099 final handshakes use their real simulated packets,
-with A1 durable one-time ClaimId and A7 original SID/hash/ACK evidence.
+D1999 load and D1016/D2099 final handshakes use real simulated UDP packets,
+with A1 durable one-time ClaimId and A7 SID/hash/ACK evidence.
 One physical line frame produces two channels using row[1::2] and row[2::2].
 D1013 and vendor camera transforms still require REAL field verification.
 Use NEW empty sim-full-data for each independent run (archive old evidence).
