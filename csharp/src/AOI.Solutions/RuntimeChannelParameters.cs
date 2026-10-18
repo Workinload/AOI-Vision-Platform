@@ -176,7 +176,13 @@ public sealed record ChannelExecutionParameters(
     string ChannelId, string StationId, string PhysicalDeviceId,
     MachineRole OwnerRole, string PlcSignalAddress, string? SharedFrameGroup,
     CameraConfigurationView Camera, InspectionAlgorithmTarget Algorithm,
-    NormalizedInspectionRoi InspectionRoi);
+    NormalizedInspectionRoi InspectionRoi)
+{
+    // Preserve station-level defaults when an explicit algorithm override omits
+    // its optional threshold/fraction. These are RELEASE values, not GUI drafts.
+    public byte StationBrightThreshold { get; init; } = 127;
+    public double StationMinimumBrightFraction { get; init; } = 0.1;
+}
 
 /// <summary>
 /// A release is pinned to a workpiece when it enters Core. Existing in-flight
@@ -201,6 +207,7 @@ public sealed class PublishedParameterSnapshot
         foreach (var channel in ChannelCatalog.All)
         {
             var station = stations[channel.StationId];
+            var (stationThreshold, stationFraction) = RoiPixelPreview.ReadRule(station);
             var capture = station.CaptureTargets?.SingleOrDefault(
                 x => x.PhysicalDeviceId == channel.PhysicalDeviceId)?.Canonical();
             var configured = station.InspectionTargets?.SingleOrDefault(
@@ -231,7 +238,11 @@ public sealed class PublishedParameterSnapshot
                 published.Manifest.SolutionId, published.ReleaseId, published.ContentSha256, epoch,
                 channel.ChannelId, channel.StationId, channel.PhysicalDeviceId,
                 channel.OwnerRole, channel.PlcSignalAddress, channel.SharedFrameGroup,
-                CameraConfigurationView.Compare(frozenCapture, null), frozenAlgorithm, roi));
+                CameraConfigurationView.Compare(frozenCapture, null), frozenAlgorithm, roi)
+            {
+                StationBrightThreshold = stationThreshold,
+                StationMinimumBrightFraction = stationFraction
+            });
         }
         _channels = new ReadOnlyDictionary<string, ChannelExecutionParameters>(entries);
         SolutionId = published.Manifest.SolutionId;
