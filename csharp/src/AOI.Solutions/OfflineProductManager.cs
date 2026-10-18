@@ -33,8 +33,9 @@ public sealed class OfflineProductManager
         this.actor = actor;
     }
 
-    public static OfflineProductManager Open(string solutionsDbPath, string actor) =>
-        new(new SolutionRepository(solutionsDbPath), actor);
+    public static OfflineProductManager Open(string solutionsDbPath, string actor,
+        bool readOnly = false) =>
+        new(new SolutionRepository(solutionsDbPath, readOnly), actor);
 
     public string Actor => actor;
 
@@ -44,29 +45,45 @@ public sealed class OfflineProductManager
     public void EnsureSimProfile() =>
         repository.RegisterProfile(MachineProfile.SimBaseline(), actor);
 
+    /// <summary>Fast pre-validation so a bad id/name never starts a product creation.</summary>
+    public static void ValidateNewSolution(string solutionId, string displayName)
+    {
+        if (string.IsNullOrWhiteSpace(solutionId) || string.IsNullOrWhiteSpace(displayName))
+            throw new ArgumentException("Solution id and display name are required.");
+        SolutionSafety.RequireId(solutionId, nameof(solutionId));
+        if (displayName.Length > 128)
+            throw new ArgumentException("Invalid product name.");
+    }
+
     /// <summary>
     /// Creates a SIM_ONLY product solution seeded with every station at the legacy default
-    /// threshold. Mirrors the existing A6 bootstrap so behaviour is identical to the CLI.
+    /// threshold. The product row and ALL 7 station drafts commit in one A6 transaction:
+    /// a failure leaves no empty/partial product. Mirrors the A6 CLI defaults.
     /// </summary>
     public ProductSolution CreateSimSolution(string solutionId, string displayName,
         double brightThreshold = 127, double minimumBrightFraction = 0.1)
     {
-        if (string.IsNullOrWhiteSpace(solutionId) || string.IsNullOrWhiteSpace(displayName))
-            throw new ArgumentException("Solution id and display name are required.");
+        ValidateNewSolution(solutionId, displayName);
+        // StationRecipe.Validate only bounds these tunables; the SIM_ONLY station rule has
+        // its own ranges. Reject them BEFORE any product row or station draft is written.
+        if (!double.IsFinite(brightThreshold) || brightThreshold != Math.Truncate(brightThreshold) ||
+            brightThreshold is < 1 or > 254)
+            throw new ArgumentOutOfRangeException(nameof(brightThreshold),
+                "SIM_ONLY brightThreshold must be a finite integer from 1 to 254.");
+        if (!double.IsFinite(minimumBrightFraction) || minimumBrightFraction is < 0 or > 1)
+            throw new ArgumentOutOfRangeException(nameof(minimumBrightFraction),
+                "SIM_ONLY minimumBrightFraction must be a finite value from 0 to 1.");
         var solution = new ProductSolution(solutionId, "SIM_MACHINE_01", displayName);
-        repository.CreateSolution(solution, actor);
+        var drafts = new Dictionary<string, StationRecipe>(StringComparer.Ordinal);
         foreach (var station in ChannelCatalog.All.GroupBy(x => x.StationId))
-        {
-            repository.SaveDraft(solutionId,
-                new StationRecipe(station.Key,
-                    station.Select(c => c.ChannelId).ToArray(),
-                    new Dictionary<string, double>
-                    {
-                        ["brightThreshold"] = brightThreshold,
-                        ["minimumBrightFraction"] = minimumBrightFraction
-                    }),
-                expectedRevision: 0, actor);
-        }
+            drafts[station.Key] = new StationRecipe(station.Key,
+                station.Select(c => c.ChannelId).ToArray(),
+                new Dictionary<string, double>
+                {
+                    ["brightThreshold"] = brightThreshold,
+                    ["minimumBrightFraction"] = minimumBrightFraction
+                });
+        repository.CreateSolutionWithDrafts(solution, drafts, actor);
         return solution;
     }
 
@@ -78,40 +95,99 @@ public sealed class OfflineProductManager
         SolutionParameterEditor.ReadDraft(repository, solutionId, channelId);
 
     /// <summary>
-    /// Validates and saves one station draft with optimistic concurrency. Validation runs
-    /// before the write so an unusable ROI/parameter set never reaches the database.
+    /// Validates and saves one station draft with optimistic concurrency. Installed-plugin,
+    /// parameter, ROI and real-image-size validation runs BEFORE the write so an unusable
+    /// set never reaches the database. A ROI needs its verified source-frame size.
     /// </summary>
-    public StationDraft SaveStation(string solutionId, StationRecipe recipe, long expectedRevision)
+    public StationDraft SaveStation(string solutionId, StationRecipe recipe, long expectedRevision,
+        IReadOnlyDictionary<string, RoiFrameSize>? verifiedFrames = null)
     {
         ArgumentNullException.ThrowIfNull(recipe);
-        recipe.Validate();
-        RoiReleaseWorkflow.ValidateStationRois(recipe);
+        var previous = repository.GetDraft(solutionId, recipe.StationId)?.Recipe;
+        OfflineRecipeValidator.RequireValid(recipe, verifiedFrames, previous);
         return repository.SaveDraft(solutionId, recipe, expectedRevision, actor);
     }
 
+    /// <summary>Read-only whole-product validation; used by the offline editor before publish.</summary>
+    public IReadOnlyList<OfflineRecipeIssue> ValidateSolution(string solutionId,
+        IReadOnlyDictionary<string, RoiFrameSize>? verifiedFrames = null) =>
+        OfflineRecipeValidator.InspectSolution(repository, solutionId, verifiedFrames);
+
     /// <summary>
-    /// Publishes an immutable Release from the current drafts and re-verifies the persisted
-    /// digest. There is no UI-only success: the returned release is the stored A6 record.
+    /// Legacy/CLI-compatible publish: pre-validates installed plugins, ranges and ROI image
+    /// sizes before calling the repository, then reads the persisted record back.
     /// </summary>
-    public OfflinePublishResult Publish(string solutionId)
+    public OfflinePublishResult Publish(string solutionId,
+        IReadOnlyDictionary<string, RoiFrameSize>? verifiedFrames = null)
     {
         try
         {
+            var issues = OfflineRecipeValidator.InspectSolution(repository, solutionId, verifiedFrames);
+            if (issues.Count != 0)
+                return new OfflinePublishResult(OfflinePublishOutcome.Rejected, null,
+                    "发布前校验失败，未写入任何 Release：" + OfflineRecipeValidator.Describe(issues));
             PublishedRelease release = repository.Publish(solutionId, actor);
             release.Verify();
-            foreach (StationRecipe station in release.Manifest.Stations)
-                RoiReleaseWorkflow.ValidateStationRois(station);
             return new OfflinePublishResult(OfflinePublishOutcome.Published, release,
                 "SIM_PRODUCT_PUBLISHED release=" + release.ReleaseId +
                 " sha256=" + release.ContentSha256 +
                 " stations=" + release.Manifest.Stations.Count);
         }
-        catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException
-            or ArgumentException or KeyNotFoundException)
+        catch (Exception ex) when (IsPublishFailure(ex))
         {
             return new OfflinePublishResult(OfflinePublishOutcome.Rejected, null, ex.Message);
         }
     }
+
+    /// <summary>
+    /// Operator-safe publish. The repository verifies the whole-product station revision
+    /// snapshot (CAS) and runs the installed-plugin/ROI validation inside ONE immediate A6
+    /// transaction before inserting the immutable release. A stale snapshot or any invalid
+    /// draft rejects the publish and leaves no new Release row.
+    /// </summary>
+    public OfflinePublishResult Publish(string solutionId,
+        IReadOnlyDictionary<string, long> expectedStationRevisions,
+        IReadOnlyDictionary<string, RoiFrameSize>? verifiedFrames)
+    {
+        ArgumentNullException.ThrowIfNull(expectedStationRevisions);
+        try
+        {
+            var release = repository.Publish(solutionId, actor, expectedStationRevisions,
+                manifest => ValidateManifestStations(manifest, verifiedFrames));
+            release.Verify();
+            return new OfflinePublishResult(OfflinePublishOutcome.Published, release,
+                "SIM_PRODUCT_PUBLISHED release=" + release.ReleaseId +
+                " sha256=" + release.ContentSha256 +
+                " stations=" + release.Manifest.Stations.Count);
+        }
+        catch (Exception ex) when (IsPublishFailure(ex))
+        {
+            return new OfflinePublishResult(OfflinePublishOutcome.Rejected, null, ex.Message);
+        }
+    }
+
+    /// <summary>Whole-product draft revisions the operator must explicitly confirm.</summary>
+    public IReadOnlyDictionary<string, long> ListDraftRevisions(string solutionId) =>
+        repository.ListDraftRevisions(solutionId);
+
+    private static void ValidateManifestStations(ReleaseManifest manifest,
+        IReadOnlyDictionary<string, RoiFrameSize>? verifiedFrames)
+    {
+        foreach (var station in manifest.Stations)
+        {
+            var issues = OfflineRecipeValidator.Inspect(station, verifiedFrames);
+            if (issues.Count != 0)
+                throw new InvalidDataException("发布前校验失败，未写入任何 Release：" +
+                    OfflineRecipeValidator.Describe(issues));
+        }
+    }
+
+    private static bool IsPublishFailure(Exception ex) =>
+        ex is InvalidDataException or InvalidOperationException or ArgumentException
+            or KeyNotFoundException or System.Data.Common.DbException;
+
+    /// <summary>Read-only list of releases actually persisted in this A6 database.</summary>
+    public IReadOnlyList<PublishedRelease> ListReleases() => repository.ListReleases();
 
     /// <summary>Reads back a stored release; proves the publish really persisted.</summary>
     public PublishedRelease RequirePublished(string releaseId) => repository.RequireRelease(releaseId);

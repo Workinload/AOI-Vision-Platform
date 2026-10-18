@@ -5,16 +5,18 @@ namespace AOI.Solutions;
 internal sealed class SqliteSupport
 {
     private readonly string _connectionString;
+    private readonly bool _readOnly;
     public string FilePath { get; }
 
-    public SqliteSupport(string filePath)
+    public SqliteSupport(string filePath, bool readOnly = false)
     {
         FilePath = Path.GetFullPath(filePath);
-        Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
+        _readOnly = readOnly;
+        if (!readOnly) Directory.CreateDirectory(Path.GetDirectoryName(FilePath)!);
         _connectionString = new SqliteConnectionStringBuilder
         {
             DataSource = FilePath,
-            Mode = SqliteOpenMode.ReadWriteCreate,
+            Mode = readOnly ? SqliteOpenMode.ReadOnly : SqliteOpenMode.ReadWriteCreate,
             Pooling = false,
             ForeignKeys = true
         }.ToString();
@@ -32,6 +34,8 @@ internal sealed class SqliteSupport
 
     public void Initialize(string schema)
     {
+        if (_readOnly)
+            throw new InvalidOperationException("Read-only A6 access cannot initialize or repair a store.");
         using var db = Open();
         using var cmd = db.CreateCommand();
         cmd.CommandText = "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL;" + schema;
