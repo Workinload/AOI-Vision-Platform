@@ -229,6 +229,8 @@ public static class SimFullHost
             new LegacyJournaledFinalOutput(legacyFins!, outputJournal,
                 interlock, finalAudit!);
         _ = SimReportIpc.ServeAsync(root, ct);
+        // A0 operator evidence: per-workpiece A7 milestones, no production commands.
+        _ = SimTimingIpc.ServeAsync(root, ct);
         var simConfig = new RoiConfigStore(Path.Combine(folder, "sim-config.sqlite"), MachineRole.Master);
         var bridge = new SimProductionBridge(folder);
         var physicalCapture = legacyFins is null ? null :
