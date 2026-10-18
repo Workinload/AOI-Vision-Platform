@@ -1,0 +1,13 @@
+=== create intermediate junction: alias -> run ===
+Junction created for <REPO>-scratch\evidence3\alias <<===>> <REPO>-scratch\evidence3\run
+
+=== negative: --out alias/exports/smuggled (physically run/exports/smuggled) ===
+exit=2
+OFFLINE_COMPARE_ERROR OUTPUT_ROOT_INSIDE_DATABASE_RUN_ROOT: reports must not be written into the A6 run folder (<REPO>-scratch\evidence3\run); export the report to a separate directory.
+physical target created: False
+_db-snapshot created:   False
+source -wal present:    False
+source -shm present:    False
+
+=== positive control: plain sibling directory ===
+exit=0  manifest=True

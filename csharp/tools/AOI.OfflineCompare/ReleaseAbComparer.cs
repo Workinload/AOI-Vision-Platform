@@ -28,7 +28,15 @@ public sealed class ReleaseAbComparer
 
     private readonly OpenCvInspectionProcessor _contour = new();
 
-    public AbCompareManifest Compare(AbCompareRequest request)
+    public AbCompareManifest Compare(AbCompareRequest request) => CompareCore(request, null);
+
+    /// <summary>Deterministic seam for the fail-closed invariant test: the callback runs
+    /// after inspection and before the final input/DB stability check, so a test can
+    /// mutate an input at exactly the moment a concurrent writer would.</summary>
+    internal AbCompareManifest CompareWithHook(AbCompareRequest request, Action? afterInspection) =>
+        CompareCore(request, afterInspection);
+
+    private AbCompareManifest CompareCore(AbCompareRequest request, Action? afterInspection)
     {
         ArgumentNullException.ThrowIfNull(request);
         if (string.IsNullOrWhiteSpace(request.ReleaseIdA) || string.IsNullOrWhiteSpace(request.ReleaseIdB))
@@ -171,10 +179,21 @@ public sealed class ReleaseAbComparer
                 width, height, decodeStatus, decodeReason, rows));
         }
 
+        afterInspection?.Invoke();
+
         var databaseShaAfter = HashFile(databasePath);
+        bool databaseUnchanged = string.Equals(databaseShaBefore, databaseShaAfter, StringComparison.Ordinal);
         var inputsUnchanged = inputHashes.All(x =>
             string.Equals(x.Value, File.Exists(Path.Combine(imageRoot, x.Key))
                 ? HashFile(Path.Combine(imageRoot, x.Key)) : null, StringComparison.Ordinal));
+
+        // Fail closed BEFORE any success-shaped artefact is persisted: a run whose
+        // inputs changed must never leave ab-manifest.json / CSV / summary behind.
+        if (!databaseUnchanged || !inputsUnchanged)
+            throw new InvalidOperationException(
+                "INPUT_MUTATED_DURING_COMPARISON: the A6 database or an input PNG changed while " +
+                "comparing, so the result cannot be attributed to one immutable image set. " +
+                "No report was written; re-run against a stable offline snapshot.");
 
         // Reports are committed as public evidence: keep machine names and absolute
         // developer paths out by default. Operators can opt in for local-only runs.
@@ -195,7 +214,7 @@ public sealed class ReleaseAbComparer
             databaseShaBefore,
             databaseShaAfter,
             HashFile(snapshotPath),
-            string.Equals(databaseShaBefore, databaseShaAfter, StringComparison.Ordinal),
+            databaseUnchanged,
             shownImages,
             shownOutput,
             request.LineMapping.ToString(),
@@ -211,10 +230,6 @@ public sealed class ReleaseAbComparer
             NotVerified(request.LineMapping));
 
         WriteEvidence(manifest, outputRoot, inputHashes);
-
-        if (!manifest.DatabaseUnchanged || !manifest.InputImagesUnchanged)
-            throw new InvalidOperationException(
-                "INPUT_MUTATED_DURING_COMPARISON: the database or an input PNG changed while comparing.");
         return manifest;
     }
 
@@ -476,40 +491,70 @@ public sealed class ReleaseAbComparer
                 "DATABASE_INSIDE_OUTPUT_ROOT: never host the A6 database in a report folder.");
         var runRoot = Path.GetDirectoryName(realDatabase);
         if (!string.IsNullOrEmpty(runRoot) &&
-            !string.Equals(runRoot, Path.GetPathRoot(realDatabase), StringComparison.OrdinalIgnoreCase) &&
+            !string.Equals(runRoot, Path.GetPathRoot(realDatabase), PathComparison) &&
             IsSameOrInside(realOutput, runRoot))
             throw new InvalidOperationException(
                 "OUTPUT_ROOT_INSIDE_DATABASE_RUN_ROOT: reports must not be written into the A6 run folder (" +
                 runRoot + "); export the report to a separate directory.");
     }
 
-    /// <summary>Resolves an existing path through symlinks; a not-yet-created tail is
-    /// appended to the resolved real ancestor so alias escapes are still detected.</summary>
+    /// <summary>
+    /// Canonical physical path: EVERY existing component is resolved through symlinks and
+    /// junctions one by one, so an intermediate link (not merely a linked final node)
+    /// cannot hide the real location. A not-yet-created tail keeps its literal parts.
+    /// </summary>
     private static string ResolveRealPath(string path)
     {
         var full = Path.GetFullPath(path);
-        var tail = new List<string>();
-        var current = full;
-        while (!File.Exists(current) && !Directory.Exists(current))
-        {
-            var parent = Path.GetDirectoryName(current);
-            if (string.IsNullOrEmpty(parent)) return full;
-            tail.Insert(0, Path.GetFileName(current));
-            current = parent;
-        }
-        string resolved;
-        if (Directory.Exists(current))
-            resolved = new DirectoryInfo(current).ResolveLinkTarget(returnFinalTarget: true)?.FullName
-                ?? current;
-        else
-            resolved = new FileInfo(current).ResolveLinkTarget(returnFinalTarget: true)?.FullName ?? current;
-        foreach (var part in tail) resolved = Path.Combine(resolved, part);
-        return Path.GetFullPath(resolved);
+        var root = Path.GetPathRoot(full) ?? string.Empty;
+        if (root.Length == 0) return full;
+        var remainder = full[root.Length..];
+        var parts = remainder.Split(
+            [Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar],
+            StringSplitOptions.RemoveEmptyEntries);
+        var current = root;
+        foreach (var part in parts)
+            current = ResolveComponent(Path.Combine(current, part));
+        return Path.GetFullPath(current);
     }
 
+    /// <summary>Resolves one path component through its link chain (bounded).</summary>
+    private static string ResolveComponent(string candidate)
+    {
+        var current = candidate;
+        for (var depth = 0; depth < 32; depth++)
+        {
+            FileSystemInfo? info = Directory.Exists(current)
+                ? new DirectoryInfo(current)
+                : File.Exists(current) ? new FileInfo(current) : null;
+            if (info is null) return current; // not created yet: keep the literal component
+            string? target;
+            try { target = info.LinkTarget; }
+            catch (IOException) { target = null; }
+            if (target is null)
+            {
+                // Junctions/other reparse points are not reported as LinkTarget on every
+                // platform; fall back to the one-hop target resolver before giving up.
+                try { target = info.ResolveLinkTarget(returnFinalTarget: false)?.FullName; }
+                catch (IOException) { target = null; }
+            }
+            if (target is null) return current;
+            current = Path.IsPathRooted(target)
+                ? Path.GetFullPath(target)
+                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(current) ?? string.Empty, target));
+        }
+        throw new InvalidOperationException(
+            "SYMLINK_DEPTH_EXCEEDED: the report, image or database path has too many link hops.");
+    }
+
+    // Windows paths are case-insensitive; Linux paths are NOT. Comparing case-insensitively
+    // on Linux would accept a sibling that only differs by case.
+    private static readonly StringComparison PathComparison =
+        OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+
     private static bool IsSameOrInside(string candidate, string parent) =>
-        candidate.Equals(parent, StringComparison.OrdinalIgnoreCase) ||
-        candidate.StartsWith(parent + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase);
+        candidate.Equals(parent, PathComparison) ||
+        candidate.StartsWith(parent + Path.DirectorySeparatorChar, PathComparison);
 
     private static bool IsPolicyFailure(Exception ex) =>
         ex is NotSupportedException or InvalidDataException or InvalidOperationException

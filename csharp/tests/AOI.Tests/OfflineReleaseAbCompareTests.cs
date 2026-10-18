@@ -10,7 +10,7 @@ namespace AOI.Tests;
 
 /// <summary>
 /// DSH-B offline A/B re-inspection: one immutable PNG set, two persisted A6
-/// releases, real OpenCV pixel results. Scoped acceptance IDs TC-154-AB-01..07.
+/// releases, real OpenCV pixel results. Scoped acceptance IDs TC-154-AB-01..09.
 /// SIM_ONLY; no PLC, camera or production write.
 /// </summary>
 [TestFixture]
@@ -298,6 +298,76 @@ public sealed class OfflineReleaseAbCompareTests
         {
             File.Delete(wal);
         }
+    }
+
+    [Test]
+    [Description("TC-154-AB-08 an INTERMEDIATE symlink cannot smuggle the report into the run root or the image tree")]
+    public void IntermediateSymlinkCannotSmuggleReportIntoRunRootOrImageTree()
+    {
+        var exports = Path.Combine(_run, "exports");
+        Directory.CreateDirectory(exports); // real sub-directory inside the A6 run root
+        var runAlias = Path.Combine(_root, "run-alias");
+        var imageAlias = Path.Combine(_root, "image-alias");
+        try
+        {
+            Directory.CreateSymbolicLink(runAlias, _run);
+            Directory.CreateSymbolicLink(imageAlias, _images);
+        }
+        catch (Exception ex) when (ex is UnauthorizedAccessException or IOException
+            or PlatformNotSupportedException or System.Security.SecurityException)
+        {
+            Assert.Ignore("SYMLINK_CREATION_UNAVAILABLE: " + ex.GetType().Name + ": " + ex.Message);
+            return;
+        }
+
+        // The link sits in an INTERMEDIATE component, and the leaf below it is a normal
+        // directory, so resolving only the final node would have missed the escape.
+        var smuggledIntoRun = Path.Combine(runAlias, "exports", "smuggled");
+        var intoRun = Assert.Throws<InvalidOperationException>(() =>
+            new ReleaseAbComparer().Compare(new AbCompareRequest(_database, _images,
+                smuggledIntoRun, _releases.ReleaseA, _releases.ReleaseB)));
+        Assert.Multiple(() =>
+        {
+            Assert.That(intoRun!.Message, Does.Contain("OUTPUT_ROOT_INSIDE_DATABASE_RUN_ROOT"));
+            Assert.That(Directory.Exists(Path.Combine(exports, "smuggled")), Is.False);
+            Assert.That(Directory.Exists(Path.Combine(exports, "smuggled", "_db-snapshot")), Is.False);
+            Assert.That(Directory.Exists(smuggledIntoRun), Is.False);
+            // The rejected run must not create sidecars next to the source database.
+            Assert.That(File.Exists(_database + "-wal"), Is.False);
+            Assert.That(File.Exists(_database + "-shm"), Is.False);
+        });
+
+        var smuggledIntoImages = Path.Combine(imageAlias, "smuggled");
+        var intoImages = Assert.Throws<InvalidOperationException>(() =>
+            new ReleaseAbComparer().Compare(new AbCompareRequest(_database, _images,
+                smuggledIntoImages, _releases.ReleaseA, _releases.ReleaseB)));
+        Assert.Multiple(() =>
+        {
+            Assert.That(intoImages!.Message, Does.Contain("OUTPUT_ROOT_INSIDE_IMAGE_TREE"));
+            Assert.That(Directory.Exists(Path.Combine(_images, "smuggled")), Is.False);
+        });
+    }
+
+    [Test]
+    [Description("TC-154-AB-09 input mutation during a run fails closed and writes no success report")]
+    public void InputMutationDuringRunWritesNoSuccessReport()
+    {
+        var report = ReportDir("report-mutated");
+        var failure = Assert.Throws<InvalidOperationException>(() =>
+            new ReleaseAbComparer().CompareWithHook(
+                new AbCompareRequest(_database, _images, report,
+                    _releases.ReleaseA, _releases.ReleaseB),
+                // Exactly where a concurrent writer would change the evidence mid-run.
+                () => File.AppendAllText(Path.Combine(_images, "CH06.png"), "tampered")));
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(failure!.Message, Does.Contain("INPUT_MUTATED_DURING_COMPARISON"));
+            Assert.That(File.Exists(Path.Combine(report, "ab-manifest.json")), Is.False);
+            Assert.That(File.Exists(Path.Combine(report, "channel-results.csv")), Is.False);
+            Assert.That(File.Exists(Path.Combine(report, "summary.txt")), Is.False);
+            Assert.That(File.Exists(Path.Combine(report, "inputs.sha256.txt")), Is.False);
+        });
     }
 
     [Test]

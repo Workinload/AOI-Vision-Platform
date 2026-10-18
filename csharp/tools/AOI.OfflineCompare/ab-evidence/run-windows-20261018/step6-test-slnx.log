@@ -1,60 +1,114 @@
-Test run for <REPO>\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll (.NETCoreApp,Version=v10.0)
-Test run for <REPO>\csharp\tests\AOI.Ui.Client.Tests\bin\Debug\net10.0\AOI.Ui.Client.Tests.dll (.NETCoreApp,Version=v10.0)
-Test run for <REPO>\csharp\tests\AOI.Solutions.Tests\bin\Debug\net10.0\AOI.Solutions.Tests.dll (.NETCoreApp,Version=v10.0)
 Test run for <REPO>\csharp\tests\AOI.Diagnostics.Tests\bin\Debug\net10.0\AOI.Diagnostics.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for <REPO>\csharp\tests\AOI.Solutions.Tests\bin\Debug\net10.0\AOI.Solutions.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for <REPO>\csharp\tests\AOI.Ui.Client.Tests\bin\Debug\net10.0\AOI.Ui.Client.Tests.dll (.NETCoreApp,Version=v10.0)
+Test run for <REPO>\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll (.NETCoreApp,Version=v10.0)
 A total of 1 test files matched the specified pattern.
 A total of 1 test files matched the specified pattern.
 A total of 1 test files matched the specified pattern.
 A total of 1 test files matched the specified pattern.
 NUnit Adapter 6.3.1.0: Test execution started
 Running all tests in <REPO>\csharp\tests\AOI.Tests\bin\Debug\net10.0\AOI.Tests.dll
+   NUnit3TestExecutor discovered 143 of 143 NUnit test cases using Current Discovery mode, Non-Explicit run
+A1_ALGORITHM_ERROR_ISOLATED_PASS outcome=ERROR good_eligible=0
+
+  Passed IdenticalPayloadHashButMutatedEnvelopeMetadataNeverProducesDuplicateAck [132 ms]
+  Passed LegacyInboxWithoutFullEnvelopeHashCannotCertifyRetryAsPersisted [33 ms]
+  Passed SlaveCannotClaimMasterOwnedCameraEvenWithValidPixelShaAndIdentity [74 ms]
+  Passed WrongPeerSenderCannotRegisterEvenWhenAllWorkpieceFieldsAreConsistent [16 ms]
+  Passed All45SignalsAnd14FieldGatesSurviveA2ProjectionWithoutEnablingWrites [37 ms]
+  Passed ForgedLiveFieldStateOrWriteAuthorizationFailsClosed [3 ms]
+  Passed CannotRelabelAnotherWorkpiecesEvidenceOrExposeUnboundedHistory [3 ms]
+  Passed PerWorkpieceReadOnlyMilestones_PreserveActualObservedIdentity [19 ms]
+  Passed AlgorithmErrorRemainsExportableButNeverQualifiesAsGoodFinalEvidence [105 ms]
+A1_MISBOUND_FRAME_ISOLATED_PASS rejects=1 valid_capture=1
+
+A1_ST05_MISSING_FRAME_ISOLATED_PASS failed=1 healthy=1 ack_error=3
+
+A1_LINE_PARENT_TWO_RESULTS_PASS capture=fac5f728-23b2-4c64-874d-0f9e671362a6
+
+A1_ST05_FRAME_FIRST_PASS capture=7df11856-07ed-4641-9052-7a4ad3267463
+
+A1_ST05_REQUEST_FIRST_PASS [{"ticket":{"workpiece":{"workpieceId":"9629e45c-cbfc-43f2-9f96-88867c012115","barcode":"DUPLICATE","epoch":3,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"2b6a3432-4e87-4794-9e13-2dd78d113b80","createdAtUtc":"2026-10-18T16:30:49.0881196+00:00"},"captureId":"07458653-1a72-49af-9a0a-7bdd6d28fc56","attemptNo":1,"physicalDeviceId":"HIK-M-2","expiresAtUtc":"2026-10-18T16:32:49.101581+00:00","isSimulation":true,"channelIds":["CH06"],"stationId":"ST05","plcAddress":"D1011"},"phase":"INSPECTION_COMPLETED","plcRequestObserved":true,"frameAcquired":true,"frameValidated":true,"pendingCamDone":null,"confirmedCamDone":2,"inspectionChannels":["CH06"],"failureReason":null,"lastSequence":6,"outcomes":{"CH06":"ok"},"rejectedFrameCount":0,"lastRejectedFrameReason":null,"hasAllInspections":true,"readyForProductionResult":true}]
+
+  Passed BadFrameIsJournaledWithoutInterruptingAHealthyPhysicalCapture [77 ms]
+  Passed MissingFrameTimesOutWithErrorCamDoneButDoesNotBlockSecondWorkpiece [98 ms]
+  Passed OneLineCameraSharedParentRequiresTwoDistinctInspectionChannelResults [95 ms]
+  Passed RetakeAttemptTwoOverridesFailedAttemptAndLateFirstFrameNeverBecomesCurrent [98 ms]
+  Passed St05HardTriggeredFrameBeforePlcRequestUsesSameCaptureIdWithoutSoftTrigger [73 ms]
+  Passed St05RealOpenCvRequestFirstThenFramePersistsResultAndReplaysOrderedEvents [118 ms]
+  Passed WrongPhysicalItemAndWrongEpochCannotBorrowFrameEvenWhenBarcodeMatches [69 ms]
+  Passed ConcurrentSameBarcodeWorkpiecesAreNeverMappedToLatest [41 ms]
+  Passed FlowHoldsMissingChannelAndWrongEndScanLineage [14 ms]
+A1_FINAL_ABNORMAL_ORDER_PASS scenario=BarcodeFailure D2099=3 then D1016=2 durable_hold=1 good=0
+
+A1_FINAL_ABNORMAL_ORDER_PASS scenario=BarcodeMismatch D2099=4 then D1016=2 durable_hold=1 good=0
+
+A1_FINAL_RESTART_UNKNOWN_PASS claimed=1 replay_writes=0
+
+A1_FINAL_ACK_LOSS_PASS same_barcode=2 distinct_workpieces=2 no_replay=1
+
+  Passed FlowRejectsForeignCapturedFrameEvenWithMatchingBarcode [1 ms]
+  Passed OutboxRetryIsBoundedAndAcknowledgedMessagesDropOut [7 ms]
+  Passed SlaveRecoversAfterInboxCommitBeforeResultAndDoesNotDuplicateOutput [62 ms]
+  Passed SlaveRecoveryNeverGeneratesFixturesForOtherReleases [24 ms]
+  Passed AbnormalPersistedHoldEnforcesReverseSequenceAndNeverCreatesGood(BarcodeFailure,3) [130 ms]
+  Passed AbnormalPersistedHoldEnforcesReverseSequenceAndNeverCreatesGood(BarcodeMismatch,4) [92 ms]
+  Passed AClaimedPossiblySentWriteIsUnknownAfterRestartAndNeverAutomaticallyRepeated [78 ms]
+  Passed ExclusiveWriterLeasePreventsSecondMasterFromIssuingTheSameOutput [14 ms]
+  Passed LostAckAndWrongReadbackKeepOnlyThatWorkpieceInManualReconciliation [104 ms]
+A1_FINAL_SLAVE_HOLD_PASS no_good=1 no_output_intent=1
+
 NUnit Adapter 6.3.1.0: Test execution started
+NUnit Adapter 6.3.1.0: Test execution started
+Running all tests in <REPO>\csharp\tests\AOI.Ui.Client.Tests\bin\Debug\net10.0\AOI.Ui.Client.Tests.dll
+Running all tests in <REPO>\csharp\tests\AOI.Diagnostics.Tests\bin\Debug\net10.0\AOI.Diagnostics.Tests.dll
 NUnit Adapter 6.3.1.0: Test execution started
 Running all tests in <REPO>\csharp\tests\AOI.Solutions.Tests\bin\Debug\net10.0\AOI.Solutions.Tests.dll
-Running all tests in <REPO>\csharp\tests\AOI.Ui.Client.Tests\bin\Debug\net10.0\AOI.Ui.Client.Tests.dll
-NUnit Adapter 6.3.1.0: Test execution started
-Running all tests in <REPO>\csharp\tests\AOI.Diagnostics.Tests\bin\Debug\net10.0\AOI.Diagnostics.Tests.dll
-   NUnit3TestExecutor discovered 141 of 141 NUnit test cases using Current Discovery mode, Non-Explicit run
-   NUnit3TestExecutor discovered 36 of 36 NUnit test cases using Current Discovery mode, Non-Explicit run
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:56487 SIM_ONLY
+A1_FINAL_REAL_UDP_PASS token=1 steps=D1016_1,D2099_2 sid_proofs=2 readbacks=2 replay_completed=1 repeat_writes=0
+
    NUnit3TestExecutor discovered 41 of 41 NUnit test cases using Current Discovery mode, Non-Explicit run
    NUnit3TestExecutor discovered 53 of 53 NUnit test cases using Current Discovery mode, Non-Explicit run
-  Passed BoundedObserverDoesNotGrowIndefinitelyOrAcceptOfflineAsARealEvent [22 ms]
+   NUnit3TestExecutor discovered 36 of 36 NUnit test cases using Current Discovery mode, Non-Explicit run
+  Passed BoundedObserverDoesNotGrowIndefinitelyOrAcceptOfflineAsARealEvent [90 ms]
   Passed SnapshotObserverDedupeAndWorkpieceIsolationAreReal [3 ms]
-  Passed St05ShowsActualResultAndSensorButNeverInventsPlcRequestFrameReadyOrAck [9 ms]
-  Passed VerifiedPngMustBelongToSelectedWorkpieceAndDoesNotProveCamDone [1 ms]
-  Passed OperatorCanPickExactWorkpieceIdWithoutNavigatingAwayFromDebugger [25 ms]
-  Passed SelectingActualChannelEventFocusesCameraButParentLineFrameDoesNotGuessChild [< 1 ms]
+  Passed St05ShowsActualResultAndSensorButNeverInventsPlcRequestFrameReadyOrAck [10 ms]
+  Passed VerifiedPngMustBelongToSelectedWorkpieceAndDoesNotProveCamDone [< 1 ms]
+  Passed OperatorCanPickExactWorkpieceIdWithoutNavigatingAwayFromDebugger [532 ms]
+  Passed SelectingActualChannelEventFocusesCameraButParentLineFrameDoesNotGuessChild [1 ms]
   Passed ReadOnlyHoldProjectionPreservesCodeAndPhysicalIdentity [2 ms]
-  Passed RejectsContradictoryCountersDuplicatedAndMalformedHolds [3 ms]
-  Passed DisplaysDistinctPhysicalWorkpiecesAtDifferentSimStationsDespiteEqualBarcodes [5 ms]
+  Passed RejectsContradictoryCountersDuplicatedAndMalformedHolds [4 ms]
+  Passed DisplaysDistinctPhysicalWorkpiecesAtDifferentSimStationsDespiteEqualBarcodes [6 ms]
   Passed RejectsDuplicateTokensAndSlaveClaimingPhysicalMasterMotion [< 1 ms]
   Passed ReadOnlyHistoryPreservesSeparateWorkpieceIdsWithTheSameBarcode [2 ms]
   Passed RejectsUntrustworthyHistoryInsteadOfDisplayingFalseProductionTotals [< 1 ms]
   Passed MissingChannelsStayExplicitlyUnknown [< 1 ms]
   Passed RejectsRealWritesAndWrongRole [< 1 ms]
   Passed RejectsStaleAndMisbinding [< 1 ms]
-  Passed RoiIsLocalAndValidated [1 ms]
-  Passed MapReallyContainsAllElevenChannelsFromNinePhysicalDevices [3 ms]
-  Passed NonCameraSignalUsesDeclaredStationWithoutInventingChannel [1 ms]
+  Passed RoiIsLocalAndValidated [2 ms]
+  Passed MapReallyContainsAllElevenChannelsFromNinePhysicalDevices [5 ms]
+  Passed NonCameraSignalUsesDeclaredStationWithoutInventingChannel [2 ms]
   Passed SharedLineScanSignalMapsToBothActualChannels [< 1 ms]
-  Passed StationClickAndChannelClickStayLinkedAndGalleryIsRealViewModel [2 ms]
+  Passed StationClickAndChannelClickStayLinkedAndGalleryIsRealViewModel [3 ms]
   Passed UnknownMapStationAndInvalidNavigationCannotChangeOperatorSelection [< 1 ms]
-  Passed RejectForgedFieldLiveAndAuthorizationState [4 ms]
-  Passed ValidCatalogIsVisibleAsStaticEvidenceOnly [< 1 ms]
-  Passed CancelledDialogWritesNothing [7 ms]
-  Passed CsvKeepsHeaderColumnOrderAndFormulaInjectionGuard [1 ms]
-  Passed EmptyPathIsTreatedAsCancelled [< 1 ms]
+  Passed RejectForgedFieldLiveAndAuthorizationState [5 ms]
+  Passed SlaveCaptureHoldCannotBeConvertedIntoNormalGoodEvenAfterRestart [46 ms]
+  Passed TwoConfirmedStepsAreActualLoopbackFinsDatagramsAndNeverSendAgainAfterReopen [127 ms]
+  Passed ValidCatalogIsVisibleAsStaticEvidenceOnly [1 ms]
+  Passed CancelledDialogWritesNothing [9 ms]
+  Passed CsvKeepsHeaderColumnOrderAndFormulaInjectionGuard [3 ms]
+  Passed EmptyPathIsTreatedAsCancelled [1 ms]
   Passed NullPickerIsExplicitlyUnavailable [< 1 ms]
   Passed PickerFailureIsReportedNotSwallowed [< 1 ms]
-  Passed SavedFileMatchesBuilderExactly [58 ms]
+  Passed SavedFileMatchesBuilderExactly [25 ms]
   Passed WriteFailureReportsTheRealReason [1 ms]
-  Passed RoiSnapshotsMustRejectForeignDuplicateAndInvalidCoordinates [2 ms]
+  Passed RoiSnapshotsMustRejectForeignDuplicateAndInvalidCoordinates [3 ms]
   Passed SavedLocalRoiIsVisibleButNotAppliedToPublishedProduct [< 1 ms]
-  Passed DuplicateBarcodeRemainsIndependentAndDailyWeeklyCountsRoundTrip [19 ms]
+  Passed DuplicateBarcodeRemainsIndependentAndDailyWeeklyCountsRoundTrip [27 ms]
   Passed InconsistentTotalsRatesDuplicateIdsAndProductionClaimAreRejected [1 ms]
-  Passed AnAckWithDifferentOperationIdOrSidIsNotAcceptedAsThisWriteAcknowledgment [8 ms]
-  Passed LineScanParentFrameMapsToTwoChannelsButNotFictitiousChildInspection [< 1 ms]
-  Passed RealLoopbackTcpQueriesExactWorkpieceAndConsumesA0CompatibleJson [25 ms]
+  Passed AnAckWithDifferentOperationIdOrSidIsNotAcceptedAsThisWriteAcknowledgment [10 ms]
+  Passed LineScanParentFrameMapsToTwoChannelsButNotFictitiousChildInspection [1 ms]
+  Passed RealLoopbackTcpQueriesExactWorkpieceAndConsumesA0CompatibleJson [40 ms]
   Passed RejectsOversizedAndNonSimulatedRepliesAndPreservesA7Findings [2 ms]
   Passed RequestFrameAndCamDoneUseTheLatestCaptureAttemptOnly [< 1 ms]
   Passed SentPacketAndInspectionOkCannotInventAnAcknowledgedCamDone [< 1 ms]
@@ -63,151 +117,20 @@ Running all tests in <REPO>\csharp\tests\AOI.Diagnostics.Tests\bin\Debug\net10.0
 Test Run Successful.
 Total tests: 41
      Passed: 41
- Total time: 0.8386 Seconds
-A1_ALGORITHM_ERROR_ISOLATED_PASS outcome=ERROR good_eligible=0
-
-  Passed IdenticalPayloadHashButMutatedEnvelopeMetadataNeverProducesDuplicateAck [134 ms]
-  Passed LegacyInboxWithoutFullEnvelopeHashCannotCertifyRetryAsPersisted [39 ms]
-  Passed SlaveCannotClaimMasterOwnedCameraEvenWithValidPixelShaAndIdentity [87 ms]
-  Passed WrongPeerSenderCannotRegisterEvenWhenAllWorkpieceFieldsAreConsistent [33 ms]
-  Passed All45SignalsAnd14FieldGatesSurviveA2ProjectionWithoutEnablingWrites [27 ms]
-  Passed ForgedLiveFieldStateOrWriteAuthorizationFailsClosed [1 ms]
-  Passed CannotRelabelAnotherWorkpiecesEvidenceOrExposeUnboundedHistory [2 ms]
-  Passed PerWorkpieceReadOnlyMilestones_PreserveActualObservedIdentity [22 ms]
-  Passed AlgorithmErrorRemainsExportableButNeverQualifiesAsGoodFinalEvidence [119 ms]
-A1_MISBOUND_FRAME_ISOLATED_PASS rejects=1 valid_capture=1
-
-A7_CROSS_LEDGER_CONFIRMED scenario=Normal workpiece=3a882a6a-1fd2-49eb-95d1-9106deffa3d7 token=3 claims=2 sid=41,42 steps=D1016=1,D2099=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
-A1_ST05_MISSING_FRAME_ISOLATED_PASS failed=1 healthy=1 ack_error=3
-
-A1_LINE_PARENT_TWO_RESULTS_PASS capture=80a46826-a0df-422f-a722-30c173e91056
-
-A7_CROSS_LEDGER_CONFIRMED scenario=Normal workpiece=c7957956-65be-4907-b63b-b7478f5f321d token=3 claims=2 sid=41,42 steps=D1016=2,D2099=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
-  Passed BothNodesRequireMatchingReadbackAndEpoch [376 ms]
-  Passed FailedInterlockCannotStageOrAdvanceEpoch [167 ms]
-  Passed LonePreparedNodeCannotActivateWithoutDualProof [160 ms]
-  Passed PreparedStateSurvivesRestartAndRejectsBlindRollbackAfterActivation [180 ms]
-  Passed ReleaseMustCoverAllElevenChannelsAndIsImmutable [148 ms]
-A1_ST05_FRAME_FIRST_PASS capture=16687584-af86-4c32-a0b5-f467fc08622d
-
-  Passed ActualRunningMasterOrSlaveBlocksOfflinePublishAndActivation [11 ms]
-  Passed HistoricalLockFileAfterCrashDoesNotPretendCoreStillRunning [5 ms]
-  Passed OfflineLeasePreventsBothCoreStartupsUntilLastSqliteCommit [3 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db") [3 ms]
-A7_CROSS_LEDGER_CONFIRMED scenario=BarcodeFailure workpiece=fdf05191-ba79-488d-9422-0d9c710f4dcc token=3 claims=2 sid=41,42 steps=D2099=3,D1016=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
-A1_ST05_REQUEST_FIRST_PASS [{"ticket":{"workpiece":{"workpieceId":"c4b5b9c6-043a-4d24-98b5-0192ab692795","barcode":"DUPLICATE","epoch":3,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"19d70258-f52d-4c9f-85ac-b003783b32a9","createdAtUtc":"2026-10-18T16:07:47.5048739+00:00"},"captureId":"b19b93ed-afdf-4e5e-8971-4be2bb328c92","attemptNo":1,"physicalDeviceId":"HIK-M-2","expiresAtUtc":"2026-10-18T16:09:47.5205543+00:00","isSimulation":true,"channelIds":["CH06"],"stationId":"ST05","plcAddress":"D1011"},"phase":"INSPECTION_COMPLETED","plcRequestObserved":true,"frameAcquired":true,"frameValidated":true,"pendingCamDone":null,"confirmedCamDone":2,"inspectionChannels":["CH06"],"failureReason":null,"lastSequence":6,"outcomes":{"CH06":"ok"},"rejectedFrameCount":0,"lastRejectedFrameReason":null,"hasAllInspections":true,"readyForProductionResult":true}]
-
-  Passed AckedButIndependentReadbackAbsent_IsReadbackUnknownNotConfirmed [341 ms]
-  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(Normal,Good) [267 ms]
-  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(Normal,Reject) [253 ms]
-  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(BarcodeFailure,Reject) [258 ms]
-A7_CROSS_LEDGER_CONFIRMED scenario=BarcodeMismatch workpiece=2e9e71b8-1f58-4431-a593-7648381bd38f token=3 claims=2 sid=41,42 steps=D2099=4,D1016=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
-  Passed BadFrameIsJournaledWithoutInterruptingAHealthyPhysicalCapture [119 ms]
-  Passed MissingFrameTimesOutWithErrorCamDoneButDoesNotBlockSecondWorkpiece [140 ms]
-  Passed OneLineCameraSharedParentRequiresTwoDistinctInspectionChannelResults [118 ms]
-  Passed RetakeAttemptTwoOverridesFailedAttemptAndLateFirstFrameNeverBecomesCurrent [160 ms]
-  Passed St05HardTriggeredFrameBeforePlcRequestUsesSameCaptureIdWithoutSoftTrigger [102 ms]
-  Passed St05RealOpenCvRequestFirstThenFramePersistsResultAndReplaysOrderedEvents [151 ms]
-  Passed WrongPhysicalItemAndWrongEpochCannotBorrowFrameEvenWhenBarcodeMatches [98 ms]
-  Passed ConcurrentSameBarcodeWorkpiecesAreNeverMappedToLatest [58 ms]
-  Passed FlowHoldsMissingChannelAndWrongEndScanLineage [13 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db-wal") [4 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db-shm") [3 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("sim-full-cycle.db") [2 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("final-plc-output.db") [2 ms]
-  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("timing-events.sqlite-wal") [3 ms]
-  Passed A0PhysicalTriggerMustMatchWorkpieceOwnerPlcAddressAndLineChildOrder [116 ms]
-  Passed LineCaptureTimeoutSharedWhileChildRoiAndAlgorithmRemainIndependent [184 ms]
-  Passed NinePhysicalTriggersProduceElevenScopedInspectionSettings [105 ms]
-  Passed PublishedNewAlgorithmAndRoiProduceRealA3Ng_WhileInFlightReleaseStaysGood [194 ms]
-A1_FINAL_ABNORMAL_ORDER_PASS scenario=BarcodeFailure D2099=3 then D1016=2 durable_hold=1 good=0
-
-A7_CROSS_LEDGER_BATCH_PASS items=2 same_barcode=1 confirmed=1 ack_unknown=1 snapshot_count=1 truncation_safe=1
-A1_FINAL_ABNORMAL_ORDER_PASS scenario=BarcodeMismatch D2099=4 then D1016=2 durable_hold=1 good=0
-
-A1_FINAL_RESTART_UNKNOWN_PASS claimed=1 replay_writes=0
-
-A7_CROSS_LEDGER_WAL_SIDECAR_PASS two_sqlite_wals=2 shms=2 source_files_unchanged=7
-A1_FINAL_ACK_LOSS_PASS same_barcode=2 distinct_workpieces=2 no_replay=1
-
-  Passed FlowRejectsForeignCapturedFrameEvenWithMatchingBarcode [< 1 ms]
-  Passed OutboxRetryIsBoundedAndAcknowledgedMessagesDropOut [5 ms]
-  Passed SlaveRecoversAfterInboxCommitBeforeResultAndDoesNotDuplicateOutput [89 ms]
-  Passed SlaveRecoveryNeverGeneratesFixturesForOtherReleases [30 ms]
-  Passed AbnormalPersistedHoldEnforcesReverseSequenceAndNeverCreatesGood(BarcodeFailure,3) [182 ms]
-  Passed AbnormalPersistedHoldEnforcesReverseSequenceAndNeverCreatesGood(BarcodeMismatch,4) [146 ms]
-  Passed AClaimedPossiblySentWriteIsUnknownAfterRestartAndNeverAutomaticallyRepeated [110 ms]
-  Passed ExclusiveWriterLeasePreventsSecondMasterFromIssuingTheSameOutput [22 ms]
-  Passed LostAckAndWrongReadbackKeepOnlyThatWorkpieceInManualReconciliation [154 ms]
-A7_CROSS_LEDGER_ACK_UNKNOWN workpiece=311a25eb-073a-442a-b649-ad0583d97a27 first=D2099:4 second=ABSENT no_replay=1
-A1_FINAL_SLAVE_HOLD_PASS no_good=1 no_output_intent=1
-
-  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(BarcodeMismatch,Reject) [240 ms]
-  Passed BatchQueryUsesOneSnapshotAndDoesNotDeduplicateIdenticalBarcodes [356 ms]
-  Passed DetachedEvidenceWithRealUncheckpointedSqliteWalAndShmIsReadWithoutTouchingSource [292 ms]
-  Passed FirstWriteAckLostAndNoSecondRequest_RemainsAckUnknown [487 ms]
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:49418 SIM_ONLY
-A1_FINAL_REAL_UDP_PASS token=1 steps=D1016_1,D2099_2 sid_proofs=2 readbacks=2 replay_completed=1 repeat_writes=0
-
-  Passed UnsupportedPublishedPluginOrIgnoredNumericOptionCannotBecomeGood [136 ms]
-  Passed WrongSoftwareTriggerInvalidThresholdAndConflictingAliasesAreRejected [171 ms]
-  Passed ExistingNodeSnapshotCanBeReadWhileItsCoreLeaseIsHeld [46 ms]
-  Passed MissingReadOnlyRepositoryDoesNotCreateAnyDirectoryOrDatabase [3 ms]
-  Passed ReadOnlyNodeCannotInventAnIdleSafeHoldRowInIncompleteEvidence [18 ms]
-  Passed ReadOnlyRepositoryVerifiesStoredReleaseAndRejectsMutation [422 ms]
-  Passed SlaveCaptureHoldCannotBeConvertedIntoNormalGoodEvenAfterRestart [488 ms]
-  Passed TwoConfirmedStepsAreActualLoopbackFinsDatagramsAndNeverSendAgainAfterReopen [509 ms]
-  Passed ForgedNonStepA1UnknownAfterTwoValidRepliesNeverGetsConfirmed [449 ms]
-  Passed ForgedSidAndSwappedIdentityCauseConflict [851 ms]
-  Passed LiveCoreMustNotBeReadOrCheckpointed_ExclusiveLeaseRequired [212 ms]
-  Passed MissingAuditDbIsFailClosedAndNeverInterpretsA1GoodAsPlcConfirmed [107 ms]
-  Passed Ch06_ExistingPng_GoodToNg_AfterExplicitImportPreviewPublishAndNewEpoch [836 ms]
-  Passed CoreRoiCannotBeReadFromOtherMachineOrOutsideBounds [350 ms]
-  Passed MalformedPartialRoiCannotEnterPublishedManifest [284 ms]
-  Passed RoiWithTooSmallPixelRegionAndNaNDoesNotSlipThrough [4 ms]
-  Passed StaleRoiOrStationRevisionNeverImportsOrMutatesOldRelease [205 ms]
-  Passed OneLineCameraTargetCoversTwoLogicalChannelsButNoCrossBinding [376 ms]
-  Passed OnlyOneVerifiedWord_NeverImpliesSecondWordWasWritten [779 ms]
-  Passed RepeatedAckAndContradictoryReadbackFailClosed [653 ms]
-A7_CROSS_LEDGER_SOURCE_IMMUTABLE_PASS files=2 original_sha256_unchanged=1
-  Passed ReadbackIsSeparateFromTargetAndNeverClaimsFieldAcceptance [416 ms]
-  Passed StaleDraftAndUnknownPluginAreRejectedNotFabricatedGood [327 ms]
-  Passed WorkpieceBindsOwnReleaseAndNativePixelProcessorAfterDraftAndEpochSwitch [470 ms]
-  Passed AllElevenProductChannelsAndStationTunablesRoundTrip [51 ms]
-  Passed PublishedReleaseStationThresholdsAreHashAddressedAndRevisioned [296 ms]
-  Passed RejectsInventedReleaseOrWrongChannelOwnershipOrRealMode [6 ms]
-
-Test Run Successful.
-Total tests: 36
-     Passed: 36
-A7_FINAL_TWO_STEP_PASS scenario=Normal workpiece=3e64dd1e-7309-4db5-a680-78de28dc55ae first=D1016:1 second=D2099:2 sid=17,18 packet_sha256=6184b1637d8a685562c133cae3f796162516b7da25d57c8f90af961c91d0cc6e complete=1
- Total time: 7.0036 Seconds
-A7_FINAL_TWO_STEP_PASS scenario=Normal workpiece=b5d64dde-0bdb-406d-8451-dd84f248e3ff first=D1016:2 second=D2099:2 sid=17,18 packet_sha256=57feebf507334e66492ec3bee8d169a662c1725c9957a637b3b347f13ed5655f complete=1
-A7_FINAL_TWO_STEP_PASS scenario=BarcodeFailure workpiece=1d89d6d2-ea0a-44e9-a09e-9fa58a429908 first=D2099:3 second=D1016:2 sid=17,18 packet_sha256=c78100898c49b752b4c725c4d5073cd17af6e682c4b044447774c19930652d97 complete=1
-A7_FINAL_TWO_STEP_PASS scenario=BarcodeMismatch workpiece=5403db56-2994-4cf0-8601-75ba0ae0ec76 first=D2099:4 second=D1016:2 sid=17,18 packet_sha256=d57c6a2e11b3b8b6873715acce1490c5ffd63dd2a248dc6858acddfc992dc2f0 complete=1
-  Passed SourceWalAndShmByteHashesRemainUnchangedAfterSnapshotInspection [511 ms]
-  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(Normal,Good,1016,1,2099,2) [321 ms]
-  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(Normal,Reject,1016,2,2099,2) [246 ms]
-  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(BarcodeFailure,Reject,2099,3,1016,2) [235 ms]
-  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(BarcodeMismatch,Reject,2099,4,1016,2) [247 ms]
-A7_FINAL_ACK_UNKNOWN_PASS workpiece=2617d83c-de1e-485c-910a-d3968c66b35b step1=D2099:4 sid=55 no_automatic_retry=1
-  Passed ExistingTimingSqliteWal_AutomaticallyAddsAuditTablesWithoutDestroyingOldEvents [280 ms]
-  Passed ExplicitlyNotSent_RequiresAdapterProofBeforeSocketDispatch [117 ms]
-  Passed LostAckAfterActualSend_MustRemainUnknownAcrossProcessRestartWithoutRetry [146 ms]
-  Passed PreparedBeforeCrash_IsNeverMislabelledAsKnownNotSent [86 ms]
-  Passed RefusedFinsResponse_RecordsRawReplyHashAndBlocksSecondStep [129 ms]
-  Passed ScannerNotVerifiedCannotStartWriteAndTwoDistinctItemsWithSameBarcodeStaySeparate [91 ms]
-  Passed WrongSidAndWrongReadback_DoNotProduceConfirmedOutput [149 ms]
-  Passed BundleVerifiedAndModifiedZipRejected [153 ms]
-  Passed CrossNodeIdentityMismatchAndStallAreDetected [11 ms]
-AGENT01_FIVE_WORKPIECE_PROGRESS_JSON=[{"workpiece":{"workpieceId":"35bb4b72-ee19-4c4a-bfd4-41468630dd30","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"12f6a623-5bc2-454a-9a19-dda5b619a81f","createdAtUtc":"2026-10-18T16:07:49.7159157+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:07:51.704548+00:00","completedUtc":"2026-10-18T16:07:52.094444+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:07:52.1159115+00:00","completedUtc":"2026-10-18T16:07:52.5520725+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:07:52.5678175+00:00","completedUtc":"2026-10-18T16:07:53.0585742+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:07:53.0773854+00:00","completedUtc":"2026-10-18T16:07:53.3645986+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:07:53.375833+00:00","completedUtc":"2026-10-18T16:07:53.6584435+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:07:53.6708316+00:00","completedUtc":"2026-10-18T16:07:54.0826508+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:07:54.0962265+00:00","completedUtc":"2026-10-18T16:07:54.5240702+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":133},{"workpiece":{"workpieceId":"cae9af65-d161-43a7-b1bf-94bb9a925d4b","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"261ca576-8a73-4854-9000-e74b923c458e","createdAtUtc":"2026-10-18T16:07:49.7159175+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:07:51.7395425+00:00","completedUtc":"2026-10-18T16:07:52.0616853+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:07:52.1275982+00:00","completedUtc":"2026-10-18T16:07:52.4925787+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:07:52.5992552+00:00","completedUtc":"2026-10-18T16:07:52.9599613+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:07:53.0901044+00:00","completedUtc":"2026-10-18T16:07:53.3140295+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:07:53.397913+00:00","completedUtc":"2026-10-18T16:07:53.6096978+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:07:53.689943+00:00","completedUtc":"2026-10-18T16:07:54.0089617+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:07:54.109793+00:00","completedUtc":"2026-10-18T16:07:54.4477481+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":136},{"workpiece":{"workpieceId":"1ca7eec2-c3f2-49e1-9f98-99c56d7656ea","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"86c7de41-2842-4b80-a882-3e25ae49147d","createdAtUtc":"2026-10-18T16:07:49.7159187+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:07:51.767832+00:00","completedUtc":"2026-10-18T16:07:52.0200011+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:07:52.1439486+00:00","completedUtc":"2026-10-18T16:07:52.4221261+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:07:52.6104765+00:00","completedUtc":"2026-10-18T16:07:52.8803041+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:07:53.1045592+00:00","completedUtc":"2026-10-18T16:07:53.2705411+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:07:53.4079525+00:00","completedUtc":"2026-10-18T16:07:53.5690559+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:07:53.7011989+00:00","completedUtc":"2026-10-18T16:07:53.9337229+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:07:54.1235609+00:00","completedUtc":"2026-10-18T16:07:54.377873+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":139},{"workpiece":{"workpieceId":"97d9e90a-8124-44c0-b789-1fd7e65470c8","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"8fe5630a-fe21-48b7-8b5c-a224d5b77d9b","createdAtUtc":"2026-10-18T16:07:49.7159189+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:07:51.796768+00:00","completedUtc":"2026-10-18T16:07:51.9497532+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:07:52.1576306+00:00","completedUtc":"2026-10-18T16:07:52.3308115+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:07:52.622792+00:00","completedUtc":"2026-10-18T16:07:52.8001677+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:07:53.1153542+00:00","completedUtc":"2026-10-18T16:07:53.2177624+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:07:53.4330636+00:00","completedUtc":"2026-10-18T16:07:53.5258693+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:07:53.7116642+00:00","completedUtc":"2026-10-18T16:07:53.8618221+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:07:54.1389525+00:00","completedUtc":"2026-10-18T16:07:54.294912+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":142},{"workpiece":{"workpieceId":"94a42ead-7e3c-4ced-b7a3-07ec3f6d4551","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"99689b3f-625c-4d18-bdd2-0bfa6e05788d","createdAtUtc":"2026-10-18T16:07:49.7159191+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:07:51.8127825+00:00","completedUtc":"2026-10-18T16:07:51.88202+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:07:52.1733887+00:00","completedUtc":"2026-10-18T16:07:52.2497682+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:07:52.635171+00:00","completedUtc":"2026-10-18T16:07:52.7270771+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:07:53.1260724+00:00","completedUtc":"2026-10-18T16:07:53.1692472+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:07:53.4517967+00:00","completedUtc":"2026-10-18T16:07:53.5004162+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:07:53.7242565+00:00","completedUtc":"2026-10-18T16:07:53.7954132+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:07:54.1501292+00:00","completedUtc":"2026-10-18T16:07:54.232483+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":145}]
+ Total time: 3.9794 Seconds
+A7_CROSS_LEDGER_CONFIRMED scenario=Normal workpiece=ae5ce88d-fc13-462d-8742-6e781fe2d12d token=3 claims=2 sid=41,42 steps=D1016=1,D2099=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
+AGENT01_FIVE_WORKPIECE_PROGRESS_JSON=[{"workpiece":{"workpieceId":"1556c6a8-ff93-449f-9551-193a2727591f","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"0b2c729d-41cb-4647-9019-35f501c974c6","createdAtUtc":"2026-10-18T16:30:50.0425136+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:30:50.6293205+00:00","completedUtc":"2026-10-18T16:30:50.7428472+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:30:50.7505937+00:00","completedUtc":"2026-10-18T16:30:50.9131935+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:30:50.9186033+00:00","completedUtc":"2026-10-18T16:30:51.1169583+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:30:51.1248174+00:00","completedUtc":"2026-10-18T16:30:51.2482261+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:30:51.2566881+00:00","completedUtc":"2026-10-18T16:30:51.3834684+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:30:51.3926616+00:00","completedUtc":"2026-10-18T16:30:51.6106197+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:30:51.6186703+00:00","completedUtc":"2026-10-18T16:30:51.8892022+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":133},{"workpiece":{"workpieceId":"f9208d4e-af75-4e5b-92e6-c3abb0914eef","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"03917665-a0e8-4684-8281-abecf49da8f3","createdAtUtc":"2026-10-18T16:30:50.0425148+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:30:50.635646+00:00","completedUtc":"2026-10-18T16:30:50.7269323+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:30:50.7562203+00:00","completedUtc":"2026-10-18T16:30:50.8847105+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:30:50.9261602+00:00","completedUtc":"2026-10-18T16:30:51.0828611+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:30:51.1317456+00:00","completedUtc":"2026-10-18T16:30:51.224542+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:30:51.263467+00:00","completedUtc":"2026-10-18T16:30:51.3613082+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:30:51.3986273+00:00","completedUtc":"2026-10-18T16:30:51.5664345+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:30:51.6277702+00:00","completedUtc":"2026-10-18T16:30:51.8472357+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":136},{"workpiece":{"workpieceId":"860debf3-61ad-4160-a3cc-66b056090db6","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"8fa2b4da-9fce-4b73-a73e-f22445abc1c9","createdAtUtc":"2026-10-18T16:30:50.0425149+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:30:50.6423617+00:00","completedUtc":"2026-10-18T16:30:50.7089504+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:30:50.7620846+00:00","completedUtc":"2026-10-18T16:30:50.8596949+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:30:50.9331755+00:00","completedUtc":"2026-10-18T16:30:51.0512736+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:30:51.138533+00:00","completedUtc":"2026-10-18T16:30:51.204412+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:30:51.2709592+00:00","completedUtc":"2026-10-18T16:30:51.3406859+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:30:51.4044936+00:00","completedUtc":"2026-10-18T16:30:51.5244398+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:30:51.6382153+00:00","completedUtc":"2026-10-18T16:30:51.7890507+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":139},{"workpiece":{"workpieceId":"462c78d7-ef20-41e9-9bd2-9bf12c6372b0","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"8851ce66-2ff8-4b48-bf1d-a7ebe1f60a96","createdAtUtc":"2026-10-18T16:30:50.0425157+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:30:50.6496168+00:00","completedUtc":"2026-10-18T16:30:50.693007+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:30:50.7673149+00:00","completedUtc":"2026-10-18T16:30:50.8285966+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:30:50.9402163+00:00","completedUtc":"2026-10-18T16:30:51.0106826+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:30:51.1443545+00:00","completedUtc":"2026-10-18T16:30:51.1880108+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:30:51.2757679+00:00","completedUtc":"2026-10-18T16:30:51.320388+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:30:51.4124652+00:00","completedUtc":"2026-10-18T16:30:51.4917113+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:30:51.649263+00:00","completedUtc":"2026-10-18T16:30:51.7414877+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":142},{"workpiece":{"workpieceId":"daaff3bc-4333-4996-8216-7f1d66a16226","barcode":"SIM-DUPLICATE","epoch":7,"releaseId":"SIM_LIGHT_TEST_RELEASE","traceId":"deee0ebe-95dd-482a-a29f-10b77da4b0e1","createdAtUtc":"2026-10-18T16:30:50.0425158+00:00"},"phase":"EJECTED","currentStationId":"OUTFEED","completedStationCount":7,"stationCount":7,"capturedChannelCount":11,"expectedChannelCount":11,"capturedChannels":["CH01","CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"stations":[{"stationId":"LOADING","enteredUtc":"2026-10-18T16:30:50.6560751+00:00","completedUtc":"2026-10-18T16:30:50.674732+00:00","expectedChannels":["CH01"],"capturedChannels":["CH01"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST03","enteredUtc":"2026-10-18T16:30:50.7733149+00:00","completedUtc":"2026-10-18T16:30:50.7996879+00:00","expectedChannels":["CH02","CH03"],"capturedChannels":["CH02","CH03"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST04","enteredUtc":"2026-10-18T16:30:50.9475309+00:00","completedUtc":"2026-10-18T16:30:50.9780798+00:00","expectedChannels":["CH04","CH05"],"capturedChannels":["CH04","CH05"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST05","enteredUtc":"2026-10-18T16:30:51.1512777+00:00","completedUtc":"2026-10-18T16:30:51.1701777+00:00","expectedChannels":["CH06"],"capturedChannels":["CH06"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST06","enteredUtc":"2026-10-18T16:30:51.2836044+00:00","completedUtc":"2026-10-18T16:30:51.3007317+00:00","expectedChannels":["CH07"],"capturedChannels":["CH07"],"hasEntered":true,"isCompleted":true,"capturedCount":1,"expectedCount":1},{"stationId":"ST09","enteredUtc":"2026-10-18T16:30:51.4205143+00:00","completedUtc":"2026-10-18T16:30:51.4548092+00:00","expectedChannels":["CH08","CH09"],"capturedChannels":["CH08","CH09"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2},{"stationId":"ST10","enteredUtc":"2026-10-18T16:30:51.6571238+00:00","completedUtc":"2026-10-18T16:30:51.6921438+00:00","expectedChannels":["CH10","CH11"],"capturedChannels":["CH10","CH11"],"hasEntered":true,"isCompleted":true,"capturedCount":2,"expectedCount":2}],"endBarcodeMatches":true,"finalReady":false,"final":{"disposition":"good","isSimulation":true,"expected":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"received":["CH02","CH03","CH04","CH05","CH06","CH07","CH08","CH09","CH10","CH11"],"proof":"COMPLETE_OK:SIM_ONLY"},"ejected":true,"lastSequence":145}]
 AGENT01_FLOW_DEMO_PASS items=5 unique_ids=5 stations=7 channels=55 opencv_assets=65 persisted_finals=5 ejected=5 sqlite_replay=5
 
-  Passed FiveRepeatedBarcodeItemsAdvanceSevenStationsUsingRealOpenCvPixelsAndDurableFinals [5 s]
+A7_CROSS_LEDGER_CONFIRMED scenario=Normal workpiece=524e80c9-4b58-44a6-8a27-c23a7316d555 token=3 claims=2 sid=41,42 steps=D1016=2,D2099=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
+  Passed AckedButIndependentReadbackAbsent_IsReadbackUnknownNotConfirmed [763 ms]
+  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(Normal,Good) [300 ms]
+  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(Normal,Reject) [339 ms]
 AGENT01_FLOW_NEGATIVE_PASS wrong_end_barcode=1 final=0 eject=0
 
+A7_CROSS_LEDGER_CONFIRMED scenario=BarcodeFailure workpiece=8115ee2d-9009-47e3-adab-62a93d453a21 token=3 claims=2 sid=41,42 steps=D2099=3,D1016=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
 A2_SCANNER_WRONG_BRANCH_REJECTED token=3 no_output=1
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58156 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65316 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 SIM_FULL_VPLC_LOAD token=2 active=2
 SIM_FULL_VPLC_LOAD token=3 active=3
@@ -215,151 +138,158 @@ SIM_FULL_VPLC_EXIT token=1 decision=2 completed=1
 SIM_FULL_VPLC_EXIT token=2 decision=2 completed=2
 
 A2_SCANNER_EMPTY_UDP token=3 D2099=3 SID=16 req=8000020001000063001001028208330000010003 ack=C000020063000001001001020000 -> D1016=2 SID=18 req=8000020001000063001201028203F80000010002 ack=C000020063000001001201020000
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58169 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65329 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 SIM_FULL_VPLC_LOAD token=2 active=2
 SIM_FULL_VPLC_LOAD token=3 active=3
 SIM_FULL_VPLC_EXIT token=1 decision=2 completed=1
 SIM_FULL_VPLC_EXIT token=2 decision=2 completed=2
 
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58191 SIM_ONLY
+  Passed BothNodesRequireMatchingReadbackAndEpoch [776 ms]
+  Passed FailedInterlockCannotStageOrAdvanceEpoch [258 ms]
+  Passed LonePreparedNodeCannotActivateWithoutDualProof [166 ms]
+  Passed PreparedStateSurvivesRestartAndRejectsBlindRollbackAfterActivation [195 ms]
+  Passed ReleaseMustCoverAllElevenChannelsAndIsImmutable [133 ms]
+  Passed ActualRunningMasterOrSlaveBlocksOfflinePublishAndActivation [13 ms]
+  Passed HistoricalLockFileAfterCrashDoesNotPretendCoreStillRunning [4 ms]
+  Passed OfflineLeasePreventsBothCoreStartupsUntilLastSqliteCommit [5 ms]
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db") [3 ms]
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65351 SIM_ONLY
 
-A2_END_WIRE_Normal FINS WRITE D1016=1 SID=7 at=2026-10-18T16:07:56.1023788+00:00 -> FINS WRITE D2099=2 SID=8 at=2026-10-18T16:07:56.1028154+00:00
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58197 SIM_ONLY
+A2_END_WIRE_Normal FINS WRITE D1016=1 SID=7 at=2026-10-18T16:30:52.7858142+00:00 -> FINS WRITE D2099=2 SID=8 at=2026-10-18T16:30:52.7861230+00:00
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65357 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A2_END_WIRE_Normal FINS WRITE D1016=2 SID=7 at=2026-10-18T16:07:56.1214474+00:00 -> FINS WRITE D2099=2 SID=8 at=2026-10-18T16:07:56.1218984+00:00
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58208 SIM_ONLY
+  Passed FiveRepeatedBarcodeItemsAdvanceSevenStationsUsingRealOpenCvPixelsAndDurableFinals [2 s]
+  Passed OutOfOrderRemoteCaptureBelongsToItsOwnWorkpieceNeverTheSameBarcodePeer [82 ms]
+  Passed ReplayingHistoricProgressIsStableAcrossReopenAndRepeatedStationEvents [59 ms]
+  Passed WrongEndBarcodeHasElevenCapturedChannelsButCannotSubmitFinalOrEject [254 ms]
+  Passed InvalidFailureTokenConfigDoesNotCreateHardwareAccess [2 ms]
+  Passed TokenSpecificScannerFailureCannotBeMisreportedAsMismatch [15 ms]
+  Passed TokenThreeUnreadableScannerIsObservedOverUdpAndProducesReverseFinsOrder [27 ms]
+  Passed CaptureTimeoutAndMissingUdpPacketRejectLateOrInventedCamDone [119 ms]
+  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(Normal,1,2) [10 ms]
+A2_END_WIRE_Normal FINS WRITE D1016=2 SID=7 at=2026-10-18T16:30:52.7950789+00:00 -> FINS WRITE D2099=2 SID=8 at=2026-10-18T16:30:52.7954594+00:00
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65368 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-  Passed OutOfOrderRemoteCaptureBelongsToItsOwnWorkpieceNeverTheSameBarcodePeer [126 ms]
-  Passed ReplayingHistoricProgressIsStableAcrossReopenAndRepeatedStationEvents [89 ms]
-  Passed WrongEndBarcodeHasElevenCapturedChannelsButCannotSubmitFinalOrEject [673 ms]
-  Passed InvalidFailureTokenConfigDoesNotCreateHardwareAccess [4 ms]
-  Passed TokenSpecificScannerFailureCannotBeMisreportedAsMismatch [31 ms]
-  Passed TokenThreeUnreadableScannerIsObservedOverUdpAndProducesReverseFinsOrder [66 ms]
-  Passed CaptureTimeoutAndMissingUdpPacketRejectLateOrInventedCamDone [145 ms]
-  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(Normal,1,2) [29 ms]
-  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(Normal,2,2) [10 ms]
-A2_END_WIRE_BarcodeFailure FINS WRITE D2099=3 SID=6 at=2026-10-18T16:07:56.1332305+00:00 -> FINS WRITE D1016=2 SID=7 at=2026-10-18T16:07:56.1336882+00:00
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58219 SIM_ONLY
+A2_END_WIRE_BarcodeFailure FINS WRITE D2099=3 SID=6 at=2026-10-18T16:30:52.7998188+00:00 -> FINS WRITE D1016=2 SID=7 at=2026-10-18T16:30:52.8001007+00:00
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65379 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A2_END_WIRE_BarcodeMismatch FINS WRITE D2099=4 SID=6 at=2026-10-18T16:07:56.1412345+00:00 -> FINS WRITE D1016=2 SID=7 at=2026-10-18T16:07:56.1415654+00:00
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58229 SIM_ONLY
+A2_END_WIRE_BarcodeMismatch FINS WRITE D2099=4 SID=6 at=2026-10-18T16:30:52.8028240+00:00 -> FINS WRITE D1016=2 SID=7 at=2026-10-18T16:30:52.8030574+00:00
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65389 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58239 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65399 SIM_ONLY
 
 A2_HOST_FINAL_WRITER Normal D1016=1 readback=1 -> D2099=2 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58242 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65401 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
 A2_HOST_FINAL_WRITER Normal D1016=2 readback=2 -> D2099=2 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58251 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65410 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
+A7_CROSS_LEDGER_CONFIRMED scenario=BarcodeMismatch workpiece=47d6bc67-01d5-4292-ab97-782380e4b647 token=3 claims=2 sid=41,42 steps=D2099=4,D1016=2 raw_sha256=2 ack=2 readback=2 no_physical_ejection_claim=1
 A2_HOST_FINAL_WRITER BarcodeFailure D2099=3 readback=3 -> D1016=2 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58260 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65419 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
 A2_HOST_FINAL_WRITER BarcodeMismatch D2099=4 readback=4 -> D1016=2 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58269 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65428 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58278 SIM_ONLY
+  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(Normal,2,2) [4 ms]
+  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(BarcodeFailure,2,3) [4 ms]
+  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(BarcodeMismatch,2,4) [2 ms]
+  Passed FinalWriterRejectsMissingRequestAndNeverWritesGoodOnBarcodeMismatch [3 ms]
+  Passed FinsNodeRouteAndSidAreValidatedBeforeAnyShadowMutation [1 ms]
+  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(Normal,Good,2) [4 ms]
+  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(Normal,Reject,2) [3 ms]
+  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(BarcodeFailure,Reject,3) [2 ms]
+  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(BarcodeMismatch,Reject,4) [3 ms]
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65437 SIM_ONLY
 
-  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(BarcodeFailure,2,3) [11 ms]
-  Passed EndResultBranchesAreTwoRealOrderedFinsWritesAndReadback(BarcodeMismatch,2,4) [9 ms]
-  Passed FinalWriterRejectsMissingRequestAndNeverWritesGoodOnBarcodeMismatch [7 ms]
-  Passed FinsNodeRouteAndSidAreValidatedBeforeAnyShadowMutation [2 ms]
-  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(Normal,Good,2) [23 ms]
-  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(Normal,Reject,2) [13 ms]
-  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(BarcodeFailure,Reject,3) [7 ms]
-  Passed HostCallableFinalWriterUsesTwoActualFinsWritesAndVerifiesBothReadbacks(BarcodeMismatch,Reject,4) [13 ms]
-  Passed LoadingScannerUsesActualFinsD1999AndTenWordFixture [13 ms]
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58284 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65443 SIM_ONLY
 
-  Passed FlightJournal_AppendAndReplayAreDeterministic_AndTamperDetected [51 ms]
-  Passed MissingPeerInboxAfterAck_IsCritical [6 ms]
-  Passed MissingWalsNeverProduceHealthyAssessment [4 ms]
-  Passed SameFrameUsedForDistinctWorkpieces_IsCritical [12 ms]
-  Passed CsvQuotingDefusesSpreadsheetInjection [36 ms]
-  Passed FivePhysicalUnits_RepeatBarcodeDoesNotDeduplicate_AndDailyWeeklyDenominatorsAreCorrect [331 ms]
-  Passed RealA3VisionLedger_LineScanParentsAndSlaveOwnedPixelsResolveInTrace [647 ms]
-  Passed TraceDoesNotClaimMissingOrTamperedImageAsVerified [152 ms]
-A2_ST05_REAL_UDP_CAM_DONE READ D1011 1 sid=3 utc=2026-10-18T16:07:56.3140148+00:00 -> WRITE D1011 2 sid=4 utc=2026-10-18T16:07:56.3143591+00:00 -> READ D1011 1 sid=5 utc=2026-10-18T16:07:56.3161829+00:00
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:58289 SIM_ONLY
+A2_ST05_REAL_UDP_CAM_DONE READ D1011 1 sid=3 utc=2026-10-18T16:30:52.8378453+00:00 -> WRITE D1011 2 sid=4 utc=2026-10-18T16:30:52.8380270+00:00 -> READ D1011 1 sid=5 utc=2026-10-18T16:30:52.8382790+00:00
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65448 SIM_ONLY
 
 SIM_MECHANICAL_FIVE_IN_FLIGHT tick=112 positions=5:ST05:43%, 4:ST06:57%, 3:ST09:71%, 2:ST10:86%, 1:ST11:100%
 SIM_ST05_STUCK token=10 station=ST05 sensorStuck=True exited=0
 SIM_ST05_RECOVERED token=10 exited=1
-  Passed OnePhysicalLineScanCaptureAcknowledgesBothLogicalChannelsExactlyOnce [22 ms]
-  Passed St05LegacyRequestAndCamDoneTravelThroughRealUdpWithDifferentNodes [56 ms]
-  Passed FiveDistinctWorkpiecesOccupyDifferentStationsAndEveryPhysicalCameraTriggersOnce [123 ms]
-  Passed PhysicalTokensCannotBeDuplicatedOrSilentlyRemappedAfterExit [11 ms]
-  Passed St05StuckSensorStopsMovementAndCaptureUntilOperatorRestoresIt [13 ms]
-  Passed StationDwellTimingOneStepPerTickAndExplicitEndScannerAreObservable [11 ms]
+  Passed LoadingScannerUsesActualFinsD1999AndTenWordFixture [3 ms]
+  Passed OnePhysicalLineScanCaptureAcknowledgesBothLogicalChannelsExactlyOnce [6 ms]
+  Passed St05LegacyRequestAndCamDoneTravelThroughRealUdpWithDifferentNodes [9 ms]
+  Passed FiveDistinctWorkpiecesOccupyDifferentStationsAndEveryPhysicalCameraTriggersOnce [18 ms]
+  Passed PhysicalTokensCannotBeDuplicatedOrSilentlyRemappedAfterExit [1 ms]
+  Passed St05StuckSensorStopsMovementAndCaptureUntilOperatorRestoresIt [1 ms]
+  Passed StationDwellTimingOneStepPerTickAndExplicitEndScannerAreObservable [1 ms]
   Passed BadcFloatAndBaBarcodeRoundTrips [2 ms]
-  Passed FinsReadWriteAndGoldenHeaderVectorsMatch [8 ms]
-  Passed RealEndpointsAndConflictedAddressesFailClosed [12 ms]
-A2_RAW_FINS_ACK step=1 operation=03fe2765-4f76-46d7-83a8-ae5e1fc58b33 SID=4 request=8000020001000063000401028208330000010003 response=C000020063000001000401020000 readback=3
-A2_RAW_FINS_ACK step=2 operation=1e871520-7e9e-43ba-8e27-e84c6665bef6 SID=6 request=8000020001000063000601028203F80000010002 response=C000020063000001000601020000 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60655 SIM_ONLY
+  Passed FinsReadWriteAndGoldenHeaderVectorsMatch [2 ms]
+A2_RAW_FINS_ACK step=1 operation=92fae749-6e4d-411d-b73f-240ae412ea5a SID=4 request=8000020001000063000401028208330000010003 response=C000020063000001000401020000 readback=3
+A2_RAW_FINS_ACK step=2 operation=755ba3f0-2764-453d-9aa2-8b439ef03f95 SID=6 request=8000020001000063000601028203F80000010002 response=C000020063000001000601020000 readback=2
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65454 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A2_RAW_FINS_ACK step=1 operation=da5c8be9-15da-4ff2-92e2-07f7029b3984 SID=4 request=8000020001000063000401028208330000010004 response=C000020063000001000401020000 readback=4
-A2_RAW_FINS_ACK step=2 operation=d4267c8a-71ff-4759-bb01-0b6375337925 SID=6 request=8000020001000063000601028203F80000010002 response=C000020063000001000601020000 readback=2
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60663 SIM_ONLY
+A2_RAW_FINS_ACK step=1 operation=e65a77ae-073f-410c-89b7-6fc80c4988f4 SID=4 request=8000020001000063000401028208330000010004 response=C000020063000001000401020000 readback=4
+A2_RAW_FINS_ACK step=2 operation=6d41a9ae-a07e-4e93-b5e9-ea3fd3c8ea30 SID=6 request=8000020001000063000601028203F80000010002 response=C000020063000001000601020000 readback=2
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65462 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60671 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65470 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A2_RAW_FINS_REJECTED operation=f55104e3-7880-4095-95ed-77d2493b1d0c SID=3 response=C000020063000001000301020005 accepted=0
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60678 SIM_ONLY
+A2_RAW_FINS_REJECTED operation=8165fd4e-dac0-49db-9491-52817bba8394 SID=3 response=C000020063000001000301020005 accepted=0
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65475 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A7_UDP_FINS_D1011_PASS workpiece=c96197a6-d1fb-4d11-99bf-f47a0d0ddecd capture=5e830746-fe31-405d-97d5-dc5f51ee682e operation=6a109e6d-30b4-436d-8a5e-6fd590dc63d5 sid=31 register=D1011 response=1
-A2_RAW_FINS_ACK_UNKNOWN operation=29ceea7e-4d87-4ae6-a7ce-46699a8671c2 SID=1 raw_sent=8000020001000063000101028208330000010004 raw_reply=MISSING independent_readback=4 no_duplicate=1
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60684 SIM_ONLY
+A2_RAW_FINS_ACK_UNKNOWN operation=c7d07558-98ad-47c2-9ff6-6eb834cdfe1a SID=1 raw_sent=8000020001000063000101028208330000010004 raw_reply=MISSING independent_readback=4 no_duplicate=1
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65481 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-  Passed TraceFollowsRealPngAndEvents_AndCsvJsonAreExported [577 ms]
-  Passed UnfinishedIsNotHold_AndBadInputsDoNotQueryOrLeakOtherRows [118 ms]
-  Passed ActualUdpFinsRequestAndResponse_CanBeCorrelatedToOnePhysicalCapture [133 ms]
-  Passed ChannelOwnerAndIdentifierMismatch_CannotBeWritten [34 ms]
-  Passed FinalPlcAcknowledgedWrites_FollowLegacyGoodOrBarcodeFailureBranches(False) [94 ms]
-  Passed FinalPlcAcknowledgedWrites_FollowLegacyGoodOrBarcodeFailureBranches(True) [93 ms]
-  Passed FrameArrivedButTooLate_IsDifferentFromFrameNeverArrived [99 ms]
-  Passed FrameReusedForTwoCaptures_IsExplicitlyReported [72 ms]
-  Passed LegacyFinalWritesReversed_AreIdentifiedFromAckOrderNotMemoryMirror [87 ms]
+A7_CROSS_LEDGER_BATCH_PASS items=2 same_barcode=1 confirmed=1 ack_unknown=1 snapshot_count=1 truncation_safe=1
 A2_FINS_ACK_LOST_AFTER_APPLY scenario=BarcodeFailure D2099=3 ack_hex=EMPTY sent_sid=2 raw=8000020001000063000201028208330000010003 duplicate_writes=0
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60689 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:65486 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A7_ST05_TIMELINE_NEGATIVE workpiece=5a4ac63d-837e-499a-b605-948858261392 missing=FrameReady; observed=CamDone2; rejected=1
-A7_ST05_TIMELINE_PASS ordering=REQUEST_FIRST workpiece=c8a49adb-d8cd-459a-931b-65290d58b420 capture=e5d0d7dc-0581-41c4-b54a-26c1ce5629ae events=6 stopwatchRun=f72a2555-8f31-4bba-b0b1-e0e9c11a8e20
+  Passed RealEndpointsAndConflictedAddressesFailClosed [3 ms]
+  Passed RegistryRetains45Signals14GatesAndNoProductionWrite [3 ms]
+  Passed StrictDecoderRejectsWrongSidNodeEndCodeAndLength [1 ms]
+  Passed ActualScannerRequestThenTwoRealWritesAndIndependentReadback(BarcodeFailure,3) [17 ms]
+  Passed ActualScannerRequestThenTwoRealWritesAndIndependentReadback(BarcodeMismatch,4) [4 ms]
+  Passed DurablePrepareCallbackThrowsBeforeSend_AndOriginalObservedApiStillWorks [6 ms]
+  Passed NegativeFinsEndCode_RecordsReceivedPacketButNeverAcceptsIt [5 ms]
+  Passed WriteAppliedWithLostAck_EmitsRealSendButNoReceivedReply [175 ms]
+  Passed FirstFinsWriteAppliedButAckLost_PreventsAutomaticSecondWriteAndDuplicate(BarcodeFailure,3) [375 ms]
+A7_CROSS_LEDGER_WAL_SIDECAR_PASS two_sqlite_wals=2 shms=2 source_files_unchanged=7
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db-wal") [3 ms]
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("production.db-shm") [2 ms]
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("sim-full-cycle.db") [3 ms]
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("final-plc-output.db") [4 ms]
+  Passed OriginalProductionEvidenceAlwaysBlocksNewReleaseWithoutMutation("timing-events.sqlite-wal") [3 ms]
+  Passed A0PhysicalTriggerMustMatchWorkpieceOwnerPlcAddressAndLineChildOrder [108 ms]
+  Passed LineCaptureTimeoutSharedWhileChildRoiAndAlgorithmRemainIndependent [160 ms]
+  Passed NinePhysicalTriggersProduceElevenScopedInspectionSettings [105 ms]
+  Passed PublishedNewAlgorithmAndRoiProduceRealA3Ng_WhileInFlightReleaseStaysGood [508 ms]
+A7_CROSS_LEDGER_ACK_UNKNOWN workpiece=b94f0ff6-1c0b-4441-9a59-d4a56974c597 first=D2099:4 second=ABSENT no_replay=1
 A2_FINS_ACK_LOST_AFTER_APPLY scenario=BarcodeMismatch D2099=4 ack_hex=EMPTY sent_sid=2 raw=8000020001000063000201028208330000010004 duplicate_writes=0
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:60701 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:49480 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-  Passed RegistryRetains45Signals14GatesAndNoProductionWrite [8 ms]
-  Passed StrictDecoderRejectsWrongSidNodeEndCodeAndLength [12 ms]
-  Passed ActualScannerRequestThenTwoRealWritesAndIndependentReadback(BarcodeFailure,3) [69 ms]
-  Passed ActualScannerRequestThenTwoRealWritesAndIndependentReadback(BarcodeMismatch,4) [20 ms]
-  Passed DurablePrepareCallbackThrowsBeforeSend_AndOriginalObservedApiStillWorks [18 ms]
-  Passed NegativeFinsEndCode_RecordsReceivedPacketButNeverAcceptsIt [43 ms]
-  Passed WriteAppliedWithLostAck_EmitsRealSendButNoReceivedReply [190 ms]
-  Passed FirstFinsWriteAppliedButAckLost_PreventsAutomaticSecondWriteAndDuplicate(BarcodeFailure,3) [393 ms]
-  Passed FirstFinsWriteAppliedButAckLost_PreventsAutomaticSecondWriteAndDuplicate(BarcodeMismatch,4) [376 ms]
 A2_FINS_WRITE_REJECTED token=1 D2099=3 sid=2 response=C000020063000001000201020005 no_register_change=1
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:54428 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:49492 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-A7_ST05_TIMELINE_PASS ordering=FRAME_FIRST workpiece=317e1578-bc58-4c8d-9a48-e3c4b9d27883 capture=dbd2efe0-f687-4eb5-9e70-f5446836b8c1 events=6 stopwatchRun=1c0f5369-7e12-456c-8c45-e0a10fe66607
+  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(BarcodeFailure,Reject) [263 ms]
+  Passed ActualA1OneTimeClaimsAndA7RawPacketWalsAgreeOnBothLegacySteps(BarcodeMismatch,Reject) [198 ms]
+  Passed BatchQueryUsesOneSnapshotAndDoesNotDeduplicateIdenticalBarcodes [334 ms]
+  Passed DetachedEvidenceWithRealUncheckpointedSqliteWalAndShmIsReadWithoutTouchingSource [315 ms]
+  Passed FirstWriteAckLostAndNoSecondRequest_RemainsAckUnknown [133 ms]
+  Passed ForgedNonStepA1UnknownAfterTwoValidRepliesNeverGetsConfirmed [243 ms]
 A2_FINS_SECOND_ACK_LOST D2099=4_ACKED D1016=2_APPLIED_ACK_LOST sid=4 no_ejection=1
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:54438 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:49502 SIM_ONLY
 SIM_FULL_VPLC_LOAD token=1 active=1
 
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
@@ -373,21 +303,6 @@ SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_o
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
-  Passed MissingFrame_WithWrongCamDoneSuccess_IsDiagnosedNotShownAsCaptured [82 ms]
-  Passed MissingFrameAndMissingCamDoneAckAreDiagnosedAfterExplicitWindows [104 ms]
-  Passed PlcRequestBeforeFrameOrFrameBeforeRequest_ProducesActualPerCaptureCausalTimeline(False) [210 ms]
-  Passed PlcRequestBeforeFrameOrFrameBeforeRequest_ProducesActualPerCaptureCausalTimeline(True) [162 ms]
-  Passed RealMasterProductionWalLegacyEvents_AreQueryableButDoNotFakeCamDone [60 ms]
-  Passed SameFrameIdForDifferentPhysicalWorkpieces_IsFoundEvenWhenQueryFiltersOneItem [62 ms]
-  Passed SeparateProcessRunsHaveIncomparableStopwatches [60 ms]
-  Passed WrongActualPlcValueAndMonotonicDeadline_AreObservableFailures [99 ms]
-SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
-SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
-
-Test Run Successful.
-Total tests: 53
-     Passed: 53
- Total time: 12.5708 Seconds
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
@@ -399,74 +314,161 @@ SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_o
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
 SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
+SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
+SIM_LEGACY_VPLC_UDP_PEER_PORT_UNREACHABLE socket_error=ConnectionReset ignored_orphan_icmp=1 no_fins_ack_invented=1
+  Passed UnsupportedPublishedPluginOrIgnoredNumericOptionCannotBecomeGood [125 ms]
+  Passed WrongSoftwareTriggerInvalidThresholdAndConflictingAliasesAreRejected [156 ms]
+  Passed ExistingNodeSnapshotCanBeReadWhileItsCoreLeaseIsHeld [41 ms]
+  Passed MissingReadOnlyRepositoryDoesNotCreateAnyDirectoryOrDatabase [4 ms]
+  Passed ReadOnlyNodeCannotInventAnIdleSafeHoldRowInIncompleteEvidence [15 ms]
+  Passed ReadOnlyRepositoryVerifiesStoredReleaseAndRejectsMutation [93 ms]
+  Passed Ch06_ExistingPng_GoodToNg_AfterExplicitImportPreviewPublishAndNewEpoch [382 ms]
+  Passed CoreRoiCannotBeReadFromOtherMachineOrOutsideBounds [104 ms]
+  Passed MalformedPartialRoiCannotEnterPublishedManifest [91 ms]
 A2_UDP_CLOSED_PEER_RECOVERY_PASS real_localhost_fins=1 ephemeral_peers=24 vplc_alive_after_icmp=1 fresh_sid_reply_verified=1 no_final_plc_write=1 no_synthetic_ack=1
-LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:54451 SIM_ONLY
+LEGACY_PLC_SHADOW_LISTEN 127.0.0.1:49515 SIM_ONLY
 
 ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("normal",1,1016,2,1): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
 ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("mismatch",3,2099,4,1): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
 ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("ack-lost",3,2099,4,1): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
 ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("ack-second",3,1016,2,2): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
-ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("scan-failed",3,2099,3,1): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
-  Passed InjectedWriteRejectionSendsFinsErrorAndNeverChangesOutputRegisters [28 ms]
-  Passed SecondWriteAckLost_PreservesOnlyFirstConfirmedStepAndDoesNotReplay [385 ms]
-  Passed UnrelatedAddressesAndInvalidTokensCannotBecomeFaultTargets [1 ms]
-  Passed ClosedEphemeralUdpPorts_DoNotTerminateVirtualPlcOrForgeFinsReply [466 ms]
-  Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("normal",1,1016,2,1) [34 ms]
+  Passed FirstFinsWriteAppliedButAckLost_PreventsAutomaticSecondWriteAndDuplicate(BarcodeMismatch,4) [355 ms]
+  Passed InjectedWriteRejectionSendsFinsErrorAndNeverChangesOutputRegisters [5 ms]
+  Passed SecondWriteAckLost_PreservesOnlyFirstConfirmedStepAndDoesNotReplay [368 ms]
+  Passed UnrelatedAddressesAndInvalidTokensCannotBecomeFaultTargets [< 1 ms]
+  Passed ClosedEphemeralUdpPorts_DoNotTerminateVirtualPlcOrForgeFinsReply [449 ms]
+  Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("normal",1,1016,2,1) [13 ms]
   Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("mismatch",3,2099,4,1) [< 1 ms]
   Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("ack-lost",3,2099,4,1) [< 1 ms]
   Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("ack-second",3,1016,2,2) [< 1 ms]
-  Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("scan-failed",3,2099,3,1) [< 1 ms]
+ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("scan-failed",3,2099,3,1): NOT_VERIFIED: real five-process evidence root not supplied; run dedicated A5 Windows/Linux evidence workflow.
+A7_CROSS_LEDGER_SOURCE_IMMUTABLE_PASS files=2 original_sha256_unchanged=1
+A7_FINAL_TWO_STEP_PASS scenario=Normal workpiece=79c5cbe0-a13f-4669-9265-0cb42f5d63d1 first=D1016:1 second=D2099:2 sid=17,18 packet_sha256=6184b1637d8a685562c133cae3f796162516b7da25d57c8f90af961c91d0cc6e complete=1
 A5_REAL_UDP_ACK_LOST_AFTER_APPLY token=1 scenario=BarcodeFailure SID=5 write=D2099:3 generated=SUCCESS transmitted=NONE D1016_Writes=0 reconnect_write_replays=0 UNKNOWN_ACK
 SIM_FULL_VPLC_LOAD token=1 active=1
 
+A7_FINAL_TWO_STEP_PASS scenario=Normal workpiece=14da73d2-9bbc-4514-ba52-57515d20fa07 first=D1016:2 second=D2099:2 sid=17,18 packet_sha256=57feebf507334e66492ec3bee8d169a662c1725c9957a637b3b347f13ed5655f complete=1
+A7_FINAL_TWO_STEP_PASS scenario=BarcodeFailure workpiece=22598112-cb1b-482b-83ce-27ae4401042f first=D2099:3 second=D1016:2 sid=17,18 packet_sha256=c78100898c49b752b4c725c4d5073cd17af6e682c4b044447774c19930652d97 complete=1
+  Passed ForgedSidAndSwappedIdentityCauseConflict [244 ms]
+  Passed LiveCoreMustNotBeReadOrCheckpointed_ExclusiveLeaseRequired [96 ms]
+  Passed MissingAuditDbIsFailClosedAndNeverInterpretsA1GoodAsPlcConfirmed [64 ms]
+  Passed OnlyOneVerifiedWord_NeverImpliesSecondWordWasWritten [164 ms]
+  Passed RepeatedAckAndContradictoryReadbackFailClosed [260 ms]
+  Passed SourceWalAndShmByteHashesRemainUnchangedAfterSnapshotInspection [221 ms]
+  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(Normal,Good,1016,1,2099,2) [116 ms]
+  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(Normal,Reject,1016,2,2099,2) [116 ms]
+  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(BarcodeFailure,Reject,2099,3,1016,2) [96 ms]
+A7_FINAL_TWO_STEP_PASS scenario=BarcodeMismatch workpiece=b32ffb8a-d565-4849-b9c9-ba97f093e45e first=D2099:4 second=D1016:2 sid=17,18 packet_sha256=d57c6a2e11b3b8b6873715acce1490c5ffd63dd2a248dc6858acddfc992dc2f0 complete=1
+  Passed RoiWithTooSmallPixelRegionAndNaNDoesNotSlipThrough [< 1 ms]
+  Passed StaleRoiOrStationRevisionNeverImportsOrMutatesOldRelease [106 ms]
+  Passed OneLineCameraTargetCoversTwoLogicalChannelsButNoCrossBinding [114 ms]
+  Passed ReadbackIsSeparateFromTargetAndNeverClaimsFieldAcceptance [104 ms]
+  Passed StaleDraftAndUnknownPluginAreRejectedNotFabricatedGood [100 ms]
+  Passed WorkpieceBindsOwnReleaseAndNativePixelProcessorAfterDraftAndEpochSwitch [154 ms]
+  Passed AllElevenProductChannelsAndStationTunablesRoundTrip [10 ms]
+  Passed PublishedReleaseStationThresholdsAreHashAddressedAndRevisioned [110 ms]
+  Passed RejectsInventedReleaseOrWrongChannelOwnershipOrRealMode [1 ms]
+
+Test Run Successful.
+Total tests: 36
+     Passed: 36
+ Total time: 7.7856 Seconds
 A5_REAL_UDP_ACK_LOST_AFTER_APPLY token=1 scenario=BarcodeMismatch SID=5 write=D2099:4 generated=SUCCESS transmitted=NONE D1016_Writes=0 reconnect_write_replays=0 UNKNOWN_ACK
 SIM_FULL_VPLC_LOAD token=1 active=1
 
+  Skipped ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper("scan-failed",3,2099,3,1) [< 1 ms]
+  Passed AckWrongHashLeavesOutboxUnacknowledged [35 ms]
+  Passed DuplicateConflictingAttemptNeverCountsAsGood [4 ms]
+  Passed EndBarcodeMismatchMustHoldDespiteAllGoodPixels [3 ms]
+  Passed MisroutedEnvelopeFailsClosed [22 ms]
+  Passed SameMessageIdDifferentDigestMustBeRejected [39 ms]
+  Passed TamperedEnvelopeMustNeverBecomeAnAck [27 ms]
+  Passed FirstReverseWriteAppliedButAckLost_MustStopBeforeD1016_AndReconnectReadOnly(BarcodeFailure,3) [318 ms]
+  Passed FirstReverseWriteAppliedButAckLost_MustStopBeforeD1016_AndReconnectReadOnly(BarcodeMismatch,4) [311 ms]
 A5_FINS_REJECTED_GOOD reply_end_code=0x0005 SID=5 D1016_good_applied=0 later_D2099_write=0
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-  Passed AckWrongHashLeavesOutboxUnacknowledged [74 ms]
-  Passed DuplicateConflictingAttemptNeverCountsAsGood [13 ms]
-  Passed EndBarcodeMismatchMustHoldDespiteAllGoodPixels [9 ms]
-  Passed MisroutedEnvelopeFailsClosed [30 ms]
-  Passed SameMessageIdDifferentDigestMustBeRejected [61 ms]
-  Passed TamperedEnvelopeMustNeverBecomeAnAck [38 ms]
-  Passed FirstReverseWriteAppliedButAckLost_MustStopBeforeD1016_AndReconnectReadOnly(BarcodeFailure,3) [360 ms]
-  Passed FirstReverseWriteAppliedButAckLost_MustStopBeforeD1016_AndReconnectReadOnly(BarcodeMismatch,4) [321 ms]
-  Passed RefusedFirstWriteHasNonzeroFinsEndCode_NoSecondWriteOrGood [37 ms]
+A7_FINAL_ACK_UNKNOWN_PASS workpiece=a05a74ab-1661-46c4-8c5e-78b40e1d43cf step1=D2099:4 sid=55 no_automatic_retry=1
+  Passed BothActualFinsDatagramsAndReadbacks_PersistInOldMachineOrder(BarcodeMismatch,Reject,2099,4,1016,2) [95 ms]
+  Passed ExistingTimingSqliteWal_AutomaticallyAddsAuditTablesWithoutDestroyingOldEvents [94 ms]
+  Passed ExplicitlyNotSent_RequiresAdapterProofBeforeSocketDispatch [39 ms]
+  Passed LostAckAfterActualSend_MustRemainUnknownAcrossProcessRestartWithoutRetry [45 ms]
+  Passed PreparedBeforeCrash_IsNeverMislabelledAsKnownNotSent [29 ms]
+  Passed RefusedFinsResponse_RecordsRawReplyHashAndBlocksSecondStep [45 ms]
+  Passed ScannerNotVerifiedCannotStartWriteAndTwoDistinctItemsWithSameBarcodeStaySeparate [33 ms]
+  Passed WrongSidAndWrongReadback_DoNotProduceConfirmedOutput [51 ms]
+  Passed BundleVerifiedAndModifiedZipRejected [64 ms]
 A5_SECOND_WRITE_ACK_LOSS SID=7 known_steps=1 unresolved_steps=1 no_automatic_retry=1
 SIM_FULL_VPLC_LOAD token=1 active=1
 
 A5_STALE_READBACK_FAIL_CLOSED SID=6 actual_D2099=3 response_D2099=1 next_D1016_write=0
 SIM_FULL_VPLC_LOAD token=1 active=1
 
-  Passed SecondReverseWriteAppliedButAckLost_PreservesOnlyFirstConfirmedStep [366 ms]
-  Passed StaleFirstReadbackAfterAppliedFailure_HaltsBeforeFinalQualityWrite [18 ms]
-  Passed DifferentPhysicalItemsWithIdenticalBarcodesStillHaveDifferentKeys [3 ms]
-  Passed FinalMustNotUseSimulatedResultsAsProductionProof [10 ms]
-  Passed IncomingAckCanOnlyFollowCommittedDatabaseState [123 ms]
-  Passed NoFrameCannotEverBecomeGood [1 ms]
-  Passed PlcProtocolDoesActualFinsMemoryReadAndWrite_ButOnlyToMemoryFixture [4 ms]
-  Passed SqliteActuallyUsesWalAndPersistentResultsCarryRealPixelSha256 [88 ms]
-  Passed Topology_UsesRealNinePhysicalDevicesAndElevenLogicalChannels [3 ms]
-  Passed WrongIdentityAndDifferentEpochAreHeldNotRemappedByBarcode [7 ms]
-  Passed HoldIsDurableIdempotentAndCannotLaterBecomeGoodOrNg [166 ms]
-  Passed RejectsUnsafeReasonsAndForbidsRetrospectiveHoldOfFinal [69 ms]
-  Passed MissingOrTamperedLineScanParentBlocksBothRoiPreviews [254 ms]
-  Passed OnlyCurrentOwnerCanPreviewAndCorruptedAreaPngIsNeverShown [215 ms]
-  Passed LineScanParentFeedsTwoLogicalChannelsWithExplicitRowMapping [1 s]
-  Passed MissingCorruptPngAndUnsupportedPluginNeverBecomeOk [2 s]
-  Passed PositioningChannelIsNeverReportedAsInspectionOk [757 ms]
-  Passed ReportRootNeverReusedOrInsideImageTreeOrDatabaseRunRoot [735 ms]
-  Passed SameImmutablePngs_TwoPersistedReleases_ChangeOnlyRoiAndThresholdChannels [445 ms]
-  Passed TamperedReleaseDigestInDatabaseIsRejected [146 ms]
-  Passed UnknownReleaseIdenticalReleasesAndLiveWalAreRejected [140 ms]
-  Passed DifferentLocalPng_ChangesRealContourVerdictAndSavesRedOverlayAndOriginalPixels [76 ms]
-  Passed MissingImageAndInvalidPng_AreReportedAndNeverBecomeFakeGood [22 ms]
-  Passed OddEvenLineScan_RetainsOneOriginalAndTwoDifferentHeightChildren [76 ms]
-  Passed OperatorRoiActuallyChangesContourResult_AndCoordinatesStayGlobal [38 ms]
-  Passed ScopeByWorkpieceId_AvoidsPickingWrongItemsOrForeignNodeRoi [31 ms]
-  Passed ClientFacingHistoryRejectsCounterForgeryAndDuplicateIdentity [1 ms]
+  Passed RefusedFirstWriteHasNonzeroFinsEndCode_NoSecondWriteOrGood [3 ms]
+  Passed SecondReverseWriteAppliedButAckLost_PreservesOnlyFirstConfirmedStep [306 ms]
+  Passed StaleFirstReadbackAfterAppliedFailure_HaltsBeforeFinalQualityWrite [4 ms]
+  Passed DifferentPhysicalItemsWithIdenticalBarcodesStillHaveDifferentKeys [1 ms]
+  Passed FinalMustNotUseSimulatedResultsAsProductionProof [2 ms]
+  Passed IncomingAckCanOnlyFollowCommittedDatabaseState [60 ms]
+  Passed NoFrameCannotEverBecomeGood [< 1 ms]
+  Passed PlcProtocolDoesActualFinsMemoryReadAndWrite_ButOnlyToMemoryFixture [2 ms]
+  Passed SqliteActuallyUsesWalAndPersistentResultsCarryRealPixelSha256 [47 ms]
+IntermediateSymlinkCannotSmuggleReportIntoRunRootOrImageTree: SYMLINK_CREATION_UNAVAILABLE: IOException: 客户端没有所需的特权。 : '<HOME>\AppData\Local\Temp\aoi-dshb-154-5e2935224e974c9ebf795983ccd3422e\run-alias'.
+  Passed CrossNodeIdentityMismatchAndStallAreDetected [2 ms]
+  Passed FlightJournal_AppendAndReplayAreDeterministic_AndTamperDetected [27 ms]
+  Passed MissingPeerInboxAfterAck_IsCritical [1 ms]
+  Passed MissingWalsNeverProduceHealthyAssessment [1 ms]
+  Passed SameFrameUsedForDistinctWorkpieces_IsCritical [7 ms]
+  Passed CsvQuotingDefusesSpreadsheetInjection [25 ms]
+  Passed FivePhysicalUnits_RepeatBarcodeDoesNotDeduplicate_AndDailyWeeklyDenominatorsAreCorrect [177 ms]
+  Passed RealA3VisionLedger_LineScanParentsAndSlaveOwnedPixelsResolveInTrace [798 ms]
+  Passed TraceDoesNotClaimMissingOrTamperedImageAsVerified [83 ms]
+A7_UDP_FINS_D1011_PASS workpiece=b2d1fee3-f47f-48fc-ae5d-de80deec225c capture=bc36d0de-c3d5-4ab4-bf58-d594a54c1ace operation=ec7cbbe5-8678-412b-9772-3342847c4ece sid=31 register=D1011 response=1
+  Passed Topology_UsesRealNinePhysicalDevicesAndElevenLogicalChannels [1 ms]
+  Passed WrongIdentityAndDifferentEpochAreHeldNotRemappedByBarcode [2 ms]
+  Passed HoldIsDurableIdempotentAndCannotLaterBecomeGoodOrNg [83 ms]
+  Passed RejectsUnsafeReasonsAndForbidsRetrospectiveHoldOfFinal [35 ms]
+  Passed MissingOrTamperedLineScanParentBlocksBothRoiPreviews [75 ms]
+  Passed OnlyCurrentOwnerCanPreviewAndCorruptedAreaPngIsNeverShown [65 ms]
+  Passed InputMutationDuringRunWritesNoSuccessReport [392 ms]
+  Skipped IntermediateSymlinkCannotSmuggleReportIntoRunRootOrImageTree [159 ms]
+  Passed LineScanParentFeedsTwoLogicalChannelsWithExplicitRowMapping [472 ms]
+  Passed TraceFollowsRealPngAndEvents_AndCsvJsonAreExported [166 ms]
+  Passed UnfinishedIsNotHold_AndBadInputsDoNotQueryOrLeakOtherRows [47 ms]
+  Passed ActualUdpFinsRequestAndResponse_CanBeCorrelatedToOnePhysicalCapture [52 ms]
+  Passed ChannelOwnerAndIdentifierMismatch_CannotBeWritten [17 ms]
+  Passed FinalPlcAcknowledgedWrites_FollowLegacyGoodOrBarcodeFailureBranches(False) [48 ms]
+  Passed FinalPlcAcknowledgedWrites_FollowLegacyGoodOrBarcodeFailureBranches(True) [48 ms]
+  Passed FrameArrivedButTooLate_IsDifferentFromFrameNeverArrived [78 ms]
+  Passed FrameReusedForTwoCaptures_IsExplicitlyReported [40 ms]
+  Passed LegacyFinalWritesReversed_AreIdentifiedFromAckOrderNotMemoryMirror [47 ms]
+A7_ST05_TIMELINE_NEGATIVE workpiece=7afb68c4-307d-4949-8f6f-5ce75d6e79e5 missing=FrameReady; observed=CamDone2; rejected=1
+A7_ST05_TIMELINE_PASS ordering=REQUEST_FIRST workpiece=d8c56345-3615-4882-aee1-32d902aa4da2 capture=1224f7d8-b496-4139-a5a1-3fd0de40ac4a events=6 stopwatchRun=ec6a56b5-8bec-4090-b79f-7ce07f9bafde
+A7_ST05_TIMELINE_PASS ordering=FRAME_FIRST workpiece=ae8f304b-660b-48a5-8193-fa87bb3a2899 capture=e95c5505-bbee-41c0-aec9-636c3faf45c6 events=6 stopwatchRun=bd34c567-ada1-4c10-a04f-31d53d0acd6b
+  Passed MissingFrame_WithWrongCamDoneSuccess_IsDiagnosedNotShownAsCaptured [42 ms]
+  Passed MissingFrameAndMissingCamDoneAckAreDiagnosedAfterExplicitWindows [46 ms]
+  Passed PlcRequestBeforeFrameOrFrameBeforeRequest_ProducesActualPerCaptureCausalTimeline(False) [97 ms]
+  Passed PlcRequestBeforeFrameOrFrameBeforeRequest_ProducesActualPerCaptureCausalTimeline(True) [239 ms]
+  Passed RealMasterProductionWalLegacyEvents_AreQueryableButDoNotFakeCamDone [27 ms]
+  Passed SameFrameIdForDifferentPhysicalWorkpieces_IsFoundEvenWhenQueryFiltersOneItem [31 ms]
+  Passed SeparateProcessRunsHaveIncomparableStopwatches [28 ms]
+  Passed WrongActualPlcValueAndMonotonicDeadline_AreObservableFailures [57 ms]
+
+Test Run Successful.
+Total tests: 53
+     Passed: 53
+ Total time: 10.4422 Seconds
+  Passed MissingCorruptPngAndUnsupportedPluginNeverBecomeOk [836 ms]
+  Passed PositioningChannelIsNeverReportedAsInspectionOk [332 ms]
+  Passed ReportRootNeverReusedOrInsideImageTreeOrDatabaseRunRoot [352 ms]
+  Passed SameImmutablePngs_TwoPersistedReleases_ChangeOnlyRoiAndThresholdChannels [453 ms]
+  Passed TamperedReleaseDigestInDatabaseIsRejected [197 ms]
+  Passed UnknownReleaseIdenticalReleasesAndLiveWalAreRejected [174 ms]
+  Passed DifferentLocalPng_ChangesRealContourVerdictAndSavesRedOverlayAndOriginalPixels [74 ms]
+  Passed MissingImageAndInvalidPng_AreReportedAndNeverBecomeFakeGood [16 ms]
+  Passed OddEvenLineScan_RetainsOneOriginalAndTwoDifferentHeightChildren [75 ms]
+  Passed OperatorRoiActuallyChangesContourResult_AndCoordinatesStayGlobal [40 ms]
+  Passed ScopeByWorkpieceId_AvoidsPickingWrongItemsOrForeignNodeRoi [28 ms]
 SIM_FULL_VPLC_LOAD token=1 active=1
 SIM_FULL_VPLC_LOAD token=2 active=2
 SIM_FULL_VPLC_LOAD token=3 active=3
@@ -483,39 +485,40 @@ SIM_FULL_VPLC_EXIT token=3 decision=1 completed=3
 SIM_FULL_VPLC_EXIT token=4 decision=1 completed=4
 SIM_FULL_VPLC_EXIT token=5 decision=1 completed=5
 
-  Passed SameBarcodeStillGeneratesSeparateReadOnlyHistoryAndCorrectCounters [47 ms]
-  Passed EachCoreCapturesOnlyItsOwnedChannelsAndParentFrameOnce [139 ms]
-  Passed DurableTokenLedgerRejectsReuseAndSilentRestart [40 ms]
-  Passed EndBarcodeFaultAndRepeatedBarcodeDoNotAllowConveyorTokenConfusion [1 ms]
-  Passed FiveItemsMoveInFIFOOrderWithThreeOverlappingInFlightAndImmutableTokens [2 ms]
-  Passed CorruptedForeignOwnedRowIsNotProjectedAsSafeLocalDraft [24 ms]
+  Passed ClientFacingHistoryRejectsCounterForgeryAndDuplicateIdentity [2 ms]
+  Passed SameBarcodeStillGeneratesSeparateReadOnlyHistoryAndCorrectCounters [67 ms]
+  Passed EachCoreCapturesOnlyItsOwnedChannelsAndParentFrameOnce [164 ms]
+  Passed DurableTokenLedgerRejectsReuseAndSilentRestart [45 ms]
+  Passed EndBarcodeFaultAndRepeatedBarcodeDoNotAllowConveyorTokenConfusion [2 ms]
+  Passed FiveItemsMoveInFIFOOrderWithThreeOverlappingInFlightAndImmutableTokens [3 ms]
+  Passed CorruptedForeignOwnedRowIsNotProjectedAsSafeLocalDraft [31 ms]
   Passed InvalidRoiAndUnsignedActorsNeverEnterSqlite [11 ms]
-  Passed MasterOwnedRoiIsDurableRevisionedAndNeverLeaksIntoSlave [48 ms]
+  Passed MasterOwnedRoiIsDurableRevisionedAndNeverLeaksIntoSlave [45 ms]
   Passed BrokenReplaceableAlgorithm_IsOnlyAnErrorOnItsOwnWorkpiece [41 ms]
   Passed FileAdapter_ActuallyImportsCurrentWorkpiecePngAtStationEvent [25 ms]
-  Passed ForeignTicketOrDuplicateFrame_CannotBeRebound [16 ms]
-  Passed FullSize8200x15000LineParent_FitsOnlyOneBoundedOwnedFrame [57 ms]
-  Passed LegacyLinePhysicalParent_SkipsRowZero_AndAuditsExactRowOneTwoSources [55 ms]
-  Passed LineScan_OnePhysicalCapture_ProducesTwoResultsAndOriginalParentLineage [58 ms]
+  Passed ForeignTicketOrDuplicateFrame_CannotBeRebound [15 ms]
+  Passed FullSize8200x15000LineParent_FitsOnlyOneBoundedOwnedFrame [47 ms]
+  Passed LegacyLinePhysicalParent_SkipsRowZero_AndAuditsExactRowOneTwoSources [68 ms]
+  Passed LineScan_OnePhysicalCapture_ProducesTwoResultsAndOriginalParentLineage [54 ms]
   Passed QueueHasFinitePixelBudget_AndDoesNotRetainDisposedVendorMemory [11 ms]
   Passed SourceMissingAndCorruptPng_ReportSingleItemMissingOrError_NoFakeResults [15 ms]
-  Passed St05HardTriggeredFrame_InBothOrders_PersistsActualCaptureAndFrameIds(True) [43 ms]
-  Passed St05HardTriggeredFrame_InBothOrders_PersistsActualCaptureAndFrameIds(False) [44 ms]
-  Passed TimedOutItem_DoesNotBorrowLateFrameOrNextWorkpieceWithSameBarcode [69 ms]
-  Passed UnknownAlgorithm_CannotBecomeGoodOrAccidentalModelProof [30 ms]
-  Passed ColorFrame_IsLosslesslyRetainedAndPixelProbeUsesOpenCvGrayConversion [34 ms]
-  Passed CorruptedOrMissingAsset_IsNeverSilentlyLoadedOrCertified [39 ms]
-  Passed ExplicitSimulationRule_CanDriveOnlySimulationMarkedDecision [96 ms]
-  Passed InvalidRoiAndUnknownGroup_FailClosedBeforeWritingAnything [16 ms]
-  Passed NineDevicesElevenChannels_AreActualPixelsWithSharedLineParentAndWal [168 ms]
-  Passed OrphanAfterInterruptedWrite_IsFlaggedRatherThanAutoPromoted [49 ms]
-  Passed RealNativeRoiCrop_PreservesExactParentSourcePixelsWithoutInterpolation [54 ms]
-  Passed SimulatedReinspection_RequiresNewAttemptAndRetainsPreviousEvidence [71 ms]
-  Passed UnsupportedLinePixelTypeAndUnboundedThreshold_AreRejected [15 ms]
-  Passed WithoutValidatedRule_GenuinePixelsDoNotProduceAnAutomaticGood [102 ms]
+  Passed St05HardTriggeredFrame_InBothOrders_PersistsActualCaptureAndFrameIds(True) [41 ms]
+  Passed St05HardTriggeredFrame_InBothOrders_PersistsActualCaptureAndFrameIds(False) [45 ms]
+  Passed TimedOutItem_DoesNotBorrowLateFrameOrNextWorkpieceWithSameBarcode [82 ms]
+  Passed UnknownAlgorithm_CannotBecomeGoodOrAccidentalModelProof [27 ms]
+  Passed ColorFrame_IsLosslesslyRetainedAndPixelProbeUsesOpenCvGrayConversion [29 ms]
+  Passed CorruptedOrMissingAsset_IsNeverSilentlyLoadedOrCertified [41 ms]
+  Passed ExplicitSimulationRule_CanDriveOnlySimulationMarkedDecision [121 ms]
+  Passed InvalidRoiAndUnknownGroup_FailClosedBeforeWritingAnything [21 ms]
+  Passed NineDevicesElevenChannels_AreActualPixelsWithSharedLineParentAndWal [213 ms]
+  Passed OrphanAfterInterruptedWrite_IsFlaggedRatherThanAutoPromoted [53 ms]
+  Passed RealNativeRoiCrop_PreservesExactParentSourcePixelsWithoutInterpolation [56 ms]
+  Passed SimulatedReinspection_RequiresNewAttemptAndRetainsPreviousEvidence [89 ms]
+  Passed UnsupportedLinePixelTypeAndUnboundedThreshold_AreRejected [12 ms]
+  Passed WithoutValidatedRule_GenuinePixelsDoNotProduceAnAutomaticGood [106 ms]
 
 Test Run Successful.
-Total tests: 141
-     Passed: 136
-    Skipped: 5
- Total time: 22.9042 Seconds
+Total tests: 143
+     Passed: 137
+    Skipped: 6
+ Total time: 14.0382 Seconds

@@ -15,8 +15,15 @@ or production write.
   `<out>/_db-snapshot/`, its SHA256 is compared with the pre-copy hash (a mismatch
   means the source was written during the copy and the run fails), and only that
   copy is opened with `SqliteOpenMode.ReadOnly`.
-- The report folder must be new, and must not be inside the image fixture, inside
-  the A6 database's run folder, or behind a `..`/symlink alias that resolves there.
+- The report folder must be new, and must not be inside the image fixture or inside
+  the A6 database's run folder. Both sides are canonicalised **component by
+  component** through symlinks and junctions, so an intermediate link (not just a
+  linked final node) cannot smuggle a report into the source trees; `..` aliases
+  are resolved the same way. A rejected run creates no report, no `_db-snapshot`
+  and no sidecars.
+- Input stability is verified **before** any success-shaped artefact is written: if
+  the database or an input PNG changes during the run, the tool throws and leaves no
+  `ab-manifest.json`/`channel-results.csv`/`summary.txt` behind.
 - Machine names and absolute paths are **redacted by default** so a report can be
   committed as public evidence; `--include-absolute-paths` is for local-only runs.
 - Emits no PLC/FINS traffic, no `CamDone`, no production statistics, no field
@@ -93,6 +100,8 @@ compare field images instead.
 | TC-154-AB-05 | `ReportRootNeverReusedOrInsideImageTreeOrDatabaseRunRoot` |
 | TC-154-AB-06 | `UnknownReleaseIdenticalReleasesAndLiveWalAreRejected` |
 | TC-154-AB-07 | `TamperedReleaseDigestInDatabaseIsRejected` |
+| TC-154-AB-08 | `IntermediateSymlinkCannotSmuggleReportIntoRunRootOrImageTree` — a link in an **intermediate** path component with a normal sub-directory below it is rejected, and the rejection creates nothing in the source tree. Skipped with an explicit `SYMLINK_CREATION_UNAVAILABLE` reason only where the host cannot create links at all |
+| TC-154-AB-09 | `InputMutationDuringRunWritesNoSuccessReport` — mutation at the concurrent-writer seam fails closed with no manifest/CSV/summary |
 
 ## Reuse, not reinvention
 
@@ -108,8 +117,9 @@ an A0 integration follow-up, not a change made here.
 
 ## Recorded run (reviewable from the cloud)
 
-`ab-evidence/run-windows-20261018/` holds one real Windows run: six command
-logs (fixtures, database, compare, NUnit, `dotnet build AOI.slnx`, `dotnet test AOI.slnx`),
+`ab-evidence/run-windows-20261018/` holds one real Windows run: seven command
+logs (fixtures, database, compare, NUnit, `dotnet build AOI.slnx`, `dotnet test AOI.slnx`,
+and `step7-negative-junction.log` for the intermediate-junction rejection),
 the before/after SHA256 of the database and all nine input PNGs, the full
 `ab-manifest.json`, the CSV/summary, and the CH06 A/B annotated pair that shows the
 published ROI change.
