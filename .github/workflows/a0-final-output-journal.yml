@@ -43,10 +43,17 @@ jobs:
         run: python scripts/e2e_a0_raw_fins_audit.py --evidence-root .artifacts/a0-final-output-journal
       - name: Offline forensic operator view is read-only against normal HOLD and unknown-ACK WAL
         run: python scripts/e2e_a0_readonly_recovery.py --evidence-root .artifacts/a0-final-output-journal
+      - name: Published A6 legacy brightness actually inspects real PNGs after nine PLC camera handshakes
+        run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --with-product --count 3 --timeout 80 --evidence-root .artifacts/a0-a6-published-bright
+      - name: Published CH06 OpenCV contour must change exact raw PNG workpiece result
+        run: python scripts/e2e_sim_full.py --legacy-shadow --with-images --with-product --with-published-contour --count 3 --timeout 80 --evidence-root .artifacts/a0-a6-published-contour
       - name: Upload failure evidence for A0
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: a0-final-fins-${{ matrix.os }}-${{ github.run_id }}
-          path: csharp/.artifacts/a0-final-output-journal/
+          path: |
+            csharp/.artifacts/a0-final-output-journal/
+            csharp/.artifacts/a0-a6-published-bright/
+            csharp/.artifacts/a0-a6-published-contour/
           retention-days: 14
