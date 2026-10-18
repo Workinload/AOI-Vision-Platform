@@ -39,6 +39,12 @@ jobs:
             exit 1
           }
           Write-Host 'A5_WINDOWS_OPERATOR_SMOKE_SYNTAX_PASS'
+      - name: A0 actual Windows launcher negative exit-code and orphan-process regression
+        if: matrix.os == 'windows-2025'
+        shell: pwsh
+        run: |
+          powershell.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -File scripts/Test-LauncherDiagnostics.ps1 -EvidenceRoot .artifacts/launcher-diagnostics
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Independent virtual FINS fault-fixture Python unit tests
         run: python -m unittest discover -s qa -p 'test_*.py' -v
       - name: Restore pinned dependencies
@@ -123,6 +129,7 @@ jobs:
           dotnet publish tools/AOI.Vision.Cli/AOI.Vision.Cli.csproj --no-restore -c Release -r win-x64 --self-contained false -o .artifacts/dist/AOI_SIM11_Windows/VisionLab
           cp scripts/Launch-SIM11.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIM11.cmd
           cp scripts/Launch-SIMFULL.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.cmd
+          cp scripts/Launch-SIMFULL.ps1 .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.ps1
           cp scripts/Launch-SIMFULL-Images.cmd .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
           cp scripts/Configure-SIM-Recipe.cmd .artifacts/dist/AOI_SIM11_Windows/Configure-SIM-Recipe.cmd
           cp scripts/WINDOWS_SIM11_PREVIEW.txt .artifacts/dist/AOI_SIM11_Windows/README.txt
@@ -132,6 +139,7 @@ jobs:
           test -f .artifacts/dist/AOI_SIM11_Windows/Windows-Operator-Smoke.ps1
           test -f .artifacts/dist/AOI_SIM11_Windows/Run-Windows-Operator-Smoke.cmd
           test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL-Images.cmd
+          test -f .artifacts/dist/AOI_SIM11_Windows/Launch-SIMFULL.ps1
           test -f .artifacts/dist/AOI_SIM11_Windows/Host/AOI.Host.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/UI/AOI.Ui.Avalonia.exe
           test -f .artifacts/dist/AOI_SIM11_Windows/Diagnostics/AOI.Diagnostics.Cli.exe
