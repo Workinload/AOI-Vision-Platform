@@ -34,7 +34,9 @@ public sealed class ReportExportTests
     public void CsvKeepsHeaderColumnOrderAndFormulaInjectionGuard()
     {
         var csv = ProductionReportCsv.Build(Example());
-        var lines = csv.Split("\r\n", StringSplitOptions.None);
+        // StringBuilder.AppendLine uses Environment.NewLine: CRLF on Windows, LF on Linux CI.
+        Assert.That(csv, Does.Contain(Environment.NewLine));
+        var lines = csv.Split(Environment.NewLine, StringSplitOptions.None);
         Assert.That(lines[0], Is.EqualTo("Period,FromUTC,UntilUTC,Total,GOOD,NG,HOLD,InProgress,GoodRate"));
         Assert.That(lines[1], Does.StartWith("\"day\","));
         Assert.That(lines[2], Does.StartWith("\"week\","));
