@@ -1,3 +1,4 @@
+using AOI.Contracts;
 using AOI.Domain;
 using System.Globalization;
 
@@ -24,10 +25,10 @@ public sealed record OperatorTimingDisplay(
 /// </summary>
 public static class OperatorTimingProjection
 {
-    public static OperatorTimingDisplay Display(OperatorTimingReply reply)
+    public static OperatorTimingDisplay Display(SimTimingReply reply)
     {
         ArgumentNullException.ThrowIfNull(reply);
-        reply.Validate(reply.WorkpieceId);
+        reply.Validate();
         var direct = reply.Events.Count(e => e.Origin == "DIRECT_OBSERVATION");
         var legacy = reply.Events.Count - direct;
         string summary = reply.Events.Count == 0
@@ -66,11 +67,11 @@ public static class OperatorTimingProjection
     /// A physical line-scan frame is shared by its two logical channels.
     /// </summary>
     public static IReadOnlyList<CaptureDebugRow> Apply(
-        IReadOnlyList<CaptureDebugRow> snapshotRows, OperatorTimingReply reply)
+        IReadOnlyList<CaptureDebugRow> snapshotRows, SimTimingReply reply)
     {
         ArgumentNullException.ThrowIfNull(snapshotRows);
         ArgumentNullException.ThrowIfNull(reply);
-        reply.Validate(reply.WorkpieceId);
+        reply.Validate();
         return snapshotRows.Select(row =>
         {
             var physical = reply.Events.Where(e => e.Origin == "DIRECT_OBSERVATION" &&
@@ -80,7 +81,7 @@ public static class OperatorTimingProjection
             var latest = physical.OrderByDescending(e => e.AttemptNo)
                 .ThenByDescending(e => e.OccurredUtc).FirstOrDefault();
             var sameCapture = latest is null
-                ? Array.Empty<OperatorTimingMilestone>()
+                ? Array.Empty<SimTimingMilestone>()
                 : physical.Where(e => e.CaptureId == latest.CaptureId &&
                     e.AttemptNo == latest.AttemptNo).ToArray();
             var request = sameCapture.LastOrDefault(e =>
@@ -143,6 +144,6 @@ public static class OperatorTimingProjection
     }
 
     private static string Short(Guid? id) => id is { } value ? value.ToString("N")[..8] : "—";
-    private static string Utc(OperatorTimingMilestone e) =>
+    private static string Utc(SimTimingMilestone e) =>
         e.OccurredUtc.ToUniversalTime().ToString("HH:mm:ss.fff 'UTC'");
 }
