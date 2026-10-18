@@ -213,17 +213,23 @@ def verify_case(root: Path, scenario: str) -> dict:
                     a1_ack['wireProof']['replyVerified'] is True,
                     'A1_FALSE_ACK', 'A1 falsely marked unverified FINS reply')
             read = step_events[3]
+            # Other external PLC engineering/diagnostic readers may poll D2099
+            # between the output and the ORIGINAL A7-confirmed readback,
+            # especially on Windows. They are NOT the A7 physical readback.
+            # Require the exact independently persisted A7 SID, raw request SHA,
+            # response SHA and decoded value. A later unrelated matching DM
+            # value cannot be used in place of this one-time operation.
             actual_reads = [(i, p, w) for i, (p, w) in enumerate(zip(rows, wire))
                             if w.token == token and not w.write and w.address == address
-                            and w.seq > packet_wire.seq]
-            require(bool(actual_reads), 'READBACK_DELETED',
-                    f'token={token} step={step} no true UDP readback')
-            first_index, first_raw, first_wire = actual_reads[0]
+                            and w.sid == read[3] and w.seq > packet_wire.seq]
+            first_index, first_raw, first_wire = exactly(
+                actual_reads, 'READBACK_DELETED',
+                f'token={token} step={step} actual A7 SID={read[3]} readback packet')
             require(first_wire.ok and first_wire.reply_words == (expected_value,) and
-                    first_wire.sid == read[3] and sha(first_raw['RequestHex']) == read[6]
+                    sha(first_raw['RequestHex']) == read[6]
                     and sha(first_raw['ResponseHex']) == read[7] and
                     read[8] == expected_value and first_index > packet_index,
-                    'READBACK_TAMPERED', f'token={token} step={step} first FINS readback invalid')
+                    'READBACK_TAMPERED', f'token={token} step={step} A7-SID-bound real UDP readback invalid')
             a1_read = exactly([x for x in a1 if x['kind'] == 'readbackConfirmed' and
                                x.get('claimId') == claim_id], 'A1_READBACK',
                               f'token={token} confirmed readback')
@@ -312,9 +318,17 @@ def mutate_case(folder: Path, mutation: str):
                 lines.append(copied)
             else:
                 position = lines.index(first)
+                # Remove the actual A7 SID-bound readback, not an unrelated
+                # engineering poll of the same DM address.
+                a7path = folder / 'master/timing-events.sqlite'
+                sid_rows = read_sql(a7path, """SELECT e.fins_sid
+                    FROM final_output_audit_events e
+                    JOIN final_output_intents i ON e.attempt_id=i.attempt_id
+                    WHERE i.token=1 AND e.step_number=1 AND e.phase='ReadbackVerified'""")
+                actual_sid = exactly(sid_rows, 'TAMPER_FIXTURE', 'real A7 readback SID')[0]
                 idx = next(i for i in range(position + 1, len(lines)) if
                            lines[i]['Token'] == 1 and not lines[i]['IsWrite'] and
-                           lines[i]['Address'] == 1016)
+                           lines[i]['Address'] == 1016 and lines[i]['Sid'] == actual_sid)
                 lines.pop(idx)
                 # Rebase only metadata sequence: do not forge a replacement reply.
                 for i, entry in enumerate(lines):
