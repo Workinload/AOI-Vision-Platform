@@ -43,7 +43,7 @@ public partial class MainWindowViewModel
     [ObservableProperty] private CaptureDebugRow? selectedCaptureDebugRow;
     [ObservableProperty] private string captureDebugIdentity = "等待来自 Core 的 WorkpieceId";
     [ObservableProperty] private string captureDebugNotice =
-        "PLC请求、硬触发FrameReady及FINS CamDone尚无只读事件IPC，不以检测OK倒推握手";
+        "PLC/FrameReady/CamDone 必须由真实 Core 时序 IPC 证明；未查询不推断已确认";
     [ObservableProperty] private string captureDebugLastSnapshot = "等待 Core 快照";
     [ObservableProperty] private string captureDebugError = "尚无可信异常记录";
     [ObservableProperty] private bool isCapturePngChecking;
@@ -54,6 +54,7 @@ public partial class MainWindowViewModel
     {
         VerifyCapturePngCommand = new AsyncRelayCommand(VerifyCapturePngAsync,
             () => !IsCapturePngChecking);
+        InitializeCaptureTiming();
         RebuildCaptureDebug(MonitorProjection.Offline(
             _role == "slave" ? MachineRole.Slave : MachineRole.Master));
     }
@@ -81,6 +82,7 @@ public partial class MainWindowViewModel
     private void RebuildCaptureDebug(MonitorProjection snapshot)
     {
         var selected = ViewedWorkpieceId;
+        CaptureTimingSelectionChanged(selected);
         if (_debugProofWorkpieceId != selected)
         {
             _debugProofGeneration++;
@@ -90,7 +92,7 @@ public partial class MainWindowViewModel
             _debugProofWorkpieceId = selected;
             _debugPngProofs.Clear();
             IsCapturePngChecking = false;
-            CaptureDebugNotice = "点击“核验本件PNG”从 Core 逐通道读回 SHA256 校验图像；不等于实际硬触发/ACK 证据";
+            CaptureDebugNotice = "PNG校验只证明图像资产；点击“读取真实时序”查看独立 PLC/FrameReady/CamDone 证据";
         }
         var latest = snapshot.Workpiece?.WorkpieceId == selected;
         var historyRow = selected is null ? null : RecentWorkpieces.FirstOrDefault(
@@ -120,7 +122,10 @@ public partial class MainWindowViewModel
               hold.RaisedUtc.ToUniversalTime().ToString("HH:mm:ss.fff 'UTC'");
 
         // These records are immutable so source/change comparison is deterministic.
-        var rows = CaptureDebugProjection.ForWorkpiece(snapshot, selected, _debugPngProofs);
+        IReadOnlyList<CaptureDebugRow> rows = CaptureDebugProjection.ForWorkpiece(
+            snapshot, selected, _debugPngProofs);
+        if (_captureTimingReply is { } timing && selected == timing.WorkpieceId)
+            rows = OperatorTimingProjection.Apply(rows, timing);
         if (!CaptureDebugChannels.SequenceEqual(rows))
         {
             var previous = SelectedCaptureDebugRow?.ChannelId;
@@ -205,7 +210,7 @@ public partial class MainWindowViewModel
                         RebuildCaptureDebug(projection);
                     CaptureDebugNotice = "已核验 " + (verified + failed) +
                         "/11 · PNG有效 " + verified + " · 不可用 " + failed +
-                        "；CamDone/PLC request 仍需真实事件 IPC";
+                        "；PLC/FrameReady/CamDone 可另点“读取真实时序”核实";
                 });
             }
         }
@@ -230,6 +235,7 @@ public partial class MainWindowViewModel
         _debugProofWorkpieceId = null;
         _debugPngProofs.Clear();
         _captureObserver.Clear();
+        ClearCaptureTiming();
         IsCapturePngChecking = false;
         CaptureDebugChannels.Clear();
         CaptureDebugTimeline.Clear();

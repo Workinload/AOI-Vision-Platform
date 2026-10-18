@@ -462,6 +462,8 @@
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="7">
                       <Button Content="核验本件11路PNG" Command="{Binding VerifyCapturePngCommand}"/>
+                      <Button Content="读取真实时序" AutomationProperties.Name="读取真实时序"
+                              Command="{Binding ReadCaptureTimingCommand}" />
                       <Button Content="回到最新工件" Command="{Binding FollowLiveCommand}"/>
                       <TextBlock Text="直接选择历史工件" FontSize="11"/>
                       <ComboBox ItemsSource="{Binding RecentWorkpieces}"
@@ -530,7 +532,63 @@
                     </Grid>
                   </Border>
                 </Grid>
-                <Border Grid.Row="2" Background="White" CornerRadius="8" Padding="12">
+                <Grid Grid.Row="2" RowDefinitions="Auto,Auto,*" RowSpacing="6">
+                  <TextBlock Text="A7 持久化真实时序（A0 Master IPC 127.0.0.1:19652）"
+                             FontSize="13" FontWeight="SemiBold"/>
+                  <TextBlock Grid.Row="1" Text="{Binding CaptureTimingSummary}"
+                             FontSize="11" Foreground="#916C40" TextWrapping="Wrap"/>
+                  <TabControl Grid.Row="2">
+                    <TabItem Header="真实 PLC / 相机 / 检测时间线">
+                      <Grid ColumnDefinitions="*,245" ColumnSpacing="8">
+                        <ListBox ItemsSource="{Binding ActualCaptureTimingEvents}"
+                                 SelectedItem="{Binding SelectedCaptureTimingEvent, Mode=TwoWay}"
+                                 Background="#F4F8FC" BorderThickness="0">
+                          <ListBox.ItemTemplate>
+                            <DataTemplate>
+                              <Grid ColumnDefinitions="103,63,131,110,*,138" Margin="5,6" ColumnSpacing="3">
+                                <TextBlock Text="{Binding EventUtc}" FontSize="10" TextWrapping="Wrap"/>
+                                <TextBlock Grid.Column="1" Text="{Binding NodeId}" FontSize="10"/>
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                  <TextBlock Text="{Binding Stage}" FontSize="10" FontWeight="SemiBold"
+                                             TextWrapping="Wrap"/>
+                                  <TextBlock Text="{Binding Provenance}" FontSize="9"
+                                             Foreground="#8A693F" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Text="{Binding ChannelDevice}"
+                                           FontSize="10" TextWrapping="Wrap"/>
+                                <StackPanel Grid.Column="4" Spacing="2">
+                                  <TextBlock Text="{Binding PlcEvidence}" FontSize="10"
+                                             TextWrapping="Wrap" Foreground="#296A8C"/>
+                                  <TextBlock Text="{Binding CaptureIdentity}" FontSize="10" TextWrapping="Wrap"/>
+                                </StackPanel>
+                                <TextBlock Grid.Column="5" Text="{Binding Status}" FontSize="10"
+                                           TextWrapping="Wrap" Foreground="#57728C"/>
+                              </Grid>
+                            </DataTemplate>
+                          </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid Grid.Column="1" RowDefinitions="Auto,Auto,*" RowSpacing="6">
+                          <TextBlock Text="A7 时序故障 / 归属异常" FontWeight="SemiBold" FontSize="12"/>
+                          <TextBlock Grid.Row="1" Text="{Binding CaptureTimingFindingsMessage}"
+                                     FontSize="10" Foreground="#976B42" TextWrapping="Wrap"/>
+                          <ListBox Grid.Row="2" ItemsSource="{Binding ActualCaptureTimingFindings}"
+                                   BorderThickness="0" Background="#F8F5F1">
+                            <ListBox.ItemTemplate>
+                              <DataTemplate>
+                                <StackPanel Spacing="3" Margin="5,7">
+                                  <TextBlock Text="{Binding Severity}" Foreground="#B14E35"
+                                             FontSize="10" FontWeight="Bold"/>
+                                  <TextBlock Text="{Binding Code}" FontSize="10" TextWrapping="Wrap"/>
+                                  <TextBlock Text="{Binding Detail}" FontSize="10" TextWrapping="Wrap"/>
+                                </StackPanel>
+                              </DataTemplate>
+                            </ListBox.ItemTemplate>
+                          </ListBox>
+                        </Grid>
+                      </Grid>
+                    </TabItem>
+                    <TabItem Header="旧快照观察（非报文证据）">
+                <Border Background="White" CornerRadius="8" Padding="12">
                   <Grid RowDefinitions="Auto,*" RowSpacing="6">
                     <TextBlock Text="快照变化日志（只证明Core已报告的状态，不代替原始FINS写入顺序）"
                                FontSize="13" FontWeight="SemiBold"/>
@@ -553,6 +611,9 @@
                     </ListBox>
                   </Grid>
                 </Border>
+                    </TabItem>
+                  </TabControl>
+                </Grid>
               </Grid>
             </TabItem>
             <TabItem Header="45条PLC工程台账">
