@@ -41,6 +41,18 @@ try
         Console.WriteLine($"SIM_ROI_SAMPLE_OK png={path} image=64x64 native_opencv=1");
         return 0;
     }
+    // Every MUTATING offline A6 command must own both Master/Slave OS run
+    // leases through its LAST SQLite commit. A Core may never start between
+    // this safety check and an A6 write. Read-only previews/status remain
+    // available without acquiring a writer lease.
+    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or
+        "import-roi" or "camera-target" or "algorithm-param";
+    using OfflineCoreOperationGate.OfflineLease? stoppedCores = mutating
+        ? OfflineCoreOperationGate.AcquireStoppedCores(root)
+        : null;
+    if (mode == "activate")
+        stoppedCores!.RequireCleanActivationRoot();
+
     var repository = new SolutionRepository(Path.Combine(root, "solutions.sqlite"));
     if (mode == "bootstrap")
     {
