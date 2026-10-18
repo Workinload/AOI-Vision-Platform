@@ -118,6 +118,34 @@ public static class PublishedRuntimeParameterResolver
     }
 
     /// <summary>
+    /// A0 Host may use this overload at an A1-registered physical event to
+    /// ensure the selected recipe belongs to that EXACT workpiece and trigger.
+    /// Ordered line children matter: even and odd rows must not be swapped.
+    /// </summary>
+    public static ResolvedPhysicalInspectionPlan ResolveForTrigger(
+        WorkpieceParameterBinding bound, WorkpieceIdentity observedWorkpiece,
+        string physicalDeviceId, MachineRole ownerRole, string plcSignalAddress,
+        IReadOnlyList<string> orderedChannelIds,
+        CameraConfigurationReadback? adapterReadback = null)
+    {
+        ArgumentNullException.ThrowIfNull(bound);
+        ArgumentNullException.ThrowIfNull(observedWorkpiece);
+        observedWorkpiece.Validate();
+        if (bound.Workpiece.WorkpieceId != observedWorkpiece.WorkpieceId ||
+            bound.Workpiece.Epoch != observedWorkpiece.Epoch ||
+            bound.Workpiece.ReleaseId != observedWorkpiece.ReleaseId ||
+            bound.Workpiece.TraceId != observedWorkpiece.TraceId)
+            throw new InvalidOperationException("PHYSICAL_TRIGGER_WORKPIECE_IDENTITY_MISMATCH");
+        var plan = Resolve(bound, physicalDeviceId, adapterReadback);
+        if (plan.Capture.OwnerRole != ownerRole ||
+            !string.Equals(plan.Capture.PlcSignalAddress, plcSignalAddress, StringComparison.Ordinal) ||
+            orderedChannelIds is null ||
+            !plan.Capture.ChannelIds.SequenceEqual(orderedChannelIds, StringComparer.Ordinal))
+            throw new InvalidOperationException("PHYSICAL_TRIGGER_RECIPE_BINDING_MISMATCH");
+        return plan;
+    }
+
+    /// <summary>
     /// A0 can use this before resolving a physical batch when an individual
     /// capture/inspection result is needed; identity comes from the A6 binding.
     /// </summary>
