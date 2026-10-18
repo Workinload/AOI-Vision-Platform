@@ -69,7 +69,7 @@ def verify_case(root: Path, scenario: str) -> dict:
     someone with write access to all three original SQLite/JSONL sources can
     reforge them together. Physical vPLC receive-side capture is necessary.
     """
-    require(scenario in ('normal', 'mismatch', 'ack-lost'), 'BAD_SCENARIO', scenario)
+    require(scenario in ('normal', 'mismatch', 'ack-lost', 'ack-second', 'scan-failed'), 'BAD_SCENARIO', scenario)
     source = root / 'p0-fins-wire.jsonl'
     rows = load_records(source)
     wire = parse_trace(rows)  # Independently decode packet bytes, SID, routing and reply.
@@ -112,12 +112,17 @@ def verify_case(root: Path, scenario: str) -> dict:
         require(guid(trace, 'A7 TraceId') == guid(real_id.get('traceId'), 'Core TraceId')
                 and epoch == real_id['epoch'] and release == real_id['releaseId'],
                 'A7_WRONG_RELEASE', f'A7 token={token} TraceId/epoch/release is altered')
-        expected_case = 'BarcodeMismatch' if token == 3 and scenario != 'normal' else 'Normal'
+        expected_case = ('BarcodeMismatch' if token == 3 and scenario in ('mismatch', 'ack-lost', 'ack-second')
+                         else 'BarcodeFailure' if token == 3 and scenario == 'scan-failed'
+                         else 'Normal')
         require(a7case == expected_case and disposition == 'Reject',
                 'A7_SCENARIO', f'token={token} incorrect scenario/disposition')
         expected = ([(2099, 4), (1016, 2)] if expected_case == 'BarcodeMismatch'
+                    else [(2099, 3), (1016, 2)] if expected_case == 'BarcodeFailure'
                     else [(1016, 2), (2099, 2)])
         required_steps = 1 if token == 3 and scenario == 'ack-lost' else 2
+        unknown_step = (1 if token == 3 and scenario == 'ack-lost' else
+                        2 if token == 3 and scenario == 'ack-second' else 0)
         events = read_sql(a7, '''SELECT phase,step_number,operation_id,fins_sid,dm_address,
                                 value,request_sha256,response_sha256,readback_value
                                 FROM final_output_audit_events WHERE attempt_id=?
@@ -191,14 +196,18 @@ def verify_case(root: Path, scenario: str) -> dict:
                     'A1_WIRE_CLAIM', f'token={token} A1 ClaimId/SID/address/value was changed')
             counts['claims'] += 1
             counts['writes'] += 1
-            if scenario == 'ack-lost' and token == 3:
+            if unknown_step == step:
                 ensure_sequential([x[0] for x in step_events],
                                   ['StepPrepared', 'WireSent', 'AckUnknown'], token)
+                expected_kinds = (['intentPrepared', 'writeClaimed', 'wireSendObserved', 'outcomeUnknown']
+                                  if step == 1 else
+                                  ['intentPrepared', 'writeClaimed', 'wireSendObserved',
+                                   'finsAckObserved', 'readbackConfirmed', 'writeClaimed',
+                                   'wireSendObserved', 'outcomeUnknown'])
                 require(packet_wire.outcome == 'INJECTED_TERMINAL_ACK_LOST_AFTER_APPLY'
                         and not packet_wire.response_seen and packet['ResponseHex'] == '' and
                         (prepared[7] is None or prepared[7] == '') and
-                        [x['kind'] for x in a1] ==
-                        ['intentPrepared', 'writeClaimed', 'wireSendObserved', 'outcomeUnknown'],
+                        [x['kind'] for x in a1] == expected_kinds,
                         'FALSE_ACK_UNKNOWN', 'Unknown ACK incorrectly treated as confirmed')
                 continue
             ensure_sequential([x[0] for x in step_events],
@@ -244,7 +253,7 @@ def verify_case(root: Path, scenario: str) -> dict:
         require(len([x for x in a1 if x['kind'] == 'wireSendObserved']) == required_steps,
                 'A1_EXTRA_WIRE', f'token={token} unauthorized extra physical write')
         require(len([x for x in events if x[0] == 'AckAccepted']) ==
-                (required_steps - (1 if scenario == 'ack-lost' and token == 3 else 0)),
+                (required_steps - (1 if unknown_step else 0)),
                 'A7_FALSE_ACK', f'token={token} extra accepted ACK')
 
     physical_writes = [i for i, w in enumerate(wire) if w.write and w.address in (1016, 2099)]
@@ -252,7 +261,7 @@ def verify_case(root: Path, scenario: str) -> dict:
             'One or more received FINS output writes have no matching immutable A1 ClaimId')
     expected_count = 5 if scenario == 'ack-lost' else 6
     require(counts['writes'] == expected_count and
-            counts['readbacks'] == expected_count - (1 if scenario == 'ack-lost' else 0) and
+            counts['readbacks'] == expected_count - (1 if scenario in ('ack-lost', 'ack-second') else 0) and
             counts['scans'] == 3 and counts['claims'] == expected_count,
             'INCOMPLETE_PROOF', str(counts))
     return {'status': 'PASS', 'scenario': scenario, 'writes': counts['writes'],
@@ -370,7 +379,7 @@ def mutate_case(folder: Path, mutation: str):
             path = folder / 'master/timing-events.sqlite'
             with closing(sqlite3.connect(path)) as conn, conn:
                 attempt = conn.execute('SELECT attempt_id FROM final_output_intents WHERE token=3').fetchone()[0]
-                changed = conn.execute("UPDATE final_output_audit_events SET phase='AckAccepted' WHERE attempt_id=? AND step_number=1 AND phase='AckUnknown'", (attempt,))
+                changed = conn.execute("UPDATE final_output_audit_events SET phase='AckAccepted' WHERE attempt_id=? AND phase='AckUnknown'", (attempt,))
                 require(changed.rowcount == 1, 'TAMPER_FIXTURE', 'expected one original A7 AckUnknown')
     else:
         raise EvidenceError('UNKNOWN_TAMPER', mutation)
@@ -386,7 +395,7 @@ def tamper_all(root: Path, scenario: str, location: Path) -> dict:
     require(not location.exists(), 'SNAPSHOT_DEST_EXISTS', f'Cannot overwrite {location}')
     location.mkdir(parents=True)
     results = {}
-    attacks = ATTACKS + (UNKNOWN_ATTACKS if scenario == 'ack-lost' else ())
+    attacks = ATTACKS + (UNKNOWN_ATTACKS if scenario in ('ack-lost', 'ack-second') else ())
     for mutation in attacks:
         folder = location / mutation
         snapshot_original(root, folder)
@@ -412,12 +421,15 @@ def main(argv=None):
     parser.add_argument('--evidence-root', required=True, type=Path,
                         help='parent containing normal/mismatch/ack-lost real five-process folders')
     parser.add_argument('--tamper-all', action='store_true')
+    parser.add_argument('--include-extra', action='store_true',
+                        help='Include A5 real scan-fail and second-ACK-lost five-process runs')
     parser.add_argument('--tamper-root', type=Path)
     args = parser.parse_args(argv)
     try:
         root = args.evidence_root.resolve()
         report = {}
-        for scenario in ('normal', 'mismatch', 'ack-lost'):
+        scenarios = ('normal', 'mismatch', 'ack-lost', 'ack-second', 'scan-failed') if args.include_extra else ('normal', 'mismatch', 'ack-lost')
+        for scenario in scenarios:
             source = root / scenario
             result = verify_case(source, scenario)
             print('A5_REAL_CLAIM_WIRE_PASS ' + json.dumps(result, sort_keys=True), flush=True)
@@ -427,7 +439,7 @@ def main(argv=None):
                           root.parent / (root.name + '-tampered')) / scenario
                 report[scenario]['tampering'] = tamper_all(source, scenario, target)
         if args.tamper_all:
-            print('A5_REAL_TAMPER_MATRIX_PASS scenarios=3 cases=32 '
+            print(f'A5_REAL_TAMPER_MATRIX_PASS scenarios={len(scenarios)} cases={sum(len(ATTACKS) + (len(UNKNOWN_ATTACKS) if case in ("ack-lost", "ack-second") else 0) for case in scenarios)} '
                   'raw_bytes=1 SID=1 A1_claimId=1 A7_SHA=1 WorkpieceId=1 '
                   'readback=1 duplicate_final_write=1 synthetic_ACK_rejected=1', flush=True)
         return 0

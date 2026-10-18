@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'csharp/qa/p0_claim_fins_antitamper.py'
+      - 'csharp/qa/e2e_a5_claim_more_branches.py'
       - 'csharp/qa/test_p0_claim_fins_antitamper.py'
       - 'csharp/tests/AOI.Tests/Agent05ClaimWireTamperTests.cs'
       - '.github/workflows/csharp-agent05-sixth-antitamper.yml'
@@ -50,12 +51,16 @@ jobs:
         shell: bash
         run: |
           python scripts/e2e_a0_raw_fins_audit.py --evidence-root .artifacts/a5-sixth-claim-real
-      - name: Agent05 independently accept original and reject 32 single-field evidence manipulations
+      - name: Real additional five-process A1 A2 A7 cases - second lost ACK and external unreadable scan
+        shell: bash
+        run: |
+          python qa/e2e_a5_claim_more_branches.py --evidence-root .artifacts/a5-sixth-claim-real
+      - name: Agent05 independently accept five scenarios and reject 54 copied-evidence alterations
         shell: bash
         run: |
           python qa/p0_claim_fins_antitamper.py \
             --evidence-root .artifacts/a5-sixth-claim-real \
-            --tamper-all --tamper-root .artifacts/a5-sixth-claim-copied-tamper
+            --tamper-all --include-extra --tamper-root .artifacts/a5-sixth-claim-copied-tamper
       - name: Native CSharp NUnit independent genuine FINS byte, SID and ClaimId checks
         shell: bash
         run: |

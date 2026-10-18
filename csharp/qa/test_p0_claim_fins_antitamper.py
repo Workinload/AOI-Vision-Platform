@@ -77,18 +77,22 @@ def fixture(root: Path, mode='normal'):
     for token in (1,2,3):
         identity=identities[token];item=identity['workpieceId'];intent=uid();attempt=uid()
         fault=mode!='normal' and token==3
-        expected='BarcodeMismatch' if fault else 'Normal'
+        expected=('BarcodeFailure' if fault and mode=='scan-failed' else
+                  'BarcodeMismatch' if fault else 'Normal')
         a7intents.append((attempt,item,identity['traceId'],1,identity['releaseId'],token,expected,'Reject'))
         a1(item,intent,'intentPrepared',identity=identity,token=token)
         scanner=append_packet(token,False,2099,words=(1,),response=(1,))
         a7(attempt,'ScannerRequestVerified',0,uid(),scanner['Sid'],2099,1,
            scanner['RequestHex'],scanner['ResponseHex'])
-        steps=[(2099,4),(1016,2)] if fault else [(1016,2),(2099,2)]
+        steps=([(2099,3),(1016,2)] if mode=='scan-failed' and fault
+               else [(2099,4),(1016,2)] if fault
+               else [(1016,2),(2099,2)])
         if mode=='ack-lost' and token==3: steps=steps[:1]
         for n,(addr,val) in enumerate(steps):
             claim=uid()
             a1(item,intent,'writeClaimed',n,claim)
-            outcome='INJECTED_TERMINAL_ACK_LOST_AFTER_APPLY' if mode=='ack-lost' and token==3 else 'OK'
+            lost=token==3 and ((mode=='ack-lost' and n==0) or (mode=='ack-second' and n==1))
+            outcome='INJECTED_TERMINAL_ACK_LOST_AFTER_APPLY' if lost else 'OK'
             packet=append_packet(token,True,addr,words=(val,),outcome=outcome)
             proof=dict(operationId=claim,sid=packet['Sid'],dmAddress=addr,
                        value=val,replyVerified=False)
@@ -142,6 +146,18 @@ class IndependentClaimWireTamperTests(unittest.TestCase):
         tampered=self.root/'tampered'
         result=tamper_all(self.good,'normal',tampered)
         self.assertEqual(set(result['negativeAttacks']),set(ATTACKS))
+
+    def test_additional_real_business_branches_second_ack_and_scanner_failure_synthetic(self):
+        for scenario in ('ack-second', 'scan-failed'):
+            with self.subTest(scenario=scenario):
+                path=self.root/scenario
+                fixture(path, scenario)
+                result=verify_case(path,scenario)
+                self.assertEqual(result['claims'],6)
+                self.assertEqual(result['readbacks'],5 if scenario=='ack-second' else 6)
+                tamper=tamper_all(path,scenario,self.root/(scenario+'-copies'))
+                self.assertEqual(len(tamper['negativeAttacks']),
+                                 12 if scenario=='ack-second' else 10)
 
     def test_negative_wrong_claim_id_not_equivalent_to_wire_operation(self):
         dest=self.root/'claim';snapshot_original(self.good,dest)

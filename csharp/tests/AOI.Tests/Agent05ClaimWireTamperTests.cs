@@ -98,7 +98,7 @@ public sealed class Agent05ClaimWireTamperTests
             throw new InvalidDataException("Unknown ACK must not have a synthetic reply");
     }
 
-    private static StepEvidence LoadActualStep(string scenario, int token, ushort address, ushort expected)
+    private static StepEvidence LoadActualStep(string scenario, int token, ushort address, ushort expected, int stepNumber)
     {
         string root = Root(scenario);
         using var core = OpenReadOnly(Path.Combine(root, "master", "sim-full-cycle.db"));
@@ -121,9 +121,9 @@ public sealed class Agent05ClaimWireTamperTests
                     foundClaims.Add(Guid.Parse(data.GetProperty("claimId").GetString()!));
             }
         }
-        if (foundClaims.Count is < 1 or > 2)
+        if (foundClaims.Count is < 1 or > 2 || foundClaims.Count < stepNumber)
             throw new InvalidDataException("Wrong number of A1 one-time write claims");
-        Guid claim = foundClaims[0];
+        Guid claim = foundClaims[stepNumber - 1];
         using var a7 = OpenReadOnly(Path.Combine(root, "master", "timing-events.sqlite"));
         string attempt = Scalar(a7,
             "SELECT attempt_id FROM final_output_intents WHERE token=$token",
@@ -136,10 +136,11 @@ public sealed class Agent05ClaimWireTamperTests
         using var step = a7.CreateCommand();
         step.CommandText = """
             SELECT phase,operation_id,fins_sid,dm_address,value,request_sha256,response_sha256
-            FROM final_output_audit_events WHERE attempt_id=$attempt AND step_number=1
+            FROM final_output_audit_events WHERE attempt_id=$attempt AND step_number=$step
             ORDER BY sequence
             """;
         step.Parameters.AddWithValue("$attempt", attempt);
+        step.Parameters.AddWithValue("$step", stepNumber);
         var phases = new List<(string Phase, string? Operation, int? Sid, int? Address,
             int? Value, string? RequestSha, string? ReplySha)>();
         using (var reader = step.ExecuteReader())
@@ -150,7 +151,8 @@ public sealed class Agent05ClaimWireTamperTests
                     reader.IsDBNull(4) ? null : reader.GetInt32(4),
                     reader.IsDBNull(5) ? null : reader.GetString(5),
                     reader.IsDBNull(6) ? null : reader.GetString(6)));
-        bool lost = scenario == "ack-lost" && token == 3;
+        bool lost = token == 3 && ((scenario == "ack-lost" && stepNumber == 1) ||
+            (scenario == "ack-second" && stepNumber == 2));
         string[] expectedPhases = lost
             ? ["StepPrepared", "WireSent", "AckUnknown"]
             : ["StepPrepared", "WireSent", "AckAccepted", "ReadbackVerified"];
@@ -179,13 +181,15 @@ public sealed class Agent05ClaimWireTamperTests
             request, reply, !lost);
     }
 
-    [TestCase("normal", 1, (ushort)1016, (ushort)2)]
-    [TestCase("mismatch", 3, (ushort)2099, (ushort)4)]
-    [TestCase("ack-lost", 3, (ushort)2099, (ushort)4)]
+    [TestCase("normal", 1, (ushort)1016, (ushort)2, 1)]
+    [TestCase("mismatch", 3, (ushort)2099, (ushort)4, 1)]
+    [TestCase("ack-lost", 3, (ushort)2099, (ushort)4, 1)]
+    [TestCase("ack-second", 3, (ushort)1016, (ushort)2, 2)]
+    [TestCase("scan-failed", 3, (ushort)2099, (ushort)3, 1)]
     public void ActualFiveProcessOriginalClaimAndFinsPacket_RejectsEachIndependentTamper(
-        string scenario, int token, ushort address, ushort value)
+        string scenario, int token, ushort address, ushort value, int stepNumber)
     {
-        StepEvidence original = LoadActualStep(scenario, token, address, value);
+        StepEvidence original = LoadActualStep(scenario, token, address, value, stepNumber);
         Assert.DoesNotThrow(() => CheckOriginalPacket(original),
             "Only original A1/A2/A7 same-run physical evidence is accepted");
         byte[] changedRequest = (byte[])original.Request.Clone();
