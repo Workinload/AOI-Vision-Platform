@@ -11,6 +11,7 @@
   Case 3 required local port occupied   -> 4
   Case 4 real PNG folder incomplete     -> 7
   Case 5 invalid executable create      -> 6 (unexpected Start-Process exception must not report success)
+  Case 6 orphaned SQLite -wal only       -> 3 (nothing overwritten)
 #>
 [CmdletBinding()]
 param([string]$EvidenceRoot = (Join-Path $env:TEMP ('AOI_LauncherDiag_' + [guid]::NewGuid().ToString('N'))))
@@ -94,6 +95,18 @@ $ok = ($r.ExitCode -eq 6 -and
     $r.Output -match 'AOI_SIM_FULL_LAUNCH_ERROR' -and
     $r.Output -notmatch 'AOI_SIM_FULL_LAUNCH_PASS')
 Add-Result 'invalid native executable cannot strand launcher' 6 $r.ExitCode $ok 'exception translated to exit 6'
+
+# ---- Case 6: SQLite orphan WAL without a production.db main file.
+# A disk-crash remnant is not a new safe production data directory.
+$sb = New-Sandbox 'case6-orphan-wal'
+$walDir = Join-Path $sb 'sim-full-data\slave'
+New-Item -ItemType Directory -Force -Path $walDir | Out-Null
+$orphan = Join-Path $walDir 'production.db-wal'
+Set-Content -Path $orphan -Value 'orphaned-previous-wire-evidence' -Encoding ascii
+$r = Invoke-Launcher $sb
+$kept = ((Test-Path $orphan) -and
+    ((Get-Content $orphan -Raw) -match 'orphaned-previous-wire-evidence'))
+Add-Result 'orphan SQLite WAL cannot be mistaken for fresh data' 3 $r.ExitCode ($r.ExitCode -eq 3 -and $kept) ('raw WAL intact=' + $kept)
 
 $failed = @($results | Where-Object { -not $_.Pass })
 $summary = Join-Path $evidence 'launcher-diagnostics.json'
