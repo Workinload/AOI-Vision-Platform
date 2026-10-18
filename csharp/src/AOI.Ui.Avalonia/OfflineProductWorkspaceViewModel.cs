@@ -33,31 +33,92 @@ public sealed record OfflineAlgorithmChoice(string AlgorithmId, string DisplayLa
 }
 
 /// <summary>
-/// Safety gate for A6 recipe writes. The production gate stays closed until A0 #149
-/// (stopped-Core dual-Core lease) is merged and the existing A6 changeover coordinator is
-/// wired to it. This is intentionally not a UI-only gray-out: every writing command
-/// checks this gate before touching the database.
+/// Real offline writer session. Write permission is not a Boolean anyone can flip: it exists
+/// only while this object physically holds BOTH OS-level Core locks obtained from the merged
+/// A0 #152 gate (<see cref="OfflineCoreOperationGate.AcquireStoppedCores"/>). Every writing
+/// command checks <see cref="A6WritesAllowed"/>, which is derived from the held lease.
+/// Read-only preview never needs the lease and stays available when arming fails.
 /// </summary>
-public sealed record OfflineWriteGate(bool A6WritesAllowed, string Reason)
+public sealed class OfflineWriteGate : IDisposable
 {
-    public static OfflineWriteGate Production { get; } = new(false, OfflineA6Dependency.BlockedReason);
+    private readonly bool isolatedTest;
+    private OfflineCoreOperationGate.OfflineLease? lease;
+
+    private OfflineWriteGate(bool isolatedTest, string reason)
+    {
+        this.isolatedTest = isolatedTest;
+        Reason = reason;
+    }
+
+    /// <summary>Normal construction: closed until <see cref="Arm"/> succeeds.</summary>
+    public OfflineWriteGate() : this(false, OfflineA6Dependency.ClosedReason) { }
+
+    /// <summary>A fresh, closed gate for each window. Never shared between Master and Slave.</summary>
+    public static OfflineWriteGate Production => new();
 
     /// <summary>Test-only seam for an isolated temporary A6 database; never used by MainWindow.</summary>
-    internal static OfflineWriteGate IsolatedTestDatabase { get; } =
+    internal static OfflineWriteGate IsolatedTestDatabase =>
         new(true, "TEST_ONLY：隔离临时 A6 数据库；无 Core、无激活。");
+
+    /// <summary>True only while both OS Core locks are physically held.</summary>
+    public bool A6WritesAllowed => isolatedTest || lease is not null;
+
+    public string Reason { get; private set; }
+
+    /// <summary>Run root that owns the held lease; empty when closed.</summary>
+    public string DataRoot { get; private set; } = "";
+
+    /// <summary>
+    /// Acquires and HOLDS both Core locks for the run root, then verifies the activation root is
+    /// clean. Throws if a Core is running or if prior evidence is unusable; in that case nothing
+    /// is held and writes stay closed.
+    /// </summary>
+    public void Arm(string dataRoot)
+    {
+        if (isolatedTest) return;
+        if (lease is not null) return;
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataRoot);
+        OfflineCoreOperationGate.OfflineLease acquired =
+            OfflineCoreOperationGate.AcquireStoppedCores(dataRoot);
+        try
+        {
+            acquired.RequireCleanActivationRoot();
+        }
+        catch
+        {
+            acquired.Dispose();
+            throw;
+        }
+        lease = acquired;
+        DataRoot = dataRoot;
+        Reason = "已持有双 Core 独占锁（OS 级文件句柄）：" + dataRoot;
+    }
+
+    /// <summary>Releases both handles. Safe to call repeatedly (window close, detach, failure).</summary>
+    public void Release()
+    {
+        OfflineCoreOperationGate.OfflineLease? held = lease;
+        lease = null;
+        DataRoot = "";
+        Reason = isolatedTest ? Reason : OfflineA6Dependency.ClosedReason;
+        held?.Dispose();
+    }
+
+    public void Dispose() => Release();
 }
 
 public static class OfflineA6Dependency
 {
-    public const string PullRequest = "#149";
-    public const string VerifiedHead = "428b42dc8608bc8e4242735bfae424d148d25f8a";
+    public const string PullRequest = "#152";
 
-    public const string BlockedReason =
-        "A0 #149 双 Core 停止门禁（Draft，未合并；已验 head 428b42dc8608bc8e4242735bfae424d148d25f8a）" +
-        "尚未接入，现有 A6 换型协调器在本切片禁止调用。";
+    /// <summary>Merged into the formal branch: OfflineCoreOperationGate + OfflineLease exist.</summary>
+    public const string VerifiedHead = "6dc510bcee76eeca9388c65632636aea6e014549";
+
+    public const string ClosedReason =
+        "写入会话未开启：未持有双 Core 独占锁。点击“开启离线写入会话”以获取 OS 级锁。";
 
     public const string ActivationUnavailable =
-        "激活：不可用（#149 双 Core 停止门禁未合并 / A0 pending）。发布 ≠ 激活，发布不会改变 Epoch/Active。";
+        "激活：需要双 Core 独占锁 + 干净激活根；未持有锁时不可激活。发布 ≠ 激活。";
 }
 
 /// <summary>
@@ -285,6 +346,49 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             ResetAttachment("启用离线方案管理失败：" + ex.Message);
         }
     }
+
+    /// <summary>
+    /// Opens the real offline writer session: acquires and HOLDS both Core OS locks for the run
+    /// root, verifies the activation root is clean, then re-attaches so A6 opens writable.
+    /// Any failure releases whatever was taken and leaves writes closed; read-only preview stays.
+    /// </summary>
+    [RelayCommand]
+    public void EnableOfflineWrites()
+    {
+        string entry = (EntryPath ?? "").Trim();
+        if (entry.Length == 0)
+        {
+            WriteState = "开启写入会话失败：请先填写运行根目录。";
+            return;
+        }
+        try
+        {
+            gate.Arm(entry);
+        }
+        catch (Exception ex) when (ex is IOException or InvalidOperationException
+            or UnauthorizedAccessException or ArgumentException)
+        {
+            gate.Release();
+            WriteState = "开启写入会话失败（写入保持关闭，未创建/修复数据库）：" + ex.Message;
+            Status = WriteState;
+            return;
+        }
+        string actor = string.IsNullOrWhiteSpace(OperatorId) ? operatorName : OperatorId;
+        Attach(entry, actor);
+        WriteState = "写入会话已开启：" + gate.Reason;
+    }
+
+    /// <summary>Closes the writer session and releases both Core locks.</summary>
+    [RelayCommand]
+    public void DisableOfflineWrites()
+    {
+        gate.Release();
+        WriteState = "写入会话已关闭：" + gate.Reason;
+        Status = WriteState;
+    }
+
+    /// <summary>Called by the window on close so the OS locks can never leak.</summary>
+    public void ReleaseWriterSession() => gate.Release();
 
     [RelayCommand]
     public void AttachEntry()

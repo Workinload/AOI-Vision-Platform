@@ -99,7 +99,7 @@ public sealed class OfflineRecipeLaunchWiringTests
         Assert.That(vm.OfflineProduct.Solutions.Select(x => x.SolutionId), Does.Contain("S1"));
         Assert.That(vm.OfflineProduct.A6WritesAllowed, Is.False);
         Assert.That(vm.OfflineProduct.WriteState, Does.Contain("fail closed"));
-        Assert.That(vm.OfflineProduct.ActivationState, Does.Contain("#149"));
+        Assert.That(vm.OfflineProduct.ActivationState, Does.Contain("双 Core 独占锁"));
     }
 
     [Test]

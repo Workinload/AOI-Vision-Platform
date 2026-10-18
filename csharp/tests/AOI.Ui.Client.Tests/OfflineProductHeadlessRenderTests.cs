@@ -101,7 +101,7 @@ public sealed class OfflineProductHeadlessRenderTests
             Assert.That(productionVm.OfflineProduct.ProductRoiTabIndex, Is.EqualTo(1));
             Assert.That(production.OfflineEntryBarVisible, Is.True);
             Assert.That(production.Texts.Any(t => t.Contains("fail closed")), Is.True);
-            Assert.That(production.Texts.Any(t => t.Contains("#149")), Is.True);
+            Assert.That(production.Texts.Any(t => t.Contains("双 Core 独占锁")), Is.True);
             TestContext.Out.WriteLine("AOI146_HEADLESS_RENDER_DIR=" + root);
         }
         finally

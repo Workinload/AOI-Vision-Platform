@@ -567,6 +567,9 @@ public partial class MainWindowViewModel : ObservableObject
     public void Stop()
     {
         _shutdown.Cancel();
+        // Window close must release BOTH OS Core locks; a leaked lease would block every later
+        // offline publish/activation until reboot.
+        OfflineProduct.ReleaseWriterSession();
         StopOperatorWorkspace();
         ClearCaptureDebug();
         ClearPreview("窗口已关闭");

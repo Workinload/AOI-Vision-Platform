@@ -130,8 +130,8 @@ public sealed class OfflineProductWorkspaceTests
         Assert.That(releases[0].ReleaseId, Is.EqualTo(vm.PublishedRelease));
         Assert.That(releases[0].ContentSha256, Is.EqualTo(vm.PublishedSha));
         // Publication is NOT activation: activation never becomes available here.
-        Assert.That(vm.ActivationState, Does.Contain("不可用"));
-        Assert.That(vm.ActivationState, Does.Contain("#149"));
+        Assert.That(vm.ActivationState, Does.Contain("不可激活"));
+        Assert.That(vm.ActivationState, Does.Contain("双 Core 独占锁"));
         Assert.That(vm.PublishConfirmed, Is.False);
     }
 
@@ -331,7 +331,7 @@ public sealed class OfflineProductWorkspaceTests
         Assert.That(reopenedVm.PublishedSha, Is.EqualTo(sha));
         Assert.That(reopenedVm.PublishedSha, Has.Length.EqualTo(64));
         Assert.That(reopenedVm.ReleaseProvenance, Does.Contain("重新打开回读"));
-        Assert.That(reopenedVm.ActivationState, Does.Contain("不可用"));
+        Assert.That(reopenedVm.ActivationState, Does.Contain("不可激活"));
     }
 
     [Test]
