@@ -9,6 +9,7 @@ public partial class MainWindow : Window
     public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
+        viewModel.ReportSavePicker = new AvaloniaReportSavePicker(this);
         DataContext = viewModel;
         Opened += (_, _) => viewModel.Start();
         Closed += (_, _) => viewModel.Stop();
