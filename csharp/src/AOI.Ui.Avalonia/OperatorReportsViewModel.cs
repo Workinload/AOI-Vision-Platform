@@ -65,14 +65,8 @@ public partial class MainWindowViewModel
             $"已完成良率 {rate}";
     }
 
-    private static string CsvField(string? value)
-    {
-        string safe = value ?? "";
-        string trimmed = safe.TrimStart();
-        if (trimmed.Length > 0 && trimmed[0] is '=' or '+' or '-' or '@')
-            safe = "'" + safe; // prevent imported barcode as spreadsheet formula
-        return "\"" + safe.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
-    }
+    /// <summary>Native save-dialog seam, wired by MainWindow. Null in headless contexts.</summary>
+    public AOI.Ui.Client.IReportSavePicker? ReportSavePicker { get; set; }
 
     [RelayCommand]
     private async Task ExportReportCsvAsync()
@@ -82,53 +76,11 @@ public partial class MainWindowViewModel
             await RefreshReportsAsync();
             if (_lastReport is null) return;
         }
-        try
-        {
-            var data = _lastReport;
-            string directory = Path.Combine(
-                Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments),
-                "AOI-Vision-Reports");
-            if (string.IsNullOrWhiteSpace(directory) ||
-                !Path.IsPathRooted(directory))
-                throw new IOException("Local Documents folder unavailable.");
-            Directory.CreateDirectory(directory);
-            string path = Path.Combine(directory,
-                "AOI-SIM-Production-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff",
-                    CultureInfo.InvariantCulture) + ".csv");
-            var csv = new StringBuilder();
-            csv.AppendLine("Period,FromUTC,UntilUTC,Total,GOOD,NG,HOLD,InProgress,GoodRate");
-            foreach (var period in new[] { data.Today, data.ThisWeek })
-            {
-                string[] fields = [
-                    period.Label, period.FromUtc.ToString("O"), period.UntilUtc.ToString("O"),
-                    period.Total.ToString(CultureInfo.InvariantCulture),
-                    period.Good.ToString(CultureInfo.InvariantCulture),
-                    period.Ng.ToString(CultureInfo.InvariantCulture),
-                    period.Hold.ToString(CultureInfo.InvariantCulture),
-                    period.InProgress.ToString(CultureInfo.InvariantCulture),
-                    period.GoodRate?.ToString("G17", CultureInfo.InvariantCulture) ?? "" ];
-                csv.AppendLine(string.Join(",", fields.Select(CsvField)));
-            }
-            csv.AppendLine();
-            csv.AppendLine("WorkpieceId,Barcode,ReleaseId,RegisteredUTC,Disposition,Channels,HoldReason");
-            foreach (var row in data.Recent)
-            {
-                string[] fields = [row.WorkpieceId.ToString("D"), row.Barcode, row.ReleaseId,
-                    row.RegisteredUtc.ToUniversalTime().ToString("O"),
-                    row.Disposition, row.CapturedChannels.ToString(CultureInfo.InvariantCulture),
-                    row.HoldReason ?? ""];
-                csv.AppendLine(string.Join(",", fields.Select(CsvField)));
-            }
-            await File.WriteAllTextAsync(path, csv.ToString(),
-                new UTF8Encoding(encoderShouldEmitUTF8Identifier: true), _shutdown.Token);
-            ReportStatus = "SIM_ONLY 报表 CSV 已保存：" + path;
-        }
-        catch (OperationCanceledException) when (_shutdown.IsCancellationRequested) { }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or
-            InvalidOperationException or ArgumentException)
-        {
-            ReportStatus = "报表导出失败：" + ex.Message;
-        }
+        var result = await ReportExportService.ExportCsvAsync(
+            ReportSavePicker, _lastReport, DateTimeOffset.Now, _shutdown.Token);
+        if (result.Outcome == ReportExportOutcome.Cancelled && _shutdown.IsCancellationRequested)
+            return;
+        ReportStatus = result.Message;
     }
 
     private void ResetReportWorkspace()
