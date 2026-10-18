@@ -541,6 +541,7 @@
                     <TabItem Header="真实 PLC / 相机 / 检测时间线">
                       <Grid ColumnDefinitions="*,245" ColumnSpacing="8">
                         <ListBox ItemsSource="{Binding ActualCaptureTimingEvents}"
+                                 SelectedItem="{Binding SelectedCaptureTimingEvent, Mode=TwoWay}"
                                  Background="#F4F8FC" BorderThickness="0">
                           <ListBox.ItemTemplate>
                             <DataTemplate>
