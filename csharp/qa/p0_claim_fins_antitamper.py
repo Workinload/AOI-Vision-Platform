@@ -334,46 +334,60 @@ def mutate_case(folder: Path, mutation: str):
                 for i, entry in enumerate(lines):
                     entry['Sequence'] = i + 1
         rewrite_raw(folder, change)
-    elif mutation in ('claim-id', 'workpiece-id', 'a7-forged-ack'):
-        if mutation == 'claim-id':
-            path, sql = folder / 'master/final-plc-output.db', (
-                'SELECT sequence,event_json FROM a1_final_output_events')
-            with closing(sqlite3.connect(path)) as c, c:
-                rows = c.execute(sql).fetchall()
-                row = exactly([(seq, json.loads(payload)) for seq, payload in rows
-                               if json.loads(payload)['kind'] == 'writeClaimed'],
-                              'TAMPER_FIXTURE', 'claims') if len(rows) == 1 else next(
-                    (seq, json.loads(payload)) for seq, payload in rows
-                    if json.loads(payload)['kind'] == 'writeClaimed')
-                row[1]['claimId'] = str(uuid.uuid4())
-                c.execute('UPDATE a1_final_output_events SET event_json=? WHERE sequence=?',
-                          (json.dumps(row[1]), row[0]))
+    elif mutation in ('claim-id', 'unknown-claim-id', 'workpiece-id',
+                      'a7-forged-ack', 'unknown-ack-promoted'):
+        if mutation in ('claim-id', 'unknown-claim-id'):
+            path = folder / 'master/final-plc-output.db'
+            target_item = None
+            if mutation == 'unknown-claim-id':
+                identity = exactly(read_sql(folder / 'master/sim-full-cycle.db',
+                    'SELECT identity_json FROM sim_full_tokens WHERE token=3'),
+                    'TAMPER_FIXTURE', 'actual unknown-ACK token3')[0]
+                target_item = json.loads(identity)['workpieceId']
+            with closing(sqlite3.connect(path)) as conn, conn:
+                events = conn.execute('SELECT sequence,event_json FROM a1_final_output_events').fetchall()
+                sequence, event = next((n, json.loads(body)) for n, body in events
+                    if json.loads(body)['kind'] == 'writeClaimed' and
+                    (target_item is None or json.loads(body)['workpieceId'] == target_item))
+                event['claimId'] = str(uuid.uuid4())
+                conn.execute('UPDATE a1_final_output_events SET event_json=? WHERE sequence=?',
+                             (json.dumps(event), sequence))
         elif mutation == 'workpiece-id':
             path = folder / 'master/timing-events.sqlite'
-            with closing(sqlite3.connect(path)) as c, c:
-                c.execute('UPDATE final_output_intents SET workpiece_id=? WHERE token=1',
-                          (str(uuid.uuid4()),))
-        else:
+            with closing(sqlite3.connect(path)) as conn, conn:
+                conn.execute('UPDATE final_output_intents SET workpiece_id=? WHERE token=1',
+                             (str(uuid.uuid4()),))
+        elif mutation == 'a7-forged-ack':
             path = folder / 'master/timing-events.sqlite'
-            with closing(sqlite3.connect(path)) as c, c:
-                attempt = c.execute('SELECT attempt_id FROM final_output_intents WHERE token=1').fetchone()[0]
-                step = c.execute("SELECT sequence FROM final_output_audit_events WHERE attempt_id=? AND phase='AckAccepted' ORDER BY sequence LIMIT 1", (attempt,)).fetchone()[0]
-                c.execute("UPDATE final_output_audit_events SET response_sha256=? WHERE sequence=?",
-                          ('0' * 64, step))
+            with closing(sqlite3.connect(path)) as conn, conn:
+                attempt = conn.execute('SELECT attempt_id FROM final_output_intents WHERE token=1').fetchone()[0]
+                step = conn.execute("SELECT sequence FROM final_output_audit_events WHERE attempt_id=? AND phase='AckAccepted' ORDER BY sequence LIMIT 1", (attempt,)).fetchone()[0]
+                conn.execute('UPDATE final_output_audit_events SET response_sha256=? WHERE sequence=?',
+                             ('0' * 64, step))
+        else:
+            # Directly flip the A7 classification for the REAL lost ACK, with
+            # NO network reply invented: the independent chain must reject it.
+            path = folder / 'master/timing-events.sqlite'
+            with closing(sqlite3.connect(path)) as conn, conn:
+                attempt = conn.execute('SELECT attempt_id FROM final_output_intents WHERE token=3').fetchone()[0]
+                changed = conn.execute("UPDATE final_output_audit_events SET phase='AckAccepted' WHERE attempt_id=? AND step_number=1 AND phase='AckUnknown'", (attempt,))
+                require(changed.rowcount == 1, 'TAMPER_FIXTURE', 'expected one original A7 AckUnknown')
     else:
         raise EvidenceError('UNKNOWN_TAMPER', mutation)
 
 
 ATTACKS = ('request-hex', 'response-hex', 'sid', 'request-sid', 'reply-sid',
            'duplicate-write', 'drop-readback', 'claim-id', 'workpiece-id', 'a7-forged-ack')
+UNKNOWN_ATTACKS = ('unknown-ack-promoted', 'unknown-claim-id')
 
 
 def tamper_all(root: Path, scenario: str, location: Path) -> dict:
-    """Perform eight isolated, one-field changes against copies of a REAL passed run."""
+    """Apply scenario-specific single-field changes ONLY to copied real evidence."""
     require(not location.exists(), 'SNAPSHOT_DEST_EXISTS', f'Cannot overwrite {location}')
     location.mkdir(parents=True)
     results = {}
-    for mutation in ATTACKS:
+    attacks = ATTACKS + (UNKNOWN_ATTACKS if scenario == 'ack-lost' else ())
+    for mutation in attacks:
         folder = location / mutation
         snapshot_original(root, folder)
         mutate_case(folder, mutation)
@@ -388,7 +402,7 @@ def tamper_all(root: Path, scenario: str, location: Path) -> dict:
         else:
             raise EvidenceError('FALSE_ACK_ACCEPTED',
                                 f'Original {scenario} data was changed ({mutation}), but verifier returned PASS')
-    require(len(results) == len(ATTACKS), 'TAMPER_MATRIX_INCOMPLETE', str(results))
+    require(len(results) == len(attacks), 'TAMPER_MATRIX_INCOMPLETE', str(results))
     return {'status': 'PASS_TAMPER_REJECTED', 'scenario': scenario,
             'negativeAttacks': results, 'simOnly': True, 'fieldVerified': False}
 
@@ -413,7 +427,7 @@ def main(argv=None):
                           root.parent / (root.name + '-tampered')) / scenario
                 report[scenario]['tampering'] = tamper_all(source, scenario, target)
         if args.tamper_all:
-            print('A5_REAL_TAMPER_MATRIX_PASS scenarios=3 cases=30 '
+            print('A5_REAL_TAMPER_MATRIX_PASS scenarios=3 cases=32 '
                   'raw_bytes=1 SID=1 A1_claimId=1 A7_SHA=1 WorkpieceId=1 '
                   'readback=1 duplicate_final_write=1 synthetic_ACK_rejected=1', flush=True)
         return 0

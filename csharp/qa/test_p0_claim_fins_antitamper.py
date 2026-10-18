@@ -156,6 +156,14 @@ class IndependentClaimWireTamperTests(unittest.TestCase):
         with self.assertRaises((EvidenceError,Exception)):
             verify_case(dest,'normal')
 
+    def test_real_unknown_ACK_classification_and_claim_identity_are_tamper_resistant(self):
+        lost = self.root / 'lost-for-unknown'
+        fixture(lost, 'ack-lost')
+        result = tamper_all(lost, 'ack-lost', self.root / 'isolated-unknown-attacks')
+        self.assertEqual(set(result['negativeAttacks']),
+                         set(ATTACKS) | {'unknown-ack-promoted', 'unknown-claim-id'})
+        self.assertEqual(verify_case(lost, 'ack-lost')['readbacks'], 4)
+
     def test_original_immutable_after_tamper(self):
         source=(self.good/'p0-fins-wire.jsonl').read_bytes()
         results=tamper_all(self.good,'normal',self.root/'all')

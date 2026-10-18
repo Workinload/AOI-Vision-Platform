@@ -50,7 +50,7 @@ jobs:
         shell: bash
         run: |
           python scripts/e2e_a0_raw_fins_audit.py --evidence-root .artifacts/a5-sixth-claim-real
-      - name: Agent05 independently accept original and reject 30 single-field evidence manipulations
+      - name: Agent05 independently accept original and reject 32 single-field evidence manipulations
         shell: bash
         run: |
           python qa/p0_claim_fins_antitamper.py \
