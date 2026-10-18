@@ -26,6 +26,8 @@ internal sealed class LegacyPhysicalCapture
     private readonly CaptureHandshakeCoordinator _captures;
     private readonly PngFileFrameSource _source;
     private readonly TriggeredVisionEngine _inspection;
+    private readonly VisionAssetLedger _assets;
+    private readonly PublishedParameterSnapshot? _publishedParameters;
     private readonly ProductionTimingJournal _timeline;
     private readonly LegacyFinsLoopbackClient _plc;
     private readonly ProductionStore _store;
@@ -75,9 +77,14 @@ internal sealed class LegacyPhysicalCapture
             flatLab: Environment.GetEnvironmentVariable("AOI_SIM_IMAGE_LAYOUT") == "FLAT");
         _captures = new CaptureHandshakeCoordinator(
             Path.Combine(nodeFolder, "capture-handshake.sqlite"));
-        _inspection = new TriggeredVisionEngine(
-            new VisionAssetLedger(Path.Combine(nodeFolder, "vision")),
+        _assets = new VisionAssetLedger(Path.Combine(nodeFolder, "vision"));
+        _inspection = new TriggeredVisionEngine(_assets,
             new OpenCvInspectionProcessor(), lineRowMapping: _lineRowMapping);
+        // Immutable dual-Core A6 Release is pinned for this Core process.
+        // Individual operations Bind the exact WorkpieceId/TraceId/Epoch/Release,
+        // never look up a mutable operator draft during real camera exposure.
+        _publishedParameters = _product.Published is null ? null :
+            new PublishedParameterSnapshot(_product.Published, _product.Epoch);
         _timeline = new ProductionTimingJournal(nodeFolder,
             owner == MachineRole.Master ? "master" : "slave");
     }
@@ -125,9 +132,51 @@ internal sealed class LegacyPhysicalCapture
         }
 
         bool line = trigger.Channels.Count == 2;
-        TimeSpan timeout = line
-            ? LegacyPlcTiming.HistoricalReference.LineCameraDeadline
-            : LegacyPlcTiming.HistoricalReference.AreaCameraDeadline;
+        ResolvedPhysicalInspectionPlan? publishedPlan = null;
+        if (_publishedParameters is not null)
+        {
+            try
+            {
+                // Same identity and exact physical trigger mapping; one line-scan
+                // parent obtains a single camera timeout and TWO child rules.
+                publishedPlan = PublishedRuntimeParameterResolver.ResolveForTrigger(
+                    _publishedParameters.Bind(item), item, trigger.PhysicalDeviceId,
+                    trigger.OwnerRole, trigger.PlcAddress,
+                    trigger.Channels.Select(c => c.ChannelId).ToArray());
+                // We ONLY have a file-backed frame adapter in this deployment.
+                // A vendor SDK target or software-trigger recipe must never
+                // silently execute as a different source of pixels.
+                if (publishedPlan.Capture.AdapterId is { } adapter &&
+                    adapter != "sim.png.frame-source.v1")
+                    throw new NotSupportedException("PUBLISHED_CAMERA_ADAPTER_NOT_INSTALLED:" + adapter);
+                if (publishedPlan.Capture.TriggerMode != CaptureTriggerMode.ExternalHardwareEdge)
+                    throw new NotSupportedException("PUBLISHED_TRIGGER_MODE_NOT_SUPPORTED");
+                Console.WriteLine("SIM_PUBLISHED_CAPTURE_PLAN workpiece=" + item.WorkpieceId +
+                    " release=" + item.ReleaseId + " device=" + trigger.PhysicalDeviceId +
+                    " channels=" + string.Join(",", publishedPlan.Capture.ChannelIds) +
+                    " deadline_ms=" + publishedPlan.Capture.FrameDeadline.TotalMilliseconds +
+                    " algorithm=" + string.Join(",",
+                        publishedPlan.Inspections.Select(x => x.AlgorithmId)) +
+                    " physical_field_verified=0");
+            }
+            catch (Exception ex) when (ex is InvalidDataException or
+                InvalidOperationException or NotSupportedException or ArgumentException)
+            {
+                // This is a PER-WORKPIECE persistent fault. Never claim a camera
+                // completion, inspection GOOD, or issue an unconfigured PLC write.
+                PersistFault(trigger, "PHYSICAL_INSPECTION_ERROR",
+                    "PUBLISHED_PLAN_NOT_READY:" + ex.GetType().Name + ":" +
+                    ex.Message[..Math.Min(260, ex.Message.Length)]);
+                Console.Error.WriteLine("SIM_PUBLISHED_CAPTURE_HOLD token=" + trigger.Token +
+                    " workpiece=" + item.WorkpieceId + " device=" +
+                    trigger.PhysicalDeviceId + " error=" + ex.Message +
+                    " no_camera_or_plc_trigger=1");
+                return;
+            }
+        }
+        TimeSpan timeout = publishedPlan?.Capture.FrameDeadline ??
+            (line ? LegacyPlcTiming.HistoricalReference.LineCameraDeadline
+                  : LegacyPlcTiming.HistoricalReference.AreaCameraDeadline);
         ushort dm = ushort.Parse(trigger.PlcAddress.AsSpan(1));
         var ticket = new AgentTicket(item, trigger.CaptureId, trigger.AttemptNo,
             trigger.PhysicalDeviceId, DateTimeOffset.UtcNow + timeout, IsSimulation: true);
@@ -241,33 +290,19 @@ internal sealed class LegacyPhysicalCapture
             trigger.CaptureId, trigger.PhysicalDeviceId,
             AttemptNo: trigger.AttemptNo, FrameId: read!.Frame!.FrameId,
             Status: "INSPECTOR_STARTED_AFTER_FINS_ACK"));
-        var output = await _inspection.InspectAndPersistAsync(frameTicket, read!,
-            c =>
-            {
-                var threshold = _product.RuleFor(c);
-                ImageRegion? roi = null;
-                if (_product.Published is not null)
-                {
-                    var preset = RoiReleaseWorkflow.ReadPublishedRoi(
-                        _product.Published, c.ChannelId);
-                    if (preset is not null)
-                    {
-                        // ROI is expressed in the image delivered TO the inspection
-                        // processor. Line siblings are half-height child images.
-                        int width = read!.Frame!.Pixels.Cols;
-                        int height = read.Frame.Pixels.Rows;
-                        if (line)
-                        {
-                            int parity = trigger.Channels[0].ChannelId == c.ChannelId ? 0 : 1;
-                            height = VisionPixelOps.InterleavedChildRows(height, parity, _lineRowMapping);
-                        }
-                        var rect = preset.Bounds.ToPixels(width, height);
-                        roi = new ImageRegion(rect.X, rect.Y, rect.Width, rect.Height);
-                    }
-                }
-                return InspectionSettings.OpenCvContour(
-                    new ContourDefectRule(threshold.BrightThreshold, 8), roi);
-            }, ct);
+        // Real native OpenCV now consumes the A6 RELEASE-BOUND per-channel
+        // algorithm and ROI, not mutable UI drafts or a fixed hardcoded area=8.
+        // LegacyBrightness keeps its own per-pixel fraction semantics; unknown
+        // plugins become a per-item ERROR/HOLD, never a fallback GOOD.
+        var inspection = publishedPlan is null ? _inspection :
+            new TriggeredVisionEngine(_assets, new PublishedReleaseInspector(publishedPlan),
+                lineRowMapping: _lineRowMapping);
+        var output = await inspection.InspectAndPersistAsync(frameTicket, read!,
+            c => publishedPlan is null
+                ? InspectionSettings.OpenCvContour(
+                    new ContourDefectRule(_product.RuleFor(c).BrightThreshold, 8))
+                : new InspectionSettings(publishedPlan.Inspections
+                    .Single(p => p.ChannelId == c.ChannelId).AlgorithmId), ct);
 
         foreach (var channel in output.Channels)
         {
