@@ -154,6 +154,9 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     [ObservableProperty] private string activationState = OfflineA6Dependency.ActivationUnavailable;
     [ObservableProperty] private int releaseCount;
     [ObservableProperty] private string revisionsSnapshotLabel = "尚未确认全站草稿版本快照";
+    // 0 = existing Core ROI editor (default, keeps the native operator-smoke path),
+    // 1 = OFFLINE_RECIPE_MANAGEMENT editor. Manual tab selection is two-way bound.
+    [ObservableProperty] private int productRoiTabIndex;
 
     public ObservableCollection<OfflineSolutionTile> Solutions { get; } = new();
     public ObservableCollection<OfflineAlgorithmChoice> AlgorithmChoices { get; } = new();
@@ -168,11 +171,19 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     public int ChannelCount => Channels.Count;
     public string ChannelSummary => ChannelCount + " 逻辑通道 / " + PhysicalDeviceCount + " 物理设备（来自 A0 ChannelCatalog）";
     public string ActiveSolutionId => SelectedSolution?.SolutionId ?? "";
+    public bool IsOfflineEditorTab => ProductRoiTabIndex == 1;
+    public bool IsLegacyCoreRoiTab => ProductRoiTabIndex == 0;
     public bool A6WritesAllowed => gate.A6WritesAllowed;
     public string WriteGateReason => gate.Reason;
     public string ReleaseSummary => ReleaseCount < 0
         ? "Release 记录不可读（数据库错误）"
         : "数据库已存不可变 Release：" + ReleaseCount + " 个";
+
+    partial void OnProductRoiTabIndexChanged(int value)
+    {
+        OnPropertyChanged(nameof(IsOfflineEditorTab));
+        OnPropertyChanged(nameof(IsLegacyCoreRoiTab));
+    }
 
     partial void OnSelectedSolutionChanged(OfflineSolutionTile? value)
     {
@@ -276,7 +287,12 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     }
 
     [RelayCommand]
-    public void AttachEntry() => Attach(EntryPath, OperatorId);
+    public void AttachEntry()
+    {
+        // Explicit offline entry switches the inner product tab to the new editor.
+        ProductRoiTabIndex = 1;
+        Attach(EntryPath, OperatorId);
+    }
 
     public void ReportLaunchFailure(string message) =>
         Status = "OFFLINE_RECIPE_MANAGEMENT 启动参数无效：" + message + "（未连接任何 A6 数据库）";

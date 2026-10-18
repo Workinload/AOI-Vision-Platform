@@ -139,6 +139,9 @@ public partial class MainWindowViewModel : ObservableObject
         ArgumentNullException.ThrowIfNull(launch);
         if (!launch.Requested) return;
         SelectedWorkspaceIndex = 5;
+        // Explicit offline launch shows the OFFLINE_RECIPE_MANAGEMENT inner tab;
+        // ordinary --master/--slave startup keeps the legacy Core ROI tab selected.
+        OfflineProduct.ProductRoiTabIndex = 1;
         OfflineProduct.EntryPath = launch.EntryPath;
         if (!string.IsNullOrWhiteSpace(launch.OperatorId)) OfflineProduct.OperatorId = launch.OperatorId;
         if (launch.Error is not null)

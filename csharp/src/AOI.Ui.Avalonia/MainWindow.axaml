@@ -682,7 +682,8 @@
         </TabItem>
         <TabItem Header="产品ROI">
           <Grid Margin="4" RowDefinitions="Auto,*" RowSpacing="10">
-            <Border Background="#FFF7EA" CornerRadius="10" Padding="15">
+            <Border Background="#FFF7EA" CornerRadius="10" Padding="15"
+                    IsVisible="{Binding OfflineProduct.IsOfflineEditorTab}">
               <StackPanel Spacing="8">
                 <TextBlock Text="OFFLINE_RECIPE_MANAGEMENT · 离线产品 / ROI 编辑（A6 真实数据库）"
                            FontSize="17" FontWeight="SemiBold" Foreground="#7A4A12"/>
@@ -708,7 +709,64 @@
                            Foreground="#6E8297" TextWrapping="Wrap"/>
               </StackPanel>
             </Border>
-            <TabControl Grid.Row="1">
+            <!-- Default is the existing Core ROI editor so ordinary master/slave
+                 startup keeps the native operator-smoke save button visible. The
+                 offline editor is selected only by explicit launch or operator choice. -->
+            <TabControl Grid.Row="1" SelectedIndex="{Binding OfflineProduct.ProductRoiTabIndex, Mode=TwoWay}">
+              <TabItem Header="Core ROI 草稿（现有）">
+                <Grid ColumnDefinitions="1*,1*" ColumnSpacing="12">
+                  <Border Background="White" CornerRadius="10" Padding="18">
+                    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
+                      <TextBlock Text="当前已发布产品方案" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
+                      <TextBlock Grid.Row="1" Text="{Binding ActiveProductLabel}" FontSize="14" Foreground="#277295" TextWrapping="Wrap"/>
+                      <TextBlock Grid.Row="2" Text="{Binding ActiveProductRelease}" FontSize="12" Foreground="#6B8195" TextWrapping="Wrap"/>
+                      <ListBox Grid.Row="3" ItemsSource="{Binding ProductStations}" Background="#F5F8FB" BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <Grid ColumnDefinitions="90,*,95,110" Margin="10,12">
+                              <TextBlock Text="{Binding StationId}" FontWeight="Bold" FontSize="12"/>
+                              <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"/>
+                              <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
+                              <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
+                            </Grid>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                    </Grid>
+                  </Border>
+                  <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
+                    <StackPanel Spacing="12">
+                      <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
+                      <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#587187" TextWrapping="Wrap"/>
+                      <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
+                               Height="95" BorderThickness="0" Background="#F4F8FC">
+                        <ListBox.ItemsPanel>
+                          <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                          <DataTemplate>
+                            <TextBlock Text="{Binding ChannelId}" Margin="10" FontWeight="SemiBold"/>
+                          </DataTemplate>
+                        </ListBox.ItemTemplate>
+                      </ListBox>
+                      <Border Background="#122D44" Padding="8" CornerRadius="8">
+                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="245"/>
+                      </Border>
+                      <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#65819A" TextWrapping="Wrap"/>
+                      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
+                        <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
+                        <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
+                        <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
+                        <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
+                      </Grid>
+                      <Button Content="校验并持久保存 SIM_ONLY ROI 草稿" Command="{Binding ValidateRoiCommand}"/>
+                      <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#96652C" TextWrapping="Wrap"/>
+                      <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
+                                 TextWrapping="Wrap" Foreground="#637C92"/>
+                    </StackPanel>
+                  </Border>
+                </Grid>
+              </TabItem>
               <TabItem Header="离线产品编辑">
                 <Grid ColumnDefinitions="1.08*,1*" ColumnSpacing="12">
                   <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -909,60 +967,6 @@
                       </Border>
                     </StackPanel>
                   </ScrollViewer>
-                </Grid>
-              </TabItem>
-              <TabItem Header="Core ROI 草稿（现有）">
-                <Grid ColumnDefinitions="1*,1*" ColumnSpacing="12">
-                  <Border Background="White" CornerRadius="10" Padding="18">
-                    <Grid RowDefinitions="Auto,Auto,Auto,*" RowSpacing="10">
-                      <TextBlock Text="当前已发布产品方案" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
-                      <TextBlock Grid.Row="1" Text="{Binding ActiveProductLabel}" FontSize="14" Foreground="#277295" TextWrapping="Wrap"/>
-                      <TextBlock Grid.Row="2" Text="{Binding ActiveProductRelease}" FontSize="12" Foreground="#6B8195" TextWrapping="Wrap"/>
-                      <ListBox Grid.Row="3" ItemsSource="{Binding ProductStations}" Background="#F5F8FB" BorderThickness="0">
-                        <ListBox.ItemTemplate>
-                          <DataTemplate>
-                            <Grid ColumnDefinitions="90,*,95,110" Margin="10,12">
-                              <TextBlock Text="{Binding StationId}" FontWeight="Bold" FontSize="12"/>
-                              <TextBlock Grid.Column="1" Text="{Binding Channels}" FontSize="11"/>
-                              <TextBlock Grid.Column="2" Text="{Binding BrightThreshold}" FontSize="12"/>
-                              <TextBlock Grid.Column="3" Text="{Binding MinimumBrightFraction}" FontSize="12"/>
-                            </Grid>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                    </Grid>
-                  </Border>
-                  <Border Grid.Column="1" Background="White" CornerRadius="10" Padding="18">
-                    <StackPanel Spacing="12">
-                      <TextBlock Text="本机 ROI 草稿 / Core 保存" FontSize="19" FontWeight="SemiBold" Foreground="#1E4263"/>
-                      <TextBlock Text="{Binding SelectedDescription}" FontSize="12" Foreground="#587187" TextWrapping="Wrap"/>
-                      <ListBox ItemsSource="{Binding Channels}" SelectedItem="{Binding SelectedChannel, Mode=TwoWay}"
-                               Height="95" BorderThickness="0" Background="#F4F8FC">
-                        <ListBox.ItemsPanel>
-                          <ItemsPanelTemplate><UniformGrid Columns="6"/></ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
-                          <DataTemplate>
-                            <TextBlock Text="{Binding ChannelId}" Margin="10" FontWeight="SemiBold"/>
-                          </DataTemplate>
-                        </ListBox.ItemTemplate>
-                      </ListBox>
-                      <Border Background="#122D44" Padding="8" CornerRadius="8">
-                        <Image Source="{Binding SelectedPreview}" Stretch="Uniform" Height="245"/>
-                      </Border>
-                      <TextBlock Text="{Binding PreviewNotice}" FontSize="11" Foreground="#65819A" TextWrapping="Wrap"/>
-                      <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="9">
-                        <StackPanel><TextBlock Text="X" FontSize="11"/><TextBox Text="{Binding RoiX}"/></StackPanel>
-                        <StackPanel Grid.Column="1"><TextBlock Text="Y" FontSize="11"/><TextBox Text="{Binding RoiY}"/></StackPanel>
-                        <StackPanel Grid.Column="2"><TextBlock Text="宽" FontSize="11"/><TextBox Text="{Binding RoiWidth}"/></StackPanel>
-                        <StackPanel Grid.Column="3"><TextBlock Text="高" FontSize="11"/><TextBox Text="{Binding RoiHeight}"/></StackPanel>
-                      </Grid>
-                      <Button Content="校验并持久保存 SIM_ONLY ROI 草稿" Command="{Binding ValidateRoiCommand}"/>
-                      <TextBlock Text="{Binding RoiFeedback}" FontSize="12" Foreground="#96652C" TextWrapping="Wrap"/>
-                      <TextBlock Text="已保存的草稿不自动发布；当前检测参数以已发布方案为准。" FontSize="11"
-                                 TextWrapping="Wrap" Foreground="#637C92"/>
-                    </StackPanel>
-                  </Border>
                 </Grid>
               </TabItem>
             </TabControl>
