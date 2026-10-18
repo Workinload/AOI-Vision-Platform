@@ -17,7 +17,8 @@ import subprocess
 import sys
 import time
 
-from p0_claim_fins_antitamper import EvidenceError, verify_case
+from p0_claim_fins_antitamper import verify_case
+from p0_fins_timeline_audit import AuditFailure
 
 # Reuse the existing A0 SIM_ONLY PNG and independent FINS READ helpers.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'scripts'))
@@ -84,7 +85,7 @@ def real_five_process_case(source: Path, root: Path, scenario: str, dotnet: str,
             try:
                 passed = verify_case(root, scenario)
                 break
-            except (EvidenceError, sqlite3.Error, OSError, ValueError, KeyError) as exc:
+            except (AuditFailure, sqlite3.Error, OSError, ValueError, KeyError) as exc:
                 last = str(exc)
             time.sleep(0.15)
         if passed is None:
