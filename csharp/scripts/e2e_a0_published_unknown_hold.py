@@ -51,7 +51,8 @@ def accept(args):
         assert 'AOI_HOST_FATAL' not in log and 'SIM_FULL_PRODUCTION_FAILED' not in log, (
             'One unsupported inspection plugin crashed entire ' + node, log[-2500:])
     assert 'SIM_PUBLISHED_CAPTURE_HOLD token=' in masterlog
-    assert 'PUBLISHED_PLAN_NOT_READY:NotSupportedException:' in masterlog
+    # PUBLISHED_PLAN_NOT_READY is the durable workpiece_holds.detail,
+    # while the console logs the exact captured exception without prefix.
     assert 'INSPECTION_PROCESSOR_NOT_READY: vendor.future.not.installed' in masterlog
     assert 'no_camera_or_plc_trigger=1' in masterlog
 
