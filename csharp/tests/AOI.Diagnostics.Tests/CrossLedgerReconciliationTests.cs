@@ -446,6 +446,34 @@ public sealed class CrossLedgerReconciliationTests
             "two_sqlite_wals=2 shms=2 source_files_unchanged=7");
     }
 
+    [Test]
+    public void ForgedNonStepA1UnknownAfterTwoValidRepliesNeverGetsConfirmed()
+    {
+        var item = Item();
+        var s = Started(item, LegacyExitScenario.Normal, FinalDisposition.Good);
+        using (s.A1)
+        {
+            Step(s.A1, s.A7, s.Intent, s.Attempt, 95);
+            Step(s.A1, s.A7, s.Intent, s.Attempt, 96);
+        }
+        Update(A1Path, """
+            INSERT INTO a1_final_output_events(sequence,intent_id,workpiece_id,event_json)
+            SELECT (SELECT max(sequence)+1 FROM a1_final_output_events),
+                   intent_id,workpiece_id,
+                   json_set(event_json,
+                       '$.sequence', (SELECT max(sequence)+1 FROM a1_final_output_events),
+                       '$.kind', 'outcomeUnknown',
+                       '$.stepIndex', -1,
+                       '$.reasonCode', 'FORGED_NON_STEP_UNKNOWN')
+              FROM a1_final_output_events
+             WHERE json_extract(event_json,'$.kind')='intentPrepared' LIMIT 1
+            """);
+        var report = CrossLedgerReadOnlyReconciliation.Capture(_root, item.WorkpieceId);
+        Assert.That(report.Status, Is.EqualTo(CrossLedgerStatus.CONFLICT));
+        Assert.That(report.Findings.Select(x => x.Code),
+            Does.Contain("A1_STEP_INDEX_INVALID"));
+    }
+
     private static void Update(string dbPath, string sql,
         params (string Key, string Value)[] args)
     {
