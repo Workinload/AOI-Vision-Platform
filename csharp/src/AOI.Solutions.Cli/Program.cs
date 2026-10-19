@@ -4,7 +4,7 @@ using AOI.Solutions;
 using System.Globalization;
 
 if (args.Length < 2 || args[0] is not
-    ("bootstrap" or "tune" or "publish" or "activate" or "status" or
+    ("bootstrap" or "tune" or "publish" or "activate" or "archive" or "status" or
      "import-roi" or "roi-preview" or "roi-diff" or "roi-sample" or
      "camera-target" or "algorithm-param" or "params-draft" or "params-release" or "runtime-plan"))
 {
@@ -14,6 +14,7 @@ if (args.Length < 2 || args[0] is not
           tune <root> <solutionId> <stationId> <expectedRevision> <threshold(1..254)> <minFraction(0..1)> <actor>
           publish <root> <solutionId> <actor>
           activate <root> <releaseId> <actor>
+          archive <root> <actor>            (moves previous production evidence to archive/, never deletes)
           status <root>
           roi-sample <root> <outputPng>
           import-roi <root> <solutionId> <channelId> <expectedRoiRevision> <expectedStationRevision> <actor>
@@ -45,7 +46,7 @@ try
     // leases through its LAST SQLite commit. A Core may never start between
     // this safety check and an A6 write. Read-only previews/status remain
     // available without acquiring a writer lease.
-    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or
+    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or "archive" or
         "import-roi" or "camera-target" or "algorithm-param";
     using OfflineCoreOperationGate.OfflineLease? stoppedCores = mutating
         ? OfflineCoreOperationGate.AcquireStoppedCores(root)
@@ -225,49 +226,26 @@ try
     else if (mode == "publish")
     {
         if (args.Length != 4) throw new ArgumentException("publish requires root, solutionId, actor");
-        var release = repository.Publish(args[2], args[3]);
+        // Capability validation runs INSIDE the transaction, before the Release row exists.
+        var release = repository.Publish(args[2], args[3], RequireSafeRule);
         // Force validation of every station's actual pixel rule, not just digest.
         foreach (var station in release.Manifest.Stations)
             RequireSafeRule(station);
         Console.WriteLine($"SIM_PRODUCT_PUBLISHED release={release.ReleaseId} sha256={release.ContentSha256} stations={release.Manifest.Stations.Count}");
     }
+    else if (mode == "archive")
+    {
+        if (args.Length != 3) throw new ArgumentException("archive requires root, actor");
+        var archived = ProductionEvidenceArchive.Archive(root, args[2]);
+        Console.WriteLine($"SIM_PRODUCT_EVIDENCE_ARCHIVED dir={archived.ArchiveRelativePath} files={archived.Files.Count}");
+    }
     else if (mode == "activate")
     {
         if (args.Length != 4) throw new ArgumentException("activate requires root, releaseId, actor");
-        var release = repository.RequireRelease(args[2]);
-        foreach (var station in release.Manifest.Stations) RequireSafeRule(station);
-        var forbidden = new[]
-        {
-            Path.Combine(root, "master", "production.db"),
-            Path.Combine(root, "slave", "production.db"),
-            Path.Combine(root, "master", "sim-full-cycle.db"),
-            Path.Combine(root, "slave", "sim-full-cycle.db")
-        };
-        if (forbidden.Any(File.Exists))
-            throw new InvalidOperationException(
-                "ACTIVATION_BLOCKED: production WAL or virtual conveyor evidence exists; do not reconfigure an active/unknown line.");
-        var master = new SimChangeoverNode(Path.Combine(root, "master", "sim-product-node.sqlite"),
-            "master", MachineRole.Master);
-        var slave = new SimChangeoverNode(Path.Combine(root, "slave", "sim-product-node.sqlite"),
-            "slave", MachineRole.Slave);
-        var beforeMaster = master.Snapshot();
-        var beforeSlave = slave.Snapshot();
-        if (beforeMaster.ActiveEpoch != beforeSlave.ActiveEpoch ||
-            beforeMaster.ActiveReleaseId != beforeSlave.ActiveReleaseId ||
-            !beforeMaster.SafeHold || !beforeSlave.SafeHold ||
-            beforeMaster.Phase is not (NodeChangeoverPhase.Idle or NodeChangeoverPhase.CommittedHold) ||
-            beforeSlave.Phase is not (NodeChangeoverPhase.Idle or NodeChangeoverPhase.CommittedHold))
-            throw new InvalidOperationException("ACTIVATION_BLOCKED: nodes not jointly idle in safe hold.");
-        var coordinator = new ChangeoverCoordinator(Path.Combine(root, "sim-product-coordinator.sqlite"));
-        var request = new ChangeoverRequest(Guid.NewGuid(), release,
-            beforeMaster.ActiveEpoch, beforeMaster.ActiveReleaseId,
-            checked(beforeMaster.ActiveEpoch + 1), args[3]);
-        // This evidence is for purely offline SQLite node emulators ONLY.
-        // Neither hardware output nor remote PLC connectivity exists here.
-        var status = coordinator.Execute(request, master, slave, SimInterlocks.AllSafeForOfflineTest);
-        if (status.Phase != ChangeoverPhase.Committed)
-            throw new InvalidOperationException("ACTIVATION_HOLD: " + status.Phase + " " + status.Detail);
-        Console.WriteLine($"SIM_PRODUCT_DUAL_COMMITTED_HOLD release={release.ReleaseId} epoch={status.NextEpoch} nodes=2 real_writes=0");
+        // One shared implementation with the operator GUI: same rule validation, same
+        // clean-root requirement, same durable two-node changeover and read-back.
+        var outcome = OfflineDualActivation.ActivateUnderLease(root, args[2], args[3], stoppedCores!);
+        Console.WriteLine($"SIM_PRODUCT_DUAL_COMMITTED_HOLD release={outcome.ReleaseId} epoch={outcome.NextEpoch} nodes=2 real_writes=0");
     }
     return 0;
 }
