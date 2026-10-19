@@ -998,6 +998,16 @@
                                          TextWrapping="Wrap"/>
                               <TextBlock Text="{Binding OfflineProduct.ActivationProof}" FontSize="10"
                                          Foreground="#4C6B57" TextWrapping="Wrap"/>
+                              <Separator Opacity="0.4"/>
+                              <TextBlock Text="连续换型：归档上一轮生产证据（只移动，不删除）"
+                                         FontSize="12" FontWeight="SemiBold" Foreground="#1D6A3A"/>
+                              <CheckBox IsChecked="{Binding OfflineProduct.ArchiveConfirmed, Mode=TwoWay}"
+                                        Content="我确认归档上一轮生产证据（只移动，不删除，记录 SHA256）"/>
+                              <Button Content="归档上一轮生产证据（连续换型）"
+                                      Command="{Binding OfflineProduct.ArchiveEvidenceCommand}"
+                                      HorizontalAlignment="Stretch"/>
+                              <TextBlock Text="{Binding OfflineProduct.ArchiveState}" FontSize="11"
+                                         Foreground="#4C6B57" TextWrapping="Wrap"/>
                             </StackPanel>
                           </Border>
                           <TextBlock Text="{Binding OfflineProduct.PublishState}" FontSize="12"

@@ -43,6 +43,7 @@ public sealed class OfflineWriteGate : IDisposable
 {
     private readonly bool isolatedTest;
     private OfflineCoreOperationGate.OfflineLease? lease;
+    private bool archiveOnly;
 
     private OfflineWriteGate(bool isolatedTest, string reason)
     {
@@ -60,8 +61,14 @@ public sealed class OfflineWriteGate : IDisposable
     internal static OfflineWriteGate IsolatedTestDatabase =>
         new(true, "TEST_ONLY：隔离临时 A6 数据库；无 Core、无激活。");
 
-    /// <summary>True only while both OS Core locks are physically held.</summary>
-    public bool A6WritesAllowed => isolatedTest || lease is not null;
+    /// <summary>True only while both OS Core locks are physically held AND the root is clean.</summary>
+    public bool A6WritesAllowed => isolatedTest || (lease is not null && !archiveOnly);
+
+    /// <summary>True while the caller physically holds the lease (archive-only mode included).</summary>
+    public bool LeaseHeld => isolatedTest || lease is not null;
+
+    /// <summary>True while the lease exists only for evidence archiving (A6 writes still closed).</summary>
+    public bool ArchiveOnly => archiveOnly;
 
     public string Reason { get; private set; }
 
@@ -101,6 +108,33 @@ public sealed class OfflineWriteGate : IDisposable
         return string.Equals(Canonical(DataRoot), Canonical(databasePath is null ? "" : dbRoot), comparison);
     }
 
+    /// <summary>
+    /// Archive-only arming: holds both Core leases (proof that the Cores are stopped) WITHOUT the
+    /// clean-root requirement, because cleaning the root IS the archive operation. A6 database
+    /// writes stay closed until <see cref="RequireCleanNow"/> succeeds under the same lease.
+    /// </summary>
+    public void ArmForArchive(string dataRoot)
+    {
+        if (isolatedTest) return;
+        Release();
+        ArgumentException.ThrowIfNullOrWhiteSpace(dataRoot);
+        lease = OfflineCoreOperationGate.AcquireStoppedCores(dataRoot);
+        DataRoot = dataRoot;
+        archiveOnly = true;
+        Reason = "已持有双 Core 独占锁（归档模式，尚未确认干净根）：" + dataRoot;
+    }
+
+    /// <summary>Re-validates the clean activation root under the SAME held lease.</summary>
+    public void RequireCleanNow()
+    {
+        if (isolatedTest) return;
+        if (lease is null)
+            throw new InvalidOperationException("未持有双 Core 独占锁，无法确认干净激活根。");
+        lease.RequireCleanActivationRoot();
+        archiveOnly = false;
+        Reason = "已持有双 Core 独占锁（干净激活根）：" + DataRoot;
+    }
+
     public void Arm(string dataRoot)
     {
         if (isolatedTest) return;
@@ -120,6 +154,7 @@ public sealed class OfflineWriteGate : IDisposable
         }
         lease = acquired;
         DataRoot = dataRoot;
+        archiveOnly = false;
         Reason = "已持有双 Core 独占锁（OS 级文件句柄）：" + dataRoot;
     }
 
@@ -129,6 +164,7 @@ public sealed class OfflineWriteGate : IDisposable
         OfflineCoreOperationGate.OfflineLease? held = lease;
         lease = null;
         DataRoot = "";
+        archiveOnly = false;
         Reason = isolatedTest ? Reason : OfflineA6Dependency.ClosedReason;
         held?.Dispose();
     }
@@ -267,6 +303,8 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
     [ObservableProperty] private string activatedRelease = "未激活";
     [ObservableProperty] private string activatedEpoch = "";
     [ObservableProperty] private string activationProof = "";
+    [ObservableProperty] private bool archiveConfirmed;
+    [ObservableProperty] private string archiveState = "连续换型前：可把上一轮生产证据归档到 archive/（只移动，不删除）。";
     [ObservableProperty] private int releaseCount;
     [ObservableProperty] private string revisionsSnapshotLabel = "尚未确认全站草稿版本快照";
     // 0 = existing Core ROI editor (default, keeps the native operator-smoke path),
@@ -746,7 +784,7 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
             CaptureReadSnapshot();
             Status = "已发布不可变 Release：" + reopened.ReleaseId +
                 " · 完整 SHA256 " + reopened.ContentSha256 +
-                "（激活仍不可用：#149 未合并）。";
+                "（可在持锁状态勾选确认后双机激活）。";
         }
         catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException
             or ArgumentException or KeyNotFoundException or IOException or DbException)
@@ -857,6 +895,69 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Continuous changeover: moves the previous run's production/conveyor/timing evidence into
+    /// archive/&lt;utc&gt;/ (never deletes, records SHA256) so this run root becomes clean enough for
+    /// the NEXT release to be activated. Runs under the same held Core lease.
+    /// </summary>
+    [RelayCommand]
+    public void ArchiveEvidence()
+    {
+        if (string.IsNullOrWhiteSpace(databasePath))
+        {
+            ArchiveState = "未归档：没有附加的 A6 数据库。";
+            Status = ArchiveState;
+            return;
+        }
+        string? runRoot = Path.GetDirectoryName(Path.GetFullPath(databasePath));
+        if (string.IsNullOrEmpty(runRoot))
+        {
+            ArchiveState = "未归档：无法从 A6 数据库路径确定 run-root。";
+            Status = ArchiveState;
+            return;
+        }
+        try
+        {
+            // Archiving is the ONE operation allowed before the root is clean; it still needs both
+            // Core leases as proof that no Core is writing these evidence files.
+            if (gate.HeldLease is null) gate.ArmForArchive(runRoot);
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException or ArgumentException)
+        {
+            ArchiveState = "未归档（未能取得双 Core 独占锁）：" + ex.Message;
+            Status = ArchiveState;
+            return;
+        }
+        if (!gate.LeaseHeld)
+        {
+            ArchiveState = "未归档：未持有双 Core 独占锁。";
+            Status = ArchiveState;
+            return;
+        }
+        if (!ArchiveConfirmed)
+        {
+            ArchiveState = "未归档：需要先勾选「我确认归档上一轮生产证据（只移动，不删除）」。";
+            Status = ArchiveState;
+            return;
+        }
+        try
+        {
+            var result = ProductionEvidenceArchive.Archive(runRoot, operatorName);
+            gate.RequireCleanNow();
+            ArchiveState = "已归档上一轮证据：" + result.ArchiveRelativePath + " · " + result.Files.Count +
+                " 个文件（原始字节保留并已记录 SHA256）；现在可以发布并激活下一套方案。";
+            ArchiveConfirmed = false;
+            ActivationState = "可激活下一套 Release（上一轮证据已归档，未删除）。";
+            Status = ArchiveState;
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or IOException
+            or UnauthorizedAccessException or ArgumentException or DirectoryNotFoundException)
+        {
+            ArchiveState = "归档失败（未删除任何证据）：" + ex.Message;
+            Status = ArchiveState;
+        }
+    }
+
     [RelayCommand]
     public void ReopenPersistedRelease()
     {
@@ -889,7 +990,7 @@ public sealed partial class OfflineProductWorkspaceViewModel : ObservableObject
                 " · stations=" + reopened.Manifest.Stations.Count;
             RefreshReleaseCount();
             Status = "已从 A6 数据库重新读取 Release " + reopened.ReleaseId +
-                "（完整 SHA256 见发布面板；激活仍不可用）。";
+                "（完整 SHA256 见发布面板；可勾选确认后双机激活）。";
         }
         catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException
             or ArgumentException or KeyNotFoundException or IOException or DbException)

@@ -4,7 +4,7 @@ using AOI.Solutions;
 using System.Globalization;
 
 if (args.Length < 2 || args[0] is not
-    ("bootstrap" or "tune" or "publish" or "activate" or "status" or
+    ("bootstrap" or "tune" or "publish" or "activate" or "archive" or "status" or
      "import-roi" or "roi-preview" or "roi-diff" or "roi-sample" or
      "camera-target" or "algorithm-param" or "params-draft" or "params-release" or "runtime-plan"))
 {
@@ -14,6 +14,7 @@ if (args.Length < 2 || args[0] is not
           tune <root> <solutionId> <stationId> <expectedRevision> <threshold(1..254)> <minFraction(0..1)> <actor>
           publish <root> <solutionId> <actor>
           activate <root> <releaseId> <actor>
+          archive <root> <actor>            (moves previous production evidence to archive/, never deletes)
           status <root>
           roi-sample <root> <outputPng>
           import-roi <root> <solutionId> <channelId> <expectedRoiRevision> <expectedStationRevision> <actor>
@@ -45,7 +46,7 @@ try
     // leases through its LAST SQLite commit. A Core may never start between
     // this safety check and an A6 write. Read-only previews/status remain
     // available without acquiring a writer lease.
-    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or
+    bool mutating = mode is "bootstrap" or "tune" or "publish" or "activate" or "archive" or
         "import-roi" or "camera-target" or "algorithm-param";
     using OfflineCoreOperationGate.OfflineLease? stoppedCores = mutating
         ? OfflineCoreOperationGate.AcquireStoppedCores(root)
@@ -231,6 +232,12 @@ try
         foreach (var station in release.Manifest.Stations)
             RequireSafeRule(station);
         Console.WriteLine($"SIM_PRODUCT_PUBLISHED release={release.ReleaseId} sha256={release.ContentSha256} stations={release.Manifest.Stations.Count}");
+    }
+    else if (mode == "archive")
+    {
+        if (args.Length != 3) throw new ArgumentException("archive requires root, actor");
+        var archived = ProductionEvidenceArchive.Archive(root, args[2]);
+        Console.WriteLine($"SIM_PRODUCT_EVIDENCE_ARCHIVED dir={archived.ArchiveRelativePath} files={archived.Files.Count}");
     }
     else if (mode == "activate")
     {
